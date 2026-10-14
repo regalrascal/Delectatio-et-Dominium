@@ -1,0 +1,52 @@
+name: PoseWorkout
+description: |
+  YOU (a female NPC) work your body on the spot — a disciplined set of exercises, strength and
+  stamina put on display.
+  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  ends on its own if a fight starts or after a while.
+
+  WHEN discipline or energy demands it: keeping the sword arm sharp, a warrior's morning
+  routine, boredom with energy to burn, showing off strength and stamina to an appreciative
+  audience. Pairs naturally with a line of dialogue — counting reps under your breath, the
+  trainer's encouragement, the "watch this."
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseWorkout_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

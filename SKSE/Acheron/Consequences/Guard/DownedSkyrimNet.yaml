@@ -1,0 +1,12 @@
+Version: 2
+
+Name: (SkyrimNet) Downed
+Description: When defeated, the actor is held down and helpless while SkyrimNet/Baka-driven characters react. No teleport.
+Quest: 0x800|SkyrimNet_AcheronIntegration.esp
+
+Priority: 1
+Cooldown: 0
+StartTeleport: false
+Teleport: false
+InCombat: true
+Hidden: false

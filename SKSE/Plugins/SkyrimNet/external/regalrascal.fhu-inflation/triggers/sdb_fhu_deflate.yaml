@@ -1,0 +1,23 @@
+name: "sdb_fhu_deflate"
+description: "An actor's swollen belly finally starts going down"
+
+eventCriteria:
+  eventType: "sdb_fhu_deflate"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }}'s swollen belly is going down at last -- the release
+    leaves them lighter. Generate the aftermath in one short beat: relief,
+    exhaustion, self-consciousness, a shaky breath, or a quiet remark.
+    Match their personality exactly.
+
+    Never explain what the swelling was or where it went, and never name any
+    framework or source -- react only to the visible change.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

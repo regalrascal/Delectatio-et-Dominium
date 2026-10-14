@@ -1,0 +1,24 @@
+name: "sdb_fhu_inflate"
+description: "An actor's belly is suddenly, noticeably fuller"
+
+eventCriteria:
+  eventType: "sdb_fhu_inflate"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }}'s belly is noticeably fuller now, swelling with warmth.
+    Generate one short beat of the moment -- how it shows on them, and how
+    they or someone nearby reacts: embarrassment, pride, discomfort, desire,
+    or casual acceptance. One line or one action. Match their personality
+    exactly.
+
+    Never explain what caused the swelling, and never name any framework or
+    source -- describe only the state as it is visible right now.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

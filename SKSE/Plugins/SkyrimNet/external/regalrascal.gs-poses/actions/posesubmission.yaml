@@ -1,0 +1,52 @@
+name: PoseSubmission
+description: |
+  YOU (a female NPC) take a submissive or surrendered pose — body lowered and bent, the physical
+  shape of yielding.
+  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — unlike
+  other poses, a fight breaking out does not free you; it ends when you stop it or after a while.
+
+  WHEN yielding needs to be shown, not just said: surrendering to a captor, submitting to a
+  dominant partner, deference to authority, a defeated warrior's grace in loss. This is the
+  attitude of surrender, not a plain kneeling posture — bent, lowered, given over. Pairs
+  naturally with a line of dialogue — the "as you wish," the lowered "yes, my thane."
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseSubmission_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

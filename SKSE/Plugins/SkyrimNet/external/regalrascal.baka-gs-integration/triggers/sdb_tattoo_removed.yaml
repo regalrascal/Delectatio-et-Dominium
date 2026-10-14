@@ -1,0 +1,25 @@
+name: "sdb_tattoo_removed"
+description: "A nearby NPC notices the mark someone wore has just been wiped away"
+
+eventCriteria:
+  eventType: "sdb_tattoo_removed"
+
+response:
+  type: "direct_narration"
+  content: |
+    The mark on {{ target }}'s skin has just been wiped away. Generate one
+    short reaction beat from anyone who notices — relief, curiosity, a
+    comment, or pointed silence. Match their personality exactly.
+
+    React only to what is observable. The specific mark that was removed is
+    named in the event text. Do not name any framework or source.
+
+    Do not describe {{ target }}'s own reaction in your beat — that belongs
+    to the conversation that follows.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

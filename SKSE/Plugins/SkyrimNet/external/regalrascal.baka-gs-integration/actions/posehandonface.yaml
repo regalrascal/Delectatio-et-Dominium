@@ -1,0 +1,52 @@
+name: PoseHandOnFace
+description: |
+  YOU cover your face — a hand across the eyes or the mouth, giving shock or dismay or
+  secondhand shame somewhere to go.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN it's all too much: news that floors you, a disaster unfolding in front of you,
+  hearing your own mistake repeated back, embarrassment that needs hiding. Pairs naturally
+  with a line of dialogue — the muffled "by the gods," the long groan.
+  Register-calibrated phrasing: the blush register shares the palm — also hiding
+  a blush that gives the whole game away, composure held one second longer.
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PoseHandOnFace_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one covering your face.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

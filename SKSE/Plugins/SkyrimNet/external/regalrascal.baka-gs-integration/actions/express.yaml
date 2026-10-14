@@ -1,0 +1,44 @@
+name: Express
+description: |
+  The speaker's face shows an emotion for a few seconds: happy, sad, angry, afraid, confused, or
+  surprised/pained.
+
+  USE WHEN: the speaker feels or wants to convey that emotion right now — greeting someone they
+  like, being insulted or threatened, hearing something shocking, feeling hurt or rejected, being
+  struck or restrained, or working something out and doubting what they heard.
+
+  Purely a facial expression — no body movement, no dialogue. It fades on its own.
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: Express_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The character whose face shows the expression
+  - type: speaker
+    name: akTarget
+    description: Who they are reacting to (optional context; not required)
+  - type: dynamic
+    name: mood
+    description: "One of: happy, sad, angry, afraid, confused, surprised, pained"
+
+enabled: true
+defaultPriority: 2
+customCategory: SNBaka_Expression
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

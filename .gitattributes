@@ -1,0 +1,4 @@
+# Text normalization only. This repository ships full source (including
+# dll-source/) — release archives are built by the dist pipeline, not by
+# `git archive`, so no export-ignore entries are used here.
+* text=auto

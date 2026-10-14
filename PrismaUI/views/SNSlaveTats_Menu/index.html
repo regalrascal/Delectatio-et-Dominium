@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SNBaka SlaveTats</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { width: 100vw; height: 100vh; overflow: hidden; background: transparent;
+         font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; }
+  #backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+              background: rgba(0,0,0,0.45); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+  #backdrop.visible { opacity: 1; pointer-events: all; }
+  #panel { zoom: 1.5; position: relative; min-width: 480px; max-width: 560px; width: 520px;
+           max-height: 88vh; display: flex; flex-direction: column;
+           background: linear-gradient(160deg, rgba(10,8,5,.97) 0%, rgba(18,13,6,.97) 100%);
+           border: 1px solid rgba(139,105,20,.55);
+           box-shadow: 0 0 0 1px rgba(196,162,72,.08), 0 12px 48px rgba(0,0,0,.85), inset 0 0 60px rgba(0,0,0,.4);
+           transform: translateY(-10px) scale(.99); opacity: 0; transition: transform .22s ease, opacity .22s ease; }
+  #backdrop.visible #panel { transform: none; opacity: 1; }
+  h1 { font-size: 17px; font-weight: normal; letter-spacing: .18em; text-transform: uppercase;
+       color: #c4a248; padding: 14px 18px 4px; text-align: center; }
+  .hint { font-size: 12px; color: rgba(214,200,168,.55); text-align: center; padding: 0 18px 10px;
+          border-bottom: 1px solid rgba(139,105,20,.25); }
+  #mode-banner { color: #c4a248; font-style: italic; }
+  .body { padding: 12px 16px; overflow-y: auto; }
+  .slot { display: flex; align-items: center; gap: 10px; padding: 7px 10px; margin-bottom: 6px;
+          border: 1px solid rgba(139,105,20,.35); border-radius: 3px; cursor: pointer; }
+  .slot:hover { border-color: rgba(196,162,72,.7); }
+  .slot.active { border-color: #c4a248; background: rgba(196,162,72,.08); }
+  .slot .tag { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #c4a248; width: 92px; }
+  .slot .val { flex: 1; font-size: 13px; color: #d6c8a8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slot .val.none { color: rgba(214,200,168,.35); font-style: italic; }
+  .slot .clear { font-size: 11px; color: rgba(214,200,168,.6); border: 1px solid rgba(139,105,20,.35);
+                 border-radius: 3px; padding: 2px 8px; cursor: pointer; }
+  .slot .clear:hover { color: #e0b4b4; border-color: rgba(180,80,80,.6); }
+  .label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(196,162,72,.6);
+           margin: 10px 0 6px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tile { font-size: 12.5px; color: #d6c8a8; text-align: center; padding: 7px 6px; border-radius: 3px;
+          border: 1px solid rgba(139,105,20,.35); cursor: pointer; overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap; }
+  .tile:hover { border-color: rgba(196,162,72,.7); background: rgba(196,162,72,.08); }
+  .tile.sel { border-color: #c4a248; background: rgba(196,162,72,.12); color: #e8d5a0; }
+  .footer { display: flex; justify-content: center; gap: 12px; padding: 10px 16px 14px;
+            border-top: 1px solid rgba(139,105,20,.25); }
+  .btn { font-size: 13px; letter-spacing: .08em; color: #d6c8a8; padding: 6px 22px; border-radius: 3px;
+         border: 1px solid rgba(139,105,20,.5); cursor: pointer; }
+  .btn:hover { border-color: #c4a248; color: #e8d5a0; }
+  .swrow { display: flex; flex-wrap: wrap; gap: 5px; }
+  .swatch { font-size: 11px; color: #d6c8a8; text-align: center; padding: 5px 8px; border-radius: 3px;
+            border: 1px solid rgba(139,105,20,.35); cursor: pointer; white-space: nowrap; }
+  .swatch:hover { border-color: rgba(196,162,72,.7); }
+  .swatch.sel { border-color: #c4a248; background: rgba(196,162,72,.12); color: #e8d5a0; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="backdrop">
+  <div id="panel">
+    <h1>SlaveTats Degradation Sets</h1>
+    <div class="hint">Pick a slot, then a section and a set. Color optional.</div>
+    <div id="mode-banner" class="hint hidden"></div>
+    <div class="body">
+      <div class="label" id="slots-label">Slots</div>
+      <div class="slot" id="slot-spank"><span class="tag">On Spank</span><span class="val"></span><span class="clear">Clear</span></div>
+      <div class="slot" id="slot-defeat"><span class="tag">On Defeat</span><span class="val"></span><span class="clear">Clear</span></div>
+      <div class="slot" id="slot-escalation"><span class="tag">On Escalation</span><span class="val"></span><span class="clear">Clear</span></div>
+      <div class="label">Section</div>
+      <div class="grid" id="st-sections"></div>
+      <div class="label hidden" id="names-label">Sets in section</div>
+      <div class="grid hidden" id="st-names"></div>
+      <div class="label hidden" id="colors-label">Color (optional)</div>
+      <div class="swrow hidden" id="st-colors"></div>
+    </div>
+    <div class="footer"><div class="btn" id="btn-done">Done</div></div>
+  </div>
+</div>
+<script>
+//  SNSlaveTats_Menu — SlaveTats degradation-set picker.
+//  — two modes over the same view:
+//   "slots"  (MCM entry): pick stored sets for the spank/defeat/escalation event slots.
+//   "picker" (downed-menu Apply Tattoo, service tattoo.picker): pick applies IMMEDIATELY
+//            to the bound actor; the mode banner names them. Slot rows are hidden in
+//            picker mode and the pick is sent with slot "picker".
+// Opened from Papyrus via SNBakaUI.ShowSlaveTatsMenu(json) -> window.snbaka_open_slavetats.
+// The pick goes back on the shared snbaka_chose listener as "slot;section;name"
+// (+ "|hex" color subfield on the name when a swatch is chosen); "cancel" on dismiss;
+// the DLL dispatches it to SkyrimNet_BakaIntegration._ST_MenuChoice unchanged.
+let g_slot = 'spank';       // "spank" | "defeat" | "escalation" | "picker" (sent as slot)
+let g_sections = [];        // [{ n: section, t: [names] }]
+let g_choice = {};          // slot -> "section|name" ("" = empty)
+let g_color = null;         // chosen swatch hex (null = pack default)
+let g_mode = 'slots';       // "slots" | "picker"
+let g_pickerTarget = '';    // display name of the picker-bound actor
+
+function _el(id) { return document.getElementById(id); }
+
+function _sendChoice(value) {
+  try { window.snbaka_chose(value); }
+  catch (e) { console.log('[SNBaka.ST] choice =', value, '(snbaka_chose unavailable in browser preview)'); }
+}
+
+window.snbaka_open_slavetats = function (payload) {
+  const data = (typeof payload === 'string') ? JSON.parse(payload || '{}') : (payload || {});
+  g_mode = data.mode || 'slots';
+  g_pickerTarget = data.target || '';
+  g_choice = {
+    spank:      (data.spank     === undefined) ? '' : String(data.spank),
+    defeat:     (data.defeat    === undefined) ? '' : String(data.defeat),
+    escalation: (data.escalation === undefined) ? '' : String(data.escalation),
+  };
+  g_sections = Array.isArray(data.sections) ? data.sections : [];
+  g_color = null;
+  g_slot = g_mode === 'picker' ? 'picker' : 'spank';
+  // Picker mode: hide the slot rows (nothing is stored).
+  const picker = (g_mode === 'picker');
+  _el('slots-label').classList.toggle('hidden', picker);
+  document.querySelectorAll('.slot').forEach(r => r.classList.toggle('hidden', picker));
+  _render();
+  _renderModeBanner();
+  _el('backdrop').classList.add('visible');
+};
+
+function _render() {
+  for (const slot of ['spank', 'defeat', 'escalation']) {
+    const row = _el('slot-' + slot);
+    row.classList.toggle('active', g_slot === slot);
+    const val = row.querySelector('.val');
+    const cur = g_choice[slot] || '';
+    val.textContent = cur ? cur.replace('|', ' — ') : 'none chosen';
+    val.classList.toggle('none', !cur);
+    row.querySelector('.clear').style.visibility = cur ? 'visible' : 'hidden';
+  }
+  const secGrid = _el('st-sections');
+  secGrid.innerHTML = '';
+  const curSec = g_slot ? (g_choice[g_slot] || '').split('|')[0] : '';
+  g_sections.forEach(s => {
+    const t = document.createElement('div');
+    t.className = 'tile' + (curSec && s.n === curSec ? ' sel' : '');
+    t.textContent = s.n;
+    t.title = s.n;
+    t.onclick = () => _pickSection(s.n);
+    secGrid.appendChild(t);
+  });
+  if (!g_sections.length) {
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.style.gridColumn = '1 / -1';
+    //  counted, honest empty state ( UX lie fixed): distinguish
+    // NOTHING discovered from DISCOVERED-BUT-DROPPED using the payload's
+    // disc/emit counts (added in BuildMenuJSON this rev).
+    const disc = (typeof data.disc === 'number') ? data.disc : -1;
+    const emit = (typeof data.emit === 'number') ? data.emit : -1;
+    if (disc === 0) {
+      t.textContent = 'No SlaveTats packs discovered — enable a pack in MO2, then Refresh in the MCM.';
+    } else if (disc > 0 && emit === 0) {
+      t.textContent = disc + ' section(s) discovered, 0 listed — the set reader dropped them (see Papyrus log).';
+    } else {
+      t.textContent = 'No SlaveTats sections discovered — enable a pack and Refresh in the MCM.';
+    }
+    secGrid.appendChild(t);
+  }
+  const namesGrid = _el('st-names');
+  namesGrid.innerHTML = '';
+  namesGrid.classList.add('hidden');
+  _el('names-label').classList.add('hidden');
+  _el('st-colors').classList.add('hidden');
+  _el('colors-label').classList.add('hidden');
+}
+
+function _renderNames(section) {
+  const namesGrid = _el('st-names');
+  namesGrid.innerHTML = '';
+  namesGrid.classList.remove('hidden');
+  _el('names-label').classList.remove('hidden');
+  const sec = g_sections.find(s => s.n === section);
+  const curName = g_slot ? (g_choice[g_slot] || '').split('|')[1] : '';
+  (sec ? sec.t : []).forEach(nm => {
+    const t = document.createElement('div');
+    t.className = 'tile' + (nm === curName ? ' sel' : '');
+    t.textContent = nm;
+    t.title = nm;
+    t.onclick = () => _pickName(section, nm);
+    namesGrid.appendChild(t);
+  });
+  _renderColors();
+}
+
+//  — color swatch row (rider 1 picker upgrades). Rides the 3-string pipe inside
+// the name field: chosen swatch hex appended as "|<hex>" by _pickName. 'Default' = pack
+// default color (no subfield). Swatch set is fixed (SlaveTats packs are recolorable to
+// any 0xRRGGBB; these cover the common degradation-mark palette).
+const ST_COLORS = [
+  { n: 'Default', h: null },
+  { n: 'Black',   h: '1a1a1a' },
+  { n: 'Red',     h: '8b1a1a' },
+  { n: 'Crimson', h: 'b01030' },
+  { n: 'Dark Red',h: '550a0a' },
+  { n: 'Blue',    h: '1a1a8b' },
+  { n: 'Green',   h: '1a6b1a' },
+  { n: 'Purple',  h: '5a1a8b' },
+  { n: 'Pink',    h: 'c05a8b' },
+];
+
+function _renderColors() {
+  const row = _el('st-colors');
+  row.innerHTML = '';
+  row.classList.remove('hidden');
+  _el('colors-label').classList.remove('hidden');
+  ST_COLORS.forEach(c => {
+    const t = document.createElement('div');
+    t.className = 'swatch' + (g_color === c.h ? ' sel' : '');
+    if (c.h) t.style.background = '#' + c.h;
+    t.textContent = c.n;
+    t.onclick = () => { g_color = c.h; _renderColors(); };
+    row.appendChild(t);
+  });
+}
+
+function _renderModeBanner() {
+  const b = _el('mode-banner');
+  if (g_mode === 'picker') {
+    b.textContent = 'Picking for: ' + g_pickerTarget + ' — the choice applies immediately.';
+    b.classList.remove('hidden');
+  } else {
+    b.classList.add('hidden');
+  }
+}
+
+function _pickSection(name) {
+  if (!g_slot) return;
+  _render();
+  _renderNames(name);
+}
+
+function _pickName(section, name) {
+  if (!g_slot) return;
+  // : chosen color rides as a "|hex" subfield on the name (pack default = no
+  // subfield). Papyrus parses it (PickerChoice/SetChoice); location is pack-fixed and
+  // display-only (schema verdict — we do not invent location options).
+  _sendChoice(g_slot + ';' + section + ';' + name + (g_color ? '|' + g_color : ''));
+  _close();
+}
+
+// Slot rows: click body = select slot; click Clear = clear it.
+document.querySelectorAll('.slot').forEach(row => {
+  row.addEventListener('click', e => {
+    const slot = row.id.replace('slot-', '');
+    if (e.target.classList.contains('clear')) {
+      _sendChoice(slot + ';;');
+      g_choice[slot] = '';
+      _render();
+      return;
+    }
+    g_slot = slot;
+    _render();
+    const curSec = (g_choice[slot] || '').split('|')[0];
+    if (curSec) _renderNames(curSec);
+  });
+});
+
+_el('btn-done').addEventListener('click', () => _sendChoice('cancel'));
+_el('backdrop').addEventListener('click', e => { if (e.target.id === 'backdrop') _sendChoice('cancel'); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); _sendChoice('cancel'); }
+});
+function _close() { _el('backdrop').classList.remove('visible'); }
+
+// Browser preview (inert inside Skyrim/PrismaUI).
+(function () {
+  if (typeof window.snbaka_chose === 'function') return;
+  window.snbaka_open_slavetats({
+    mode: 'picker', target: 'Lydia',
+    spank: 'Sluts|cumdump', defeat: '', escalation: '',
+    sections: [
+      { n: 'Sluts', t: ['cumdump', 'petgirl', 'breeder'] },
+      { n: 'Mind tricks', t: ['hypno_eyes', 'heart_nipples'] },
+      { n: 'Tears and shame', t: ['used', 'broken'] },
+    ]
+  });
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,65 @@
+name: ShowOffBody
+description: |
+  The speaker (initiator) ogles and savors a target who poses ostentatiously for
+  them — the target's display is handled automatically by the game, and the beat
+  ends with a slap. This is an appreciation/watching action, like Flirt but with a
+  more leering, demanding edge: the visible performance is done by the TARGET.
+
+  ROLE — READ CAREFULLY: You are the one LOOKING, not performing. The target's
+  posing is automatic. Speak and act ONLY as yourself: your appraising stare, your
+  greedy appreciation, your command that they turn around, your reaction to what
+  you see. DO NOT write the target's dialogue, thoughts, or movements — they are a
+  separate character who will respond on their own.
+
+  USE WHEN:
+  - Attracted to the target and wanting to watch them display themselves
+  - A dominant character demanding or enjoying a display from a submissive or
+    captive target
+  - A leering, possessive, or greedy appraisal — stripping the target with your
+    eyes
+  - The scene has established erotic or power-dynamic tension and you want to
+    savor the view
+
+  DO NOT USE:
+  - If YOU want to be the one posing for someone else — use the Pose action
+    (SOLO) instead, or respond when someone ogles you
+  - In tense, hostile, or dangerous situations (it is intimate, not aggressive)
+  - When the target has no reason to display and you have no leverage or
+    flirtation to prompt it
+
+  CONSEQUENCES vary by relationship and context:
+  - Wanted by target: arousal, flattered escalation of intimacy.
+  - Commanded: reinforces the power dynamic — humiliation or pride for the poser.
+  - Observed by bystanders: a public display — reactions range from arousal to
+    offense.
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: ShowingOffBody_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one ogling, appraising, demanding the display. Voice only this character.
+  - type: dynamic
+    name: akTarget
+    description: The other character, who poses ostentatiously for you (automatically) — and delivers the closing slap. Do not voice them here.
+
+enabled: true
+defaultPriority: 4
+customCategory: SNBaka_Display
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

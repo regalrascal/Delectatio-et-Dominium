@@ -1,0 +1,12 @@
+{
+  "id": "regalrascal.fhu-inflation",
+  "type": "bundle",
+  "title": "SkyrimNet Fill Her Up Inflation Awareness",
+  "tagline": "The narrator sees the swelling and the release.",
+  "description": "LLM trigger cues for Fill Her Up inflation level changes: swelling (level up) and release (level down), read from FHU's own per-actor state. Source-agnostic by design: the cues describe only the visible state and never assert what caused it, so any framework that feeds FHU benefits automatically.",
+  "author": "regalrascal",
+  "tags": ["nsfw", "triggers"],
+  "nsfw": true,
+  "version": "0.1.0",
+  "min_skyrimnet_version": "0.25.0"
+}

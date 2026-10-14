@@ -1,0 +1,28 @@
+name: "sdb_tattoo_applied"
+description: "A nearby NPC notices a fresh mark has just been applied to someone's skin"
+
+eventCriteria:
+  eventType: "sdb_tattoo_applied"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ target }} now wears a fresh mark on their skin. Generate one short
+    reaction beat from anyone who sees it — a word, a look, a step closer or
+    away. Match their personality exactly.
+
+    React only to what is observable: the event text names the specific mark
+    and may describe the marked person's own visible reaction. Read that
+    before deciding the tone. Do not invent facts about how it was applied,
+    and do not name any framework or source.
+
+    Do not describe {{ target }}'s own reaction in your beat unless the event
+    text has already shown it — their reaction belongs to the conversation
+    that follows.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SNBaka Execute Confirm</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { width: 100vw; height: 100vh; overflow: hidden; background: transparent;
+         font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; }
+  #backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+              background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+  #backdrop.visible { opacity: 1; pointer-events: all; }
+  #panel { zoom: 1.4; position: relative; min-width: 460px; max-width: 560px; width: 500px;
+           display: flex; flex-direction: column;
+           background: linear-gradient(160deg, rgba(10,8,5,.97) 0%, rgba(18,13,6,.97) 100%);
+           border: 1px solid rgba(139,105,20,.55);
+           box-shadow: 0 0 0 1px rgba(196,162,72,.08), 0 12px 48px rgba(0,0,0,.85), inset 0 0 60px rgba(0,0,0,.4);
+           transform: translateY(-10px) scale(.99); opacity: 0; transition: transform .18s ease, opacity .18s ease; }
+  #backdrop.visible #panel { transform: none; opacity: 1; }
+  h1 { font-size: 17px; font-weight: normal; letter-spacing: .18em; text-transform: uppercase;
+       color: #c4a248; padding: 16px 18px 4px; text-align: center; }
+  .hint { font-size: 12px; color: rgba(214,200,168,.55); text-align: center; padding: 0 18px 12px;
+          border-bottom: 1px solid rgba(139,105,20,.25); }
+  .body { padding: 16px 20px 8px; }
+  .line { font-size: 14.5px; color: #d6c8a8; text-align: center; line-height: 1.5; }
+  .line .who { color: #e8d5a0; }
+  .line .deed { color: #e0b4b4; }
+  .timer { font-size: 11px; color: rgba(214,200,168,.45); text-align: center; padding-top: 12px; }
+  .footer { display: flex; justify-content: center; gap: 14px; padding: 14px 16px 16px;
+            border-top: 1px solid rgba(139,105,20,.25); }
+  .btn { font-size: 14px; letter-spacing: .1em; color: #d6c8a8; padding: 8px 26px; border-radius: 3px;
+         border: 1px solid rgba(139,105,20,.5); cursor: pointer; }
+  .btn:hover { border-color: #c4a248; color: #e8d5a0; }
+  .btn.deny:hover { border-color: rgba(180,80,80,.75); color: #e0b4b4; }
+</style>
+</head>
+<body>
+<div id="backdrop">
+  <div id="panel">
+    <h1>An Execution Awaits Your Word</h1>
+    <div class="hint">SkyrimNet Baka - Execute gate</div>
+    <div class="body">
+      <div class="line"><span class="who" id="who-init">?</span> is about to finish the downed
+        <span class="who" id="who-tgt">?</span> with a <span class="deed">deliberate killing blow</span>.</div>
+      <div class="line" style="padding-top:8px;">Accept the kill, or let the moment pass?</div>
+      <div class="timer" id="tmr"></div>
+    </div>
+    <div class="footer">
+      <div class="btn deny" id="btn-decline">Decline</div>
+      <div class="btn" id="btn-accept">Accept</div>
+    </div>
+  </div>
+</div>
+<script>
+var CLOSE_MS = 20000, _t0 = 0, _tid = 0, _closed = false;
+
+function _el(id) { return document.getElementById(id); }
+
+// C++ entry: snbaka_open_execconfirm('Initiator Name', 'Target Name')
+window.snbaka_open_execconfirm = function(iniName, tgtName) {
+  _closed = false;
+  _el('who-init').textContent = iniName || 'Someone';
+  _el('who-tgt').textContent  = tgtName || 'someone';
+  _el('backdrop').classList.add('visible');
+  _t0 = Date.now();
+  clearInterval(_tid);
+  _tid = setInterval(function() {
+    var left = Math.max(0, CLOSE_MS - (Date.now() - _t0));
+    _el('tmr').textContent = left > 0 ? ('The moment passes in ' + Math.ceil(left / 1000) + 's')
+                                      : '';
+    if (left <= 0) _finish('-1');   // timeout: decline (Papyrus also runs its own bound)
+  }, 250);
+};
+
+function _finish(v) {
+  if (_closed) return;
+  _closed = true;
+  clearInterval(_tid);
+  _el('tmr').textContent = '';
+  _el('backdrop').classList.remove('visible');
+  if (typeof window.snbaka_chose === 'function') window.snbaka_chose(v);
+  else console.log('[SNBaka] execconfirm =', v, '(snbaka_chose unavailable in browser preview)');
+}
+
+_el('btn-accept').addEventListener('click',  function() { _finish('0'); });
+_el('btn-decline').addEventListener('click', function() { _finish('-1'); });
+_el('backdrop').addEventListener('click', function(e) { if (e.target.id === 'backdrop') _finish('-1'); });
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape')      { e.preventDefault(); _finish('-1'); }
+  else if (e.key === 'Enter')  { e.preventDefault(); _finish('0'); }
+});
+
+// Browser preview (inert inside Skyrim/PrismaUI)
+(function () {
+  if (typeof window.snbaka_chose === 'function') return;
+  window.snbaka_open_execconfirm('Lydia', 'Degaine');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+name: PoseDanceSexy
+description: |
+  YOU dance slow and provocative — hips leading, eyes holding the one you dance
+  for, a performance with a single intended victim.
+  You hold the pose until you choose to stop (use StopPosing) — it also
+  ends on its own if a fight starts or after a while.
+
+  WHEN music and low light conspire: tavern entertainment that turns heads, a dare, a bet,
+  wine-fuelled showing off, flirtation that has stopped pretending to be anything else. Pairs
+  naturally with a line of dialogue — the lyrical tease between the beats.
+
+  OVERRIDING CIRCUMSTANCES: even a shy character, when the wine, the dare, or the crowd has
+  loosened them past usual restraint, may let the slip happen — write them surprising themselves.
+  There must be a reason in the scene; this is never a blanket license.
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseDanceSexy_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

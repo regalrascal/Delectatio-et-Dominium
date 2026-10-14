@@ -1,0 +1,12 @@
+{
+  "id": "regalrascal.gs-poses",
+  "type": "bundle",
+  "title": "Gunslicer Poses",
+  "tagline": "The solo-pose system for the GS animation set.",
+  "description": "The GS-side pose vocabulary split out of Delectatio et Dominium: 12 solo vibe poses (dance, stretch, meditate, show off, and more) executed by SkyrimNet_AnimationsGS over the Gunslicer animation set, plus StopPosing and CommandStopPose to end them, and the muse's pose-consideration prompt that lets nearby NPCs decide to strike a pose on their own. The SNGS_Pose category is registered at runtime by the SNAnimGS_UI DLL; the paired Babo-event poses stay in the Delectatio et Dominium pack.",
+  "author": "regalrascal",
+  "tags": ["nsfw", "poses"],
+  "nsfw": true,
+  "version": "0.1.0",
+  "min_skyrimnet_version": "0.25.0"
+}
