@@ -1,0 +1,57 @@
+name: PoseSeduce
+description: |
+  YOU shift into a seductive standing pose — weight on one hip, chin lowered,
+  gaze holding your audience — and let your body make the invitation.
+  You hold the pose until you choose to stop (use StopPosing) — it also
+  ends on its own if a fight starts or after a while.
+
+  WHEN the moment turns warm: a compliment that lands, wine and candlelight, a dare to show
+  what you've got, a slow song with nowhere to hurry. The pose is the offer — it pairs
+  naturally with a line of dialogue: the teasing invitation, the whispered promise, the
+  challenge to keep looking.
+
+  OVERRIDING CIRCUMSTANCES: even a shy character, when desire, drink, or a flattering
+  audience has loosened them past usual restraint, may let the slip happen — write it
+  happening, blush and hesitation included. There must be a reason in the scene; this is
+  never a blanket license.
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseSeduce_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

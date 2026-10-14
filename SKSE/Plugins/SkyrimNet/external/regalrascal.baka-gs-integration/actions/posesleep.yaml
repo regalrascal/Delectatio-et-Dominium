@@ -1,0 +1,50 @@
+name: PoseSleep
+description: |
+  YOU bed down and are genuinely asleep — out cold, breathing slow, the watch trusted to others.
+  Not a lazy sprawl while awake: this is unconsciousness.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN the body simply wins: camp after a double march, a bedroll by the fire, sleeping rough
+  on the road, a safe bed finally reached. Pairs naturally with a line of dialogue — the last
+  drowsy word before sleep takes you, or the snore that answers any question.
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PoseSleep_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one bedding down.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

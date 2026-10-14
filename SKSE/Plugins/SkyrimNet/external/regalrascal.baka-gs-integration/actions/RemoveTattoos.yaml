@@ -1,0 +1,39 @@
+name: RemoveTattoos
+description: |
+  The initiator wipes or cleanses the degradation tattoos from the target's skin —
+  a spell of cleansing, a rag and soap, or simply the marks fading under care.
+  Only removes the degradation sets this integration applied; Baka's own spank-heat
+  marks are untouched.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - Freeing or redeeming a former slave or captive
+  - A healer, priest or kind character removing shame marks
+  - The target's ally restoring their dignity
+  - Aftermath care after a scene
+
+  PERSONALITY TYPES WHO WOULD DO THIS:
+  - Kind, caring, protective
+  - Priests, healers, redeemers
+
+  DO NOT USE:
+  - If the target wears no degradation tattoos (silent no-op)
+  - As a hostile act
+
+  CONSEQUENCES:
+  - The degradation tattoo sets are removed from the target's skin
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: RemoveTattoos_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The NPC removing the marks.
+  - type: dynamic
+    name: akTarget
+    description: The person whose tattoos are being removed — player or nearby NPC.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNBaka_Display

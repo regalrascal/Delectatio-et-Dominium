@@ -1,0 +1,17 @@
+name: "acheron_recovered"
+description: "A defeated character has recovered and gotten back to their feet (the area cleared, or they were helped up)."
+
+eventCriteria:
+  eventType: "acheron_recovered"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} comes to and struggles back to their feet, shaken but alive. One brief beat.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 10
+priority: 6

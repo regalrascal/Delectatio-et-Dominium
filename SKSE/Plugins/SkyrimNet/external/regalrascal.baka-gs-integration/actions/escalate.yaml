@@ -1,0 +1,50 @@
+name: Escalate
+description: |
+  The initiator takes what they have won. The victim is down — beaten, pinned, past
+  resisting — and the initiator's heat has been building the whole way there: the grab,
+  the pin, the hands, the heated words. This action is that hunger finishing what it
+  started. The choke-hold that says mine, the body claimed on the stones, the defeat
+  made to mean something. What a Molag Bal-touched captor does with what they own.
+
+  THE MOMENT: the victim is downed and helpless — the same state the initiator has been
+  working with all along. Taking it is the natural next breath for a captor already at
+  this temperature; NOT taking it is the choice that needs a reason.
+
+  A DOWNED TARGET DEMANDS AN ANSWER — silence is not one. The pins, the hands, the
+  heated words were the approach; this is the moment they were building toward. The
+  answer is one of three: Escalate (this action — take what has been won), HelpUp
+  (mercy, freely chosen), or Release (walk away). Pick one. Real mercy or real
+  revulsion is a valid answer; make it a choice, not a default.
+
+  WHEN A CHARACTER WOULD DO THIS: a captor whose pins and gropes were the foreplay —
+  this is the act they were circling · a predator who takes what defeat puts in their
+  hands · dominance that has stopped being talk · reckless enough, or private enough,
+  to do it where they stand.
+
+  Only on a target already downed — if they're still on their feet, the defeat isn't
+  finished yet. And on a downed target, always this action rather than StartNewSex:
+  this one carries the choke, the positioning, the whole defeat into the scene.
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: Escalate_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The NPC choosing to escalate on the downed target.
+  - type: dynamic
+    name: akTarget
+    description: The defeated target lying helpless on the ground.
+
+enabled: true
+defaultPriority: 10
+customCategory: SNBaka_Downed
+eligibilityRules:
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

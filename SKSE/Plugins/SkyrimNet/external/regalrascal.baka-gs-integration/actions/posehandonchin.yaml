@@ -1,0 +1,52 @@
+name: PoseHandOnChin
+description: |
+  YOU rest a hand on your chin — weighing, appraising, turning it over before you commit
+  to an opinion.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN judgment is asked for: sizing up a suspect answer, appraising wares or an offer,
+  weighing a plan, skepticism that wants evidence first. Pairs naturally with a line of
+  dialogue — the "let me think," the level "mm," the "go on."
+  Register-calibrated phrasing: the coy register shares the hand — also being
+  coy about it, the pose of someone who already knows their answer and wants you to guess.
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PoseHandOnChin_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one resting a hand on your chin.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

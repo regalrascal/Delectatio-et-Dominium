@@ -1,0 +1,50 @@
+name: PosePickpocket
+description: |
+  YOU slip a hand into a pocket or pouch — theft performed as an ordinary gesture, a
+  pickpocket quietly at work.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN the opportunity is too clean: a crowded market, a drunk asleep at his table, a
+  coin purse riding carelessly, repaying a cheat by lighter means. Pairs naturally with
+  a line of dialogue — the distraction chatter, the innocent "pardon me."
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PosePickpocket_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one pickpocketing.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

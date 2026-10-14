@@ -1,0 +1,24 @@
+name: "baka_escalate_slipped"
+description: "An NPC moved to escalate on a downed target — and the moment slipped away before it landed (initiator still tangled in the preceding struggle; the attempt never happened). The surface-the-failure half of the lock-race fix: the model is told its chosen escalation did NOT occur, as a roleplay beat."
+
+eventCriteria:
+  eventType: "baka_escalate_slipped"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }}'s intent breaks against the moment — a heartbeat too slow, and
+    the opening is gone. Whatever they meant to do has not happened; the situation
+    has changed under them. The reaction is theirs to play: frustration, a renewed
+    reading of {{ target }}, a redirected threat — whatever is true to who they are.
+
+audience: "nearby_npcs"
+
+enabled: true
+# NOTE (lock-race fix, docs/LOCKRACE_FIX_DESIGN.md ): probability MUST stay 1.0.
+# A probabilistic gate on the failure cue would reintroduce the silent drop in the
+# notification path — the bug being fixed, wearing a different hat. The
+# retry-window-expiry condition is this cue's only gate.
+probability: 1.0
+cooldownSeconds: 2
+priority: 10

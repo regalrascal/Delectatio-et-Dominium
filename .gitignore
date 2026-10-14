@@ -1,0 +1,8 @@
+# Build artifacts only — this repository ships full source (including
+# dll-source/). Nothing else is excluded.
+build/
+out/
+vcpkg_installed/
+*.pdb
+*.log
+*.vs18backup

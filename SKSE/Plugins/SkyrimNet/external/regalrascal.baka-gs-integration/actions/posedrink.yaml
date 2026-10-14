@@ -1,0 +1,52 @@
+name: PoseDrink
+description: |
+  YOU take a drink — raising the tankard, swallowing, again — at a tavern or feast,
+  and the night wearing on. Heavy drinking carries a real risk: you may drink yourself
+  into a helpless, passed-out stupor — unaware, and a vulnerability nearby characters
+  will notice.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN the cup is the point: toasting a victory, drowning a loss, tavern conviviality,
+  dutch courage before something foolish, an evening with nowhere better to be. Pairs
+  naturally with a line of dialogue — the toast, the slur, the "one more."
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PoseDrink_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one drinking.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

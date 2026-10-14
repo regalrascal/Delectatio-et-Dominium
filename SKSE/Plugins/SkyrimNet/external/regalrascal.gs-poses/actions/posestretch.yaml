@@ -1,0 +1,54 @@
+name: PoseStretch
+description: |
+  YOU (a female NPC) stretch or flow into a yoga pose — reaching, bending, working the stiffness
+  out of your body.
+  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  ends on its own if a fight starts or after a while.
+
+  WHEN the body asks for it: first light after a rough camp, muscles stiff from a long march,
+  warming up before a workout, a contented catlike stretch, yoga by the river in the morning
+  calm. Pairs naturally with a line of dialogue — the groan of relief, the "don't just stand
+  there, join me."
+  Register-calibrated phrasing: the show register shares the movement — also a
+  slow, unhurried stretch that knows exactly who's watching.
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseStretch_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

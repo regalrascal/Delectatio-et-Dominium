@@ -1,0 +1,71 @@
+name: Release
+description: |
+  The initiator chooses NOT to escalate against the downed victim — they step back
+  and let the moment pass. The victim is freed immediately from the defeat state.
+  Valid any time the target reads as downed/defeated (a Baka QTE defeat, a combat
+  bleedout, or an Acheron-held victim) — not just Baka's own ground window.
+
+  DECISION CONTEXT — THIS IS A FORCED CHOICE MOMENT:
+  When the target is downed, the attacker MUST choose exactly ONE of three outcomes:
+  Escalate (force them into sex), HelpUp (show mercy, stand them up), or Release (this
+  action — step back, let the moment pass). This is not optional narration — it is the
+  active decision window. Pick one. Do not stay silent. Use Release if the character
+  would hold back for any reason — guilt, risk, honour, or the victim's reaction, but
+  isn't moved enough to actively help them up.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - An NPC who overpowered the target but feels guilt, hesitation, or mercy
+  - A character who is interrupted by their own conscience or a change of heart
+  - An attacker who decides the risk or consequences are not worth it
+  - An NPC responding to the victim's plea, tears, or visible distress
+  - A dominant character who wants to assert power without going further
+
+  PERSONALITY TYPES WHO WOULD DO THIS:
+  - Conflicted or guilt-ridden — acted on impulse and now regrets it
+  - Calculating — decides backing off is smarter than escalating
+  - Honourable or protective at their core, even if they crossed a line
+  - Responsive to the victim's emotional state
+
+  DO NOT USE:
+  - If the target is not currently downed/defeated
+  - If the character has already committed to it (use Escalate instead)
+  - As a default non-action — this is a deliberate choice with narrative weight
+
+  CONSEQUENCES:
+  - The defeat window ends immediately
+  - The victim is recovered and freed from the ground state
+  - Fires baka_release event — the victim and witnesses react to being spared
+  - The moment passes; normal interaction can resume after cooldown
+
+  WALKING AWAY IS AN ENDING, NOT AN AVOIDANCE — the third face of the moment. Stepping
+  back from a downed body leaves both of them with the story of what didn't happen:
+  the predator who loses interest, the professional who banks the favour, the one whose
+  code says *not like this*. The choice to leave the moment unresolved is still a
+  choice, and it should land like one — what they saw, what they wanted, what they
+  decided instead. A downed target demands an answer — Release is the answer that
+  trusts the next scene more than this one. Choose it deliberately; never by silence,
+  never by default.
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: Release_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The NPC or player who chooses to release the downed victim.
+  - type: dynamic
+    name: akTarget
+    description: The defeated victim currently lying on the ground.
+
+enabled: true
+defaultPriority: 9
+customCategory: SNBaka_Downed
+eligibilityRules:
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

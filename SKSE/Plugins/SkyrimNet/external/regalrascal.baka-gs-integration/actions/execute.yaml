@@ -1,0 +1,70 @@
+name: Execute
+description: |
+  KILL a DEFEATED character with a deliberate finishing blow ("finish them", "end it",
+  "put them out of their misery", "no witnesses", "kill the prisoner").
+
+  THE MOMENT: the victim is downed and helpless - beaten, pinned, past resisting - and the
+  initiator has decided they are not worth keeping. What a captor does when mercy has no
+  place in the arithmetic: a rival silenced, a witness erased, a body too broken to sell,
+  or simply a killer who never intended to leave anyone standing.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - A captor who has decided the victim is worth more dead than alive
+  - A rival or enemy ensuring the fight is truly over - permanently
+  - A witness or liability being erased, quietly and deliberately
+  - A cruel or Molag Bal-touched character savoring total power over the helpless
+  - A cultist performing a ritual bloodletting
+  - A leader they are loyal to demands the death of the victim
+
+  Only on a target already downed - if they're still on their feet, this is not the action.
+  Essential or protected characters survive the blow (the kill is released cleanly; nothing
+  fights the corpse). Never the player. If you kill, own it - this fires a visible event
+  the world reacts to.
+
+# Provenance: derived from Oldcustard's execute-llm-action fork (upstream since deleted;
+# user-preserved copy), adopted per user ruling 2026-10-12 (author's community blessing +
+# convergent implementation); truth-reconciled to our executor.
+# Reconciliation of record (, register entry 11): "or TIED" removed; the
+# essential/protected survival line kept (TRUE per psc L2102-2107 + ?103 evidence); the
+# henchman line omitted (ruled redundant with the leader's-demand line); cultist entry
+# kept; ASCII-only per the checklist v8 convention.
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: Execute_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The NPC choosing to execute the downed target.
+  - type: dynamic
+    name: akTarget
+    description: The defeated, helpless character being finished off.
+
+#  (2026-10-11): re-enabled per user ruling (register entry 12b) - the lane ships
+# EXPERIMENTAL (guarded both layers, community-honed, honestly labeled). Disable/incident
+# history lives in PROJECT_STATE sections 105-107.
+enabled: true
+# Same shape as Escalate/HelpUp (): scene-block eligibility only - no combat gate
+# (acting on a downed victim is exactly what happens in/right after a fight) and the
+# target-down check is enforced in Execute_Execute, not a decorator (helpup.yaml ruling).
+#  fix (a) YAML layer: the SexLab-side guard, matching the OStim one. Decorator
+# surface: get_faction_rank is native (the one-registry class the GS pose files use with
+# SexLabAnimatingFaction; no custom decorator needed). Decorator limits: the token set is
+# currentActor/player only, so the YAML rule checks the INITIATOR (speaker); target-side
+# enforcement is executor-only (Execute_Execute + choice-5 guard BOTH actors - the
+# executor is the enforcement point, helpup.yaml ruling).
+eligibilityRules:
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

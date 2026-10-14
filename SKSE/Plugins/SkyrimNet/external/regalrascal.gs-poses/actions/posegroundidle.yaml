@@ -1,0 +1,51 @@
+name: PoseGroundIdle
+description: |
+  YOU (a female NPC) sit or sprawl on the ground — resting, bored, or spent — and let the earth
+  hold you for a while.
+  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  ends on its own if a fight starts or after a while.
+
+  WHEN the body calls a halt: camp after a long march, waiting on a slow companion, sunbathing
+  by the river, a lazy afternoon with nothing owed, spent and satisfied after a fight. Pairs
+  naturally with a line of dialogue — the lazy complaint, the contented sigh.
+
+  DO NOT USE: in combat, in danger, or during a sex scene.
+questEditorId: SkyrimNet_AnimationsGS
+scriptName: SkyrimNet_AnimationsGS
+executionFunctionName: PoseGroundIdle_Execute
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one striking the pose.
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimActorCountFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true

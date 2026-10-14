@@ -1,0 +1,52 @@
+name: PoseBraceArm
+description: |
+  YOU hug one arm — shy, nervous, uneasy, holding yourself together at the seams while you
+  wait for whatever comes next.
+  Held until you stop it, combat starts, or it times out on its own.
+
+  WHEN nerves show: caught staring, out of your element among strangers, waiting on news
+  that matters, braced for a blow you can't dodge. Pairs naturally with a line of dialogue —
+  the too-quiet answer, the "it's nothing."
+  Register-calibrated phrasing: the anticipation register shares the hold — also
+  braced for the good kind of news, the wait for something you actually want to arrive.
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: PoseBraceArm_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: YOU — the one bracing your arm.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNGS_Pose
+eligibilityRules:
+  - conditions:
+      - decoratorName: "is_in_combat"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "is_busy"
+        arguments: ["currentActor"]
+        comparisonOperator: "=="
+        expectedValue: false
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "OStimExcitementFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true
+  - conditions:
+      - decoratorName: "get_faction_rank"
+        arguments: ["currentActor", "SexLabAnimatingFaction"]
+        comparisonOperator: "<"
+        expectedValue: 0
+    logicalOperator: "AND"
+    required: true

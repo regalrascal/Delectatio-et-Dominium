@@ -1,0 +1,41 @@
+name: ApplyTattoo
+description: |
+  The initiator brands the target with a degrading tattoo set (SlaveTats) — ownership
+  marks, degrading words, or shame symbols drawn onto their skin. Applied on top of any
+  existing marks; only the set configured in the Baka MCM (SlaveTats Degradation Sets)
+  is used.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - Claiming or marking a submissive, slave or captive
+  - Punishing or humiliating a defeated rival
+  - A sadistic or possessive character asserting ownership
+  - Ritual marking by a cultist or dominant
+
+  PERSONALITY TYPES WHO WOULD DO THIS:
+  - Dominant, possessive, sadistic
+  - Cultists, slavers, owners
+
+  DO NOT USE:
+  - If no degradation set is configured (silent no-op)
+  - On someone the initiator has no power over or relationship with
+  - As a friendly or affectionate gesture
+
+  CONSEQUENCES:
+  - The configured degradation tattoo set appears on the target's skin
+  - Persists until removed (Remove Tattoos) or the module's cleanup
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: ApplyTattoo_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The NPC applying the mark.
+  - type: dynamic
+    name: akTarget
+    description: The person being marked — player or nearby NPC.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNBaka_Display

@@ -1,0 +1,12 @@
+{
+  "id": "regalrascal.baka-gs-integration",
+  "type": "bundle",
+  "title": "Delectatio et Dominium",
+  "tagline": "Bedroom drama for SkyrimNet",
+  "description": "A unified NSFW addon for SkyrimNet combining paired LLM-driven interaction scenes (spanking, groping, capture, slavery, creature escalation) with Babo-event poses embedded in those interactions. The AI chooses context-appropriate physical and intimate actions and facial expressions during roleplay. The 12 GS solo-pose vibes, StopPosing/CommandStopPose, and the pose muse now ship in the Gunslicer-Poses pack.",
+  "author": "regalrascal",
+  "tags": ["nsfw", "poses", "interactions"],
+  "nsfw": true,
+  "version": "0.2.0-alpha",
+  "min_skyrimnet_version": "0.25.0"
+}

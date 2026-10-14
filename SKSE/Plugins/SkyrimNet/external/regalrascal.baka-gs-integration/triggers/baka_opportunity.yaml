@@ -1,0 +1,20 @@
+name: "baka_opportunity"
+description: "A victim is helpless and recovering on the ground after a violent or coercive Baka Motion scene. The originator — and any nearby NPC — may choose to escalate, help, or ignore."
+
+eventCriteria:
+  eventType: "baka_opportunity"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} can talk to them first — interrogate, threaten, mock, demand their surrender or
+    belongings — but must still decide now: call the action, don't just narrate: Execute (the deliberate
+    killing blow on a downed victim — first when the loser is an enemy the winner wants dead),
+    Escalate (the Escalate action — never StartNewSex), HelpUp, or Release.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 5
+priority: 10
