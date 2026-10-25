@@ -14,7 +14,7 @@ add_commonlibsse_plugin(${PROJECT_NAME}
         src/Plugin.cpp
         src/PapyrusFunctions.cpp
         src/PrismaUIBridge.cpp
-        src/SkyrimNetBridge.cpp   # SNGS_Pose esp-probe fallback (pack-split)
+        src/SkyrimNetBridge.cpp   # REV-103: SNGS_Pose esp-probe fallback (pack-split)
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

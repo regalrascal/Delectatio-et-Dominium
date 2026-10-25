@@ -2,6 +2,11 @@ name: PoseDanceSexy
 description: |
   YOU dance slow and provocative — hips leading, eyes holding the one you dance
   for, a performance with a single intended victim.
+  Twerking IS this action: told to twerk, dance on someone, shake your hips or
+  your backside at them, grind or put on a lewd show — call PoseDanceSexy and
+  say so; the pose drawn from the pool matches the wording of the moment
+  (slow provocative dancing, twerking while looking back at them, hands-up hip
+  dance). There is no separate twerk action — this is it.
   You hold the pose until you choose to stop (use StopPosing) — it also
   ends on its own if a fight starts or after a while.
 
@@ -11,9 +16,12 @@ description: |
 
   OVERRIDING CIRCUMSTANCES: even a shy character, when the wine, the dare, or the crowd has
   loosened them past usual restraint, may let the slip happen — write them surprising themselves.
-  There must be a reason in the scene; this is never a blanket license.
+  The scene gives the reason — a mood, a dare, a look — and without one the
+  moment simply passes the pose by.
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: twerking while looking back, slow twerking, sensual hips with hands up, a slow hip dance with hand on chin, moving in circles bent low, tik-tok hips, sensual semi-shy swaying, and (for men) a standing lewd suggestion. (REV-161 4.3 moves enrichment - register batch DRAFT; PRIORITY SET: this is the twerk-bearing pool.)
+  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
+  begins in one.
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseDanceSexy_Execute

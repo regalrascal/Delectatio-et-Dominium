@@ -1,0 +1,20 @@
+name: "sdb_fhu_deflate_vaginal"
+description: "An inflated actor's womb lets its load go at last (DRAFT - rev-149, re-voiced REV-164, sec.7 approval pending)"
+
+eventCriteria:
+  eventType: "sdb_fhu_deflate_vaginal"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} has let the cum out of their womb at last -- legs pressed
+    together, the pressure pouring from between their thighs, and their belly
+    is lighter for it. They react to what their body just did and who saw it
+    -- true to who they are.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

@@ -1,0 +1,28 @@
+{
+  "name": "commonlibsse-ng",
+  "version": "4.26.0",
+  "description": "CommonLibSSE-NG built from source (overlay port)",
+  "homepage": "https://github.com/alandtse/CommonLibVR",
+  "license": "MIT",
+  "dependencies": [
+    "directxmath",
+    "directxtk",
+    "fmt",
+    "rapidcsv",
+    "spdlog",
+    "xbyak",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ],
+  "features": {
+    "xbyak": {
+      "description": "Build with xbyak for JIT support"
+    }
+  }
+}

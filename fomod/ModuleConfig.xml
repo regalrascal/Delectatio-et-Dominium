@@ -17,7 +17,7 @@
 	     Player-facing titles per the  section-7 rider; technical paths
 	     (folder names, manifest id regalrascal.baka-gs-integration) are legacy
 	     Beta 25 load-bearing. -->
-	<moduleName>Delectatio et Dominium (0.2.0-alpha)</moduleName>
+	<moduleName>Delectatio et Dominium (0.3.0-alpha)</moduleName>
 	<moduleImage path="fomod\images\Delectatio_et_Dominium_Cover.jpg" showImage="true" showFade="true" height="-1"/>
 	<requiredInstallFiles>
 		<!-- FRAMEWORK (always installed): the MCM host esp + the core the MCM,
@@ -27,6 +27,11 @@
 		<folder source="Scripts" destination="Scripts"/>
 		<file source="SKSE/Plugins/SNBaka_Offsets.ini" destination="SKSE/Plugins/SNBaka_Offsets.ini"/>
 		<file source="SKSE/Plugins/SkyrimNet_BakaIntegration.dll" destination="SKSE/Plugins/SkyrimNet_BakaIntegration.dll"/>
+		<!--  (2026-10-15): the framework service DLL joins the required set (central
+		     state store + cosave serialization + single tick scheduler + event pump; the
+		     cum-v2 backing store). Its companion psc/pex ride the Scripts folder below (the
+		     script core ships in full). -->
+		<file source="SKSE/Plugins/DeDService.dll" destination="SKSE/Plugins/DeDService.dll"/>
 		<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.baka-gs-integration" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.baka-gs-integration"/>
 		<folder source="Sound" destination="Sound"/>
 		<folder source="Interface" destination="Interface"/>
@@ -71,20 +76,16 @@
 				<group name="Modules" type="SelectAny">
 					<plugins order="Explicit">
 						<plugin name="Framework (always installed)">
-							<description>The DeD Framework - the always-installed core. This includes the framework esp (the MCM host), ALL scripts (the script core is one link-time unit - module scripts are referenced by name from the shared core and always ship), the Baka UI DLL and offsets config, the shared interaction content pack (the non-pose actions, prompts, and triggers the interaction core uses), the interaction sounds, and the interact/execute/HUD menus.
+							<description>The heart of DeD: the MCM, the interaction menus, the service DLL that keeps every module's state save-safe, and the shared content pack the LLM reads. One framework, every module hanging off it - and it never gets in the way.
 
-The framework files are ALWAYS installed regardless of this checkbox - this entry is informational and installs nothing extra (leaving it unchecked changes nothing). The module options below are real file toggles - each installs exactly its own files (esp, DLL, content layer, assets) and nothing else; the mod runs with any combination of them, including none.</description>
+Always installed regardless of this checkbox; the module options below are the real file toggles.</description>
 							<files/>
 							<typeDescriptor>
 								<type name="Recommended"/>
 							</typeDescriptor>
 						</plugin>
 						<plugin name="Baka Interactions">
-							<description>Baka's Animations integration - the interaction core: escalation, downed states, spank, capture, reactions, modesty, SexLab cues, the Execute action, and the interact/encounter/downed/mid-combat/sex-spank menus.
-
-Without this module you lose every interaction action (flirt, harass, escalate, capture, spank, execute and the rest of the non-pose action set), the Baka menus, and the slave-trade paths. The framework MCM still opens; its Baka pages show empty-state text.
-
-Prerequisites: none. SexLab is optional at runtime - without it, scenes fall back to plain pairing (the bridge no-ops).</description>
+							<description>The interaction core: flirt, harass, escalate, capture, spank - affectionate, forced, and sexual actions through the Interact power, with resistance, struggle, and slavery. A Muse-style daemon (Mephala / Molag Bal modes) lets dominant NPCs escalate on their own initiative. Every emergent NSFW moment in DeD starts here.</description>
 							<files>
 								<file source="SkyrimNet_BakaIntegration.esp" destination="SkyrimNet_BakaIntegration.esp"/>
 							</files>
@@ -93,13 +94,7 @@ Prerequisites: none. SexLab is optional at runtime - without it, scenes fall bac
 							</typeDescriptor>
 						</plugin>
 						<plugin name="GS Poses">
-							<description>Solo posing - the crosshair pose grid, the Power of Poses, and the muse (idle NPCs considering and striking poses on their own).
-
-Without this module you lose solo posing, the pose grid, the muse, and the GS Poses MCM page. Everything else works; the pose actions are simply absent from the LLM menu.
-
-Note on combinations: with the Baka Interactions module OFF, a few muse vocabulary names skip gracefully (they log guarded skips, not errors) - the muse runs on the reduced vocabulary either way.
-
-Prerequisites: none.</description>
+							<description>Solo posing, made ambient: a PrismaUI pose grid for you or any targeted NPC, plus the Muse daemon that puts idle NPCs into mood-fitting poses - the LLM picks both the pose and the exact move from live scene context. Overdrive Mode raises the intensity when you want a livelier room.</description>
 							<files>
 								<file source="SkyrimNet_AnimationsGS.esp" destination="SkyrimNet_AnimationsGS.esp"/>
 								<file source="SKSE/Plugins/SNAnimGS_UI.dll" destination="SKSE/Plugins/SNAnimGS_UI.dll"/>
@@ -110,37 +105,20 @@ Prerequisites: none.</description>
 							<typeDescriptor>
 								<type name="Recommended"/>
 							</typeDescriptor>
-						</plugin>
-						<plugin name="Cum Detection">
-							<description>LLM cum cues - the narrator sees when an actor is filled and reacts: swelling, warmth, dripping arousal content for OCum and SexLab scenes.
+						</plugin><!--  F-1 (S181 finding, delete-over-restore ruled): the Cum
+     Detection group is DELETED. Its only file target
+     (the cum-detection package folder, consolidated into the shared pack)
+     was consolidated into regalrascal.baka-gs-integration at
+      (commit fb36b40) and the folder exists in no dist since
+     [] - the group installed nothing and its description no
+     longer matched reality in either direction. A stub group would
+     re-split the R1 grouping (delete-over-restore). The cum module
+     itself is framework-carried (Scripts + the shared pack); its
+     runtime gate is the MCM "Cum Cues Module Toggle" plus
+     OCum/SexLab presence. --><plugin name="FHU Inflation">
+							<description>Fill Her Up, narrated: belly inflation cues as it happens - swelling on level-up, release on level-down, creature fills - with ambient follow-up narration on by default, and OStim scenes driving their own fills. Inflation becomes part of the story instead of a silent widget.
 
-Without this module you lose the cum cues (sdb_cum_applied and the SexLab stage-end cue). Nothing else changes.
-
-Prerequisites: OCum OR SexLab at runtime - the module no-ops and the MCM section greys out without either. Without its prerequisite, this module is inert; nothing breaks.</description>
-							<files>
-								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.cum-detection" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.cum-detection"/>
-							</files>
-							<typeDescriptor>
-								<dependencyType>
-									<defaultType name="Optional"/>
-									<patterns>
-										<pattern>
-											<dependencies operator="Or">
-												<fileDependency file="OCum.esp" state="Active"/>
-												<fileDependency file="SexLab.esm" state="Active"/>
-											</dependencies>
-											<type name="Recommended"/>
-										</pattern>
-									</patterns>
-								</dependencyType>
-							</typeDescriptor>
-						</plugin>
-						<plugin name="FHU Inflation">
-							<description>LLM inflation cues - Fill Her Up belly inflation narrated as it happens: swelling on level-up, release on level-down, read from FHU's own per-actor state.
-
-Without this module you lose the inflation cues only. Nothing else changes.
-
-Prerequisites: Fill Her Up at runtime - the poll never arms without it and the MCM section greys out. Without its prerequisite, this module is inert.</description>
+Unchecking this removes the cue pack only; the module's logic stays installed and simply idles - nothing breaks either way.</description>
 							<files>
 								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.fhu-inflation" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.fhu-inflation"/>
 							</files>
@@ -159,13 +137,9 @@ Prerequisites: Fill Her Up at runtime - the poll never arms without it and the M
 							</typeDescriptor>
 						</plugin>
 						<plugin name="SlaveTats">
-							<description>Degradation tattoos - SlaveTats sets that accumulate with spank/defeat/escalation play: spank marks, tears, drool, the defeated look. Includes the in-game set-picker.
+							<description>Marks that linger: degradation tattoos - spank marks, tears, drool, the defeated look - applied by the LLM with in-character reactions, plus ambient rolls narrating who notices the marks a character is wearing. The body keeps the story.
 
-Without this module you lose the tattoo sets, the picker, and the SlaveTats MCM section. If the Acheron Bridge is installed, its defeat marks (applied by this module) disappear with it. The spank/defeat/escalation hooks simply idle.
-
-Note: if both OSL Aroused (Reborn) and SL Aroused (NG) are installed together, our runtime chain uses Reborn first, then SL Aroused, then neutral - you should run only one arousal framework.
-
-Prerequisites: SlaveTats (which includes JContainers) at runtime - without it, this module is inert.</description>
+Unchecking this removes the tattoo assets and the set-picker UI only; the content layer stays installed and inert - nothing breaks either way.</description>
 							<files>
 								<folder source="textures/actors/character/SlaveTats" destination="textures/actors/character/SlaveTats"/>
 								<file source="PrismaUI/views/SNSlaveTats_Menu/index.html" destination="PrismaUI/views/SNSlaveTats_Menu/index.html"/>
@@ -185,11 +159,7 @@ Prerequisites: SlaveTats (which includes JContainers) at runtime - without it, t
 							</typeDescriptor>
 						</plugin>
 						<plugin name="Acheron Bridge">
-							<description>Downed-state bridge - defeat handoff between Acheron and this mod: downed actors get the interact menu, the Downed State MCM page, and Acheron action icons.
-
-Without this module you lose the Acheron-side integration (consequence handoff, its YAMLs, the Downed State page). The mod keeps its own defeat/downed logic independent of Acheron.
-
-Prerequisites: Acheron at runtime - the bridge only arms when Acheron is present. Without it, this module is inert.</description>
+							<description>Defeat with consequences: the downed-state bridge between Acheron and DeD - downed actors get the interact menu, the Downed State MCM page, and capped consequence cues. Losing a fight becomes a scene, not a game over.</description>
 							<files>
 								<file source="SkyrimNet_AcheronIntegration.esp" destination="SkyrimNet_AcheronIntegration.esp"/>
 								<folder source="SKSE/Acheron/Consequences" destination="SKSE/Acheron/Consequences"/>

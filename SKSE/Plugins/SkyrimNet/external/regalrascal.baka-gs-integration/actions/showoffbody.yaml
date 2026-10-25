@@ -1,5 +1,9 @@
 name: ShowOffBody
 description: |
+  [REV-84 — retitled "Ogle Body" in the UI; this YAML's name/id stay ShowOffBody
+  (load-bearing LLM action id). The description below was corrected from the old
+  INVERTED text: the initiator does NOT pose — they OGLE.]
+
   The speaker (initiator) ogles and savors a target who poses ostentatiously for
   them — the target's display is handled automatically by the game, and the beat
   ends with a slap. This is an appreciation/watching action, like Flirt but with a

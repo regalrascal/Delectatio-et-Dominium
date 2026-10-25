@@ -1,0 +1,30 @@
+name: "sdb_tattoo_observed_narr"
+description: "Tattoo ambient reaction narration (MCM-gated optional second surface; register entry 35 DRAFT)"
+
+#  (ruling (b), AMBIENT-ONLY; the Follow-up Prompt pattern - 134f/153/154
+# precedent - applied to the tattoo ambient cue). This yaml matches the gated
+# sdb_tattoo_observed_narr event type ONLY: SNBaka_SlaveTatsModule.
+# AmbientExposurePass emits it when (and only when) the SlaveTats MCM
+# "Tattoo Ambient Narration" toggle (StorageUtil key SNBaka.ST.AmbientNarr,
+# DEFAULT OFF) is ON. The mandatory cue is the sdb_tattoo_observed event text
+# itself (cue-only, no yaml of its own - the  anatomy); this narration
+# is the gated second surface. No template variables (the D8/sec.137 binding
+# rule); ASCII.
+
+eventCriteria:
+  eventType: "sdb_tattoo_observed_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    A nearby character has a visible tattoo showing on their skin, and it has just
+    been noticed. Those who see it take the specific mark the cue described in
+    their own way -- a comment, a look, a step closer or away, amusement,
+    scandal, or interest -- each true to who they are and where they stand. The
+    most affected feel compelled to speak.
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

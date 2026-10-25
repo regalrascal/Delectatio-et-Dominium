@@ -1,0 +1,51 @@
+{% if render_mode == "full" or render_mode == "thoughts" or render_mode == "transform" or render_mode == "action" %}
+{# DeD Tattoos — visible-mark facts. INFORMATIVE ONLY, never directive.
+   The VISIBLE-ONLY ruling (REV-157 exchange): marks key on the
+   ResolveVisibility cascade's layer-1 truth ONLY — covered marks render
+   nothing, and the subject's own marks are the SELF branch. Marks the
+   bio's subject can see on OTHERS = the OTHER branch (first visibly
+   marked actor in the subject's cell; the module carries section + name
+   + location per visible mark, resolved fresh per render). Brace-balanced.
+
+   REV-157 (2026-10-24) — the 0175 mold applied to SlaveTats. Lane
+   conventions transcribed exactly: the bio lane's actor variable is
+   actorUUID (0171 precedent); every read is guarded (default() +
+   isNumber / isArray) so no loop or comparison can see null/undefined;
+   present false renders nothing. NULL CONTRACT (psc side, REV-157):
+   get_ded_marks always returns well-formed JSON — {"present": false}
+   under every absent-framework state; the marks array is always a
+   well-formed (possibly empty) array of section/name/area objects;
+   visibility is resolved per render (a covered mark one render may be
+   exposed the next — no staleness).
+   Branch texts below are STRATEGIST DRAFT (register entry 36) — the
+   user's ruling gates INSTALL; first enabled render IS the probe
+   (clean = LIVE; error box = escalate). #}
+{% if actorUUID and actorUUID != 0 %}
+{% set marks = get_ded_marks(actorUUID) %}
+{% if marks and marks.present %}
+{% if marks.self %}
+## Your Body
+{% if existsIn(marks, "marks") and isArray(marks.marks) %}
+{% for mk in marks.marks %}
+{% if mk.area == "Face" %}
+A tattoo is showing on your face: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+{% elif mk.area == "Hands" %}
+A tattoo is showing on your bare hands: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+{% elif mk.area == "Feet" %}
+A tattoo is showing on your bare feet: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+{% elif mk.area == "Body" %}
+A tattoo is showing on your exposed torso: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+{% else %}
+A tattoo is showing on your exposed skin: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+{% endif %}
+{% endfor %}
+{% endif %}
+{% else %}
+## Who Is Nearby
+{% if existsIn(marks, "marks") and isArray(marks.marks) %}
+{{ default(marks.wearer, "The marked person") }} has visible tattoos:{% for mk in marks.marks %}{% if mk.area == "Face" %} one on their face: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Hands" %} one on their bare hands: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Feet" %} one on their bare feet: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Body" %} one on their exposed torso: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% else %} one on their exposed skin: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% endif %}{% endfor %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}

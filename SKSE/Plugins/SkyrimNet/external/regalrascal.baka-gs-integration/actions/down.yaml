@@ -17,5 +17,5 @@
 # cost than losing the entire action group, so we accept it and leave this enabled.
 customCategory: SNBaka_Downed
 name: Down
-description: "Actions taken on a character who is DOWNED, defeated, and helpless on the ground (a Baka defeat or anything left bleeding out): force themselves on them, help them back up, release them, harass or grope them. Valid even while still nominally in combat, because the victim is alive and helpless."
+description: "Actions taken on a character who is DOWNED, defeated, and helpless on the ground (a Baka defeat or anything left bleeding out): force themselves on them, help them back up, release them, harass or grope them, ink them with Force Tattoo, or - when the loser is an enemy the winner wants dead - deliver the deliberate killing blow (Execute). Valid even while still nominally in combat, because the victim is alive and helpless. (Execute-mention phrasing credit: Oldcustard PR #2, folded REV-161.)"
 enabled: true

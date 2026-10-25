@@ -1,0 +1,35 @@
+{# DeD Cum — disposition guidance for witnesses. ACTING-NPC-keyed: the
+   branches read the ACTING NPC's arousal tier (get_ded_arousal), NOT the
+   wearer's — a neutral witness and a fascinated witness react differently to
+   the same marked actor. Eligibility via get_ded_cum_any (module-owned
+   companion decorator, REV-132b): a marked actor in the observer's cell.
+   Tier-0 = silence (the anti-obsession rule; 0171's tier-1 floor).
+
+   REV-133 (2026-10-19) — THE NULL-HARDENING (register entry 26's batch):
+   (1) this lane's actor variable is npc.UUID (the 0050/0550 sexlab ufi
+   precedent — decorators ARE used in this lane: sexlab_get_threads), NOT
+   actor_uuid — the 132b draft's actor_uuid was an UNKNOWN VARIABLE (the
+   RenderTemplate error class);
+   (2) the render_mode gate is REMOVED — no surveyed user_final_instructions
+   fragment reads render_mode (0050/0550 do not); keeping it was an
+   unknown-variable risk in this lane (the gate's loss is safe: eligibility
+   via get_ded_cum_any already renders nothing when unmarked);
+   (3) the tier read is guarded (default() + isNumber; tier defaults 0 =
+   silence when the arousal framework is absent — the s9 null contract).
+   Branch texts below are STRATEGIST DRAFT — the real texts are the USER'S
+   pen (register entry 26), whose ruling gates INSTALL. First enabled render
+   IS the probe (clean = LIVE; error box = escalate). #}
+{% set dedany = get_ded_cum_any(npc.UUID) %}
+{% if dedany and dedany.any %}
+{% set tier = default(get_ded_arousal(npc.UUID).tier, 0) %}
+{% if not isNumber(tier) %}
+{% set tier = 0 %}
+{% endif %}
+{% if tier == 3 %}
+When reacting to the cum-soaked person, run hot — open admiration and appetite; you do not bother hiding your fascination.
+{% else if tier == 2 %}
+When reacting to the cum-soaked person, be intrigued — with scandalized curiosity and fascination, openly staring.
+{% else if tier == 1 %}
+When reacting to the cum-soaked person, be taken aback — shock, disgust, or scandalized disapproval.
+{% endif %}
+{% endif %}

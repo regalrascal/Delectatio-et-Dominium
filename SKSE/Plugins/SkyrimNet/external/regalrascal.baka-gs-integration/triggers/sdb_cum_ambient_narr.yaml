@@ -1,0 +1,28 @@
+name: "sdb_cum_ambient_narr"
+description: "Follow-up Prompt (MCM-gated): optional direct narration for the ambient cum cue"
+
+#  (user-ruled dogfood 2026-10-21): the direct narration is a SEPARATE,
+# OPTIONAL surface from the mandatory ambient cue. This yaml matches the gated
+# sdb_cum_ambient_narr event type ONLY -- SNBaka_CumDetectionModule.
+# HandleCumAmbientDue emits that event at the +60s ambient tick when (and only
+# when) the Cum Effects MCM "Follow-up Prompt" toggle (motherboard property
+# bCumFollowUpNarration, default OFF) is ON. The narration text is the register
+# entry-22 ruled wording of record, VERBATIM (the user's narrative-voice edit,
+# staged for exactly this direct-narration consumer). The  cue-only
+# anatomy verdict stays the default: cue always, narration only on opt-in.
+# The stale overwrite-overlay sdb_cum_ambient.yaml (which kept narrating
+# un-gated after , shadowing every packaged copy) is deleted from the
+# live modlist this rev -- the live leg of this fix.
+
+eventCriteria:
+  eventType: "sdb_cum_ambient_narr"
+
+response:
+  type: "direct_narration"
+  content: "People feel the need to express their reaction to the cum covered person, and begin to make comments.\n"
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

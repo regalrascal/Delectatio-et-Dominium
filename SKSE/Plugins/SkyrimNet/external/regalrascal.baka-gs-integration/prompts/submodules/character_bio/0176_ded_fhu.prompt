@@ -1,0 +1,57 @@
+{% if render_mode == "full" or render_mode == "thoughts" or render_mode == "transform" or render_mode == "action" %}
+{# DeD FHU inflation — body-state facts. INFORMATIVE ONLY, never directive.
+   Tier-0 (nothing in the noticeable band) renders NOTHING. Windowed
+   (the 0171 precedent sized for a long-lived state): prompt_show opens
+   ~1 min per 10 min of banded time, and a fresh episode (unanchored by
+   the 10s poll yet) reads as inside an open window, so state updates
+   land without repetition. Brace-balanced.
+
+   REV-157 (2026-10-24) — the 0175 mold applied to FHU. Lane conventions
+   transcribed exactly: the bio lane's actor variable is actorUUID (0171
+   precedent); every numeric read is guarded (default() + isNumber) so no
+   comparison can see null/undefined; present false renders nothing.
+   NULL CONTRACT (psc side, REV-157): get_ded_inflation always returns
+   well-formed JSON — {"present": false} under every absent-framework
+   state; freshness_s is always an Int >= 0; prompt_show is always 0 or
+   1; band is always "noticeable" or "heavy"; the band floors default to
+   the MCM sliders (30%/60%) with safe fallbacks when the host is absent.
+   The self/other split: the SELF branch renders the subject's own
+   swelling; the OTHER branch renders the nearest in-band inflated actor
+   in the subject's cell. Branch texts below are STRATEGIST DRAFT
+   (register entry 36) — the user's ruling gates INSTALL; first enabled
+   render IS the probe (clean = LIVE; error box = escalate). #}
+{% if actorUUID and actorUUID != 0 %}
+{% set inf = get_ded_inflation(actorUUID) %}
+{% if inf and inf.present %}
+{% set show = default(inf.prompt_show, 1) %}
+{% if not isNumber(show) %}
+{% set show = 1 %}
+{% endif %}
+{% set fr = default(inf.freshness_s, 0) %}
+{% if not isNumber(fr) %}
+{% set fr = 0 %}
+{% endif %}
+{% if show == 1 %}
+{% if inf.self %}
+## Your Body
+{% if inf.band == "heavy" %}
+{% if fr < 600 %}
+Your belly is hugely distended and still swelling — the heavy, taut roundness of it strains with every breath.
+{% else %}
+Your belly remains hugely distended — the heavy swell has settled in and refuses to go down.
+{% endif %}
+{% else %}
+{% if fr < 600 %}
+Your belly is noticeably swollen and still filling — a warm, weighted fullness you can feel with every step.
+{% else %}
+Your belly stays noticeably swollen — the lingering fullness has not gone down.
+{% endif %}
+{% endif %}
+{% else %}
+## Who Is Nearby
+{{ default(inf.name, "The swollen person") }} {% if inf.band == "heavy" %}is hugely distended, belly heavy and taut with the swelling{% else %}has a noticeably swollen belly{% endif %}{% if fr < 600 %}, and it is still filling{% else %}, the swelling long since settled in{% endif %}.
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}

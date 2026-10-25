@@ -2,7 +2,7 @@ name: PoseWorkout
 description: |
   YOU (a female NPC) work your body on the spot — a disciplined set of exercises, strength and
   stamina put on display.
-  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  You hold the pose until you choose to stop (use StopPosing) — it also
   ends on its own if a fight starts or after a while.
 
   WHEN discipline or energy demands it: keeping the sword arm sharp, a warrior's morning
@@ -10,7 +10,9 @@ description: |
   audience. Pairs naturally with a line of dialogue — counting reps under your breath, the
   trainer's encouragement, the "watch this."
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: jumping warmup, push-ups, deadlifts, squats, abs work (flat and legs-up), glute bridges and lateral raises, lateral leg raises, mountain climbers, and a static footing set. (REV-161 4.3 moves enrichment - register batch DRAFT.)
+  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
+  begins in one.
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseWorkout_Execute

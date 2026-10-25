@@ -1,0 +1,19 @@
+name: "sdb_fhu_deflate_anal"
+description: "An inflated actor can no longer hold the load in (DRAFT - rev-149, re-voiced REV-164, sec.7 approval pending)"
+
+eventCriteria:
+  eventType: "sdb_fhu_deflate_anal"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} can no longer hold the cum in -- they clench, then
+    helplessly let it out of their backside. They react to what their body
+    just did and who saw it -- true to who they are.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

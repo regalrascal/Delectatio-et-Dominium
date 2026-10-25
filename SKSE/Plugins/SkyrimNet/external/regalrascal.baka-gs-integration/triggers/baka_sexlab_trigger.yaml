@@ -9,16 +9,14 @@ response:
   content: |
     {{ originator }} has completely overpowered {{ target }}. The struggle is over.
 
-    Generate a brief, raw narrative beat acknowledging what is happening — without
-    euphemism, but also without gratuitous excess. Consider:
+    What remains is the raw fact of it, named plainly -- without euphemism, without
+    gratuitous excess. {{ target }}'s state in the aftermath: resignation, dissociation,
+    quiet horror, or a last defiant word that goes nowhere. {{ originator }}'s
+    demeanour: cold control, intensity, or something more conflicted, where their
+    personality allows it. And anyone watching: silence, looking away, or a reaction
+    that fits the scene.
 
-    - {{ target }}'s state: resignation, dissociation, quiet horror, or a last
-      defiant word that goes nowhere.
-    - {{ originator }}'s demeanour: cold control, intensity, or something more
-      conflicted — if their personality allows.
-    - Any witnesses: silence, looking away, or a reaction that fits the scene.
-
-    One beat only. Terse. Match personalities exactly.
+    One terse beat, shaped by who these people are.
 
 audience: "nearby_npcs"
 

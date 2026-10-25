@@ -1,0 +1,36 @@
+name: "sdb_fhu_inflate_narr"
+description: "Follow-up Prompt (MCM-gated, REV-153): optional direct narration for the inflation cue (DRAFT - rev-153, sec.7 approval pending)"
+
+#  (user-ruled 2026-10-24, the  Follow-up Prompt pattern applied
+# to FHU): the direct narration is a SEPARATE, OPTIONAL surface from the
+# mandatory inflation cue. This yaml matches the gated sdb_fhu_inflate_narr
+# event type ONLY -- SNBaka_FHUInflationModule._FireChange emits that event
+# immediately after the sdb_fhu_inflate cue when (and only when) the Fill Her Up
+# MCM "Follow-up Prompt" toggle (motherboard property bFHUInflateNarration,
+# default OFF) is ON. The cue (what happened -- the orifice/consent/arousal
+# desc composed in-script) stays mandatory while the module is active; this
+# narration surface (how to respond) is the gated second surface. The guidance
+# text is a sec.7 DRAFT (, register entry 33, the user's pen), adapted
+# from the approved entry-32 inflation cue family to the narration register.
+# No template variables per the D8/sec.137 binding rule (RegisterEvent carries
+# no extraData; documented-variable table only) -- plain text throughout.
+
+eventCriteria:
+  eventType: "sdb_fhu_inflate_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    The recently filled character's belly swells with warmth. Nearby people
+    start to notice. Their reactions differ -- a comment, a tease, concern,
+    envy, shock, amusement -- but they all notice, and the most affected feel
+    compelled to speak.
+
+    The source of the swelling is not apparent; the visible moment speaks
+    for itself.
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

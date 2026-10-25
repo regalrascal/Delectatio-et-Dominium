@@ -1,5 +1,5 @@
 name: "acheron_downed"
-description: "A character is defeated and lying helpless on the ground. A nearby character may Escalate, HelpUp, or Release them (or a Baka intermediate action first). Fires on defeat and repeats while they stay down."
+description: "A character is defeated and lying helpless on the ground. A nearby character may Escalate, HelpUp, or Release them (or a Baka intermediate action first). Fires on defeat and, at most, twice more at 60s spacing while they stay down (REV-164 cue cap: 3 fires per episode, then the actor is silent for 180s)."
 
 eventCriteria:
   eventType: "acheron_downed"
@@ -7,15 +7,17 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ target }} is down{% if originator %}, beaten by {{ originator }}{% endif %}. Nearby actors can talk
-    to them first — interrogate, threaten, mock, demand their surrender or belongings — but must still
-    resolve the moment: call the action, don't just narrate — Execute, PinHelpless, ChokeHelpless,
-    HelpUp, or Release. Execute is the deliberate killing blow on a downed victim — first when the
-    loser is an enemy the winner wants dead.
+    {{ target }} is down{% if originator %}, beaten by {{ originator }}{% endif %}. The moment
+    wants an end, and the acts are close at hand: a helping hand up (HelpUp), walking away
+    and letting them crawl off (Release), pinning them where they lie (PinHelpless), a
+    chokehold (ChokeHelpless), or an executioner's finishing blow (Execute -- the deliberate
+    killing blow on a downed victim, the one a victor chooses when the loser is an enemy
+    wanted dead). Words can fill the space first -- questions, threats, mockery, demands
+    for surrender or belongings -- but the moment ends in one of these.
 
 audience: "nearby_npcs"
 
 enabled: true
 probability: 1
-cooldownSeconds: 30
+cooldownSeconds: 60
 priority: 10

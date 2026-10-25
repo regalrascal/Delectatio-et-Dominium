@@ -7,17 +7,14 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ target }} just broke free — physically tore themselves out of {{ originator }}'s
-    grip. Generate {{ originator }}'s immediate reaction in one short beat.
+    {{ target }} just broke free -- physically tore out of {{ originator }}'s grip, and
+    the loss of control lands instantly. The first thing out of {{ originator }} in
+    that moment is telling: rage, shock, cold recalculation, wounded pride, or a
+    threat about what comes next. A weak character backs down; a dangerous one
+    steps forward.
 
-    This is a loss of control. How does {{ originator }} respond? Rage, shock, cold
-    recalculation, wounded pride, or a threat about what comes next? A weak character
-    might back down; a dangerous one might step forward. Do NOT let {{ originator }}
-    simply accept this — make their reaction feel true to who they are and what this
-    escape means for the power dynamic between them.
-
-    One beat. What is the very first thing {{ originator }} says or does the instant
-    {{ target }} pulls free? Make it land.
+    The escape reshapes the power between them, and {{ originator }}'s reaction shows
+    what that change means to who they are. One beat of it.
 
 audience: "nearby_npcs"
 

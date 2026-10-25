@@ -2,14 +2,16 @@ name: PoseGroundIdle
 description: |
   YOU (a female NPC) sit or sprawl on the ground — resting, bored, or spent — and let the earth
   hold you for a while.
-  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  You hold the pose until you choose to stop (use StopPosing) — it also
   ends on its own if a fight starts or after a while.
 
   WHEN the body calls a halt: camp after a long march, waiting on a slow companion, sunbathing
   by the river, a lazy afternoon with nothing owed, spent and satisfied after a fight. Pairs
   naturally with a line of dialogue — the lazy complaint, the contented sigh.
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: squatting and looking at the ground, sitting playful, recovering and exhausted, sprawled on the stomach out of boredom, seated and spent, kneeling, back-resting, laying laterally, and seated hugging the legs. (REV-161 4.3 moves enrichment - register batch DRAFT.)
+  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
+  begins in one.
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseGroundIdle_Execute

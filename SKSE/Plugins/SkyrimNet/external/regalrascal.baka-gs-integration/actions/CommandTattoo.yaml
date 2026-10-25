@@ -1,0 +1,53 @@
+name: CommandTattoo
+description: |
+  [REV-156 DRAFT - pending-approvals register entry 35; wording at the user's pen]
+  The initiator commands a tattoo onto a standing character who accepts their
+  dominance - a submissive partner, an intimidated rival, a claimed servant. The
+  initiator decides where the mark goes, which specific tattoo it is, and its color,
+  drawn from what the target's own tattoo packs offer. The mark is applied to their
+  skin.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - Commanding a tattoo onto a submissive or cowed character during dialogue
+  - A dominant formally marking a servant, pet or claim
+  - A victor demanding a visible sign of ownership
+  - The character asks to "mark their skin", to "give them a tattoo", or to
+    "brand them with my mark" - all of these mean THIS action
+
+  KILL VS INK: when the intent is a lasting mark of ownership or shame on a
+  living character, this is the action. Execute is the killing blow on a
+  downed enemy - a character who only wants to brand or mark someone never
+  reaches for Execute.
+
+  The target must be willing in the moment: someone with a relationship with the
+  initiator, or someone too intimidated to refuse. Standing characters only - a
+  downed character takes the Force Tattoo action instead. Never on children.
+
+  CONSEQUENCES:
+  - The chosen tattoo appears on the target's skin and stays until removed
+  - Anyone who sees it can react to the specific mark
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: CommandTattoo_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The character commanding the tattoo (usually the player).
+  - type: dynamic
+    name: akTarget
+    description: The standing NPC being marked.
+  - type: dynamic
+    name: asSection
+    description: The tattoo pack section to draw the mark from.
+  - type: dynamic
+    name: asName
+    description: The specific tattoo name within that section.
+  - type: dynamic
+    name: asColor
+    description: "Hex color for the mark, e.g. 8b1a1a (optional - pack default if omitted)."
+
+enabled: true
+defaultPriority: 2
+customCategory: SNBaka_Display

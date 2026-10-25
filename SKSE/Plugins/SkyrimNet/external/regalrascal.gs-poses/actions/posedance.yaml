@@ -2,7 +2,7 @@ name: PoseDance
 description: |
   YOU (a female NPC) break into a playful, light dance — feet answering the music, shoulders
   loose, joy worn on the outside.
-  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  You hold the pose until you choose to stop (use StopPosing) — it also
   ends on its own if a fight starts or after a while.
 
   WHEN music moves you or a mood needs lifting: a bard earns his coin, a victory worth
@@ -12,7 +12,7 @@ description: |
   dance where one particular pair of eyes can't look away, a show with a single intended
   witness.
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: the arm dance, mambo, a victory dance, modest and playful sets, joyful hips with funny hands, and a valiant girly turn. (REV-161 4.3 moves enrichment - register batch DRAFT.)
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseDance_Execute
