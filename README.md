@@ -7,13 +7,19 @@
 **Bedroom drama for SkyrimNet.** DeD v0.3.0-alpha — the first full release: every module
 shipped, polished, and dogfood-tested.
 
-Delectatio et Dominium (DeD) is a **modular SkyrimNet integration framework** for adult
-Skyrim modding. Instead of one monolithic adult mod, DeD is a set of modules that hook
-auxiliary and niche adult mods into [SkyrimNet](https://github.com/goncalo22/SkyrimNet) —
-so the LLM driving your NPCs can perceive and act on what those mods are actually doing
-to (and around) the player and other characters. The structural idea: a modular framework
-that can support a number of mods while requiring as few as one of them. Each module is a
-separable file-set with a FOMOD installer option, so you install only what you use.
+Delectatio et Dominium (DeD) is a **modular SkyrimNet integration mod for a number of
+classic community adult mods and effects**. It aims to immerse you in those mods through
+thoughtful integration into [SkyrimNet](https://github.com/goncalo22/SkyrimNet)'s prompt
+and trigger systems: the LLM driving your NPCs doesn't just know what's happening — it
+reacts as the character would, narrates it in-story, and decides what happens next. In
+some instances, DeD even drives the functions itself: applying cum decals, executing
+paired animations, and applying tattoos. And it attempts to maintain complete
+compatibility with both main adult Skyrim frameworks, **SexLab and OStim** — pick either,
+or run both.
+
+The structural idea: a modular framework that can support a number of mods while
+requiring as few as one of them. Each module is a separable file-set with a FOMOD
+installer option, so you install only what you use.
 
 Everything the LLM narrates is written in-story: cues and ambient narration describe what
 is happening as it happens — the model reacts as the character would, never breaking the
@@ -28,16 +34,93 @@ intensity slider, and per-module settings let you dial everything back.
 
 ## Modules
 
-| Module | What it does |
-| --- | --- |
-| **Baka Interactions** | The interaction core: paired NSFW actions through the Interact power (affectionate, forced, and sexual actions targeted at any NPC, a downed victim, a hostile creature, or yourself), an escalation system (resist / struggle / submit / call for help), capture, tie-up, slavery, creature escalation, and a **Muse-style background daemon** — Mephala and Molag Bal modes that let dominant NPCs escalate on their own initiative, on cadences you set. |
-| **GS Poses** | Solo posing: a PrismaUI pose-grid selector (19 high-quality pose categories on the player or any targeted NPC), the **Muse** background daemon that puts nearby NPCs into mood-fitting poses (with **Overdrive Mode** to raise ambient intensity), a **pose gender policy** (female-only / curated / all-poses), and optional **Sanguine / Sheogorath narration modes** with their own cadence sliders. Every pose pick is grounded by an LLM consideration prompt that picks both the pose and the exact move in one pass, from live scene context. |
-| **Cum (v2)** | Full awareness of applied cum: SkyrimNet triggers when cum is applied (the OCum ModEvent path, plus a SexLab end-of-scene proxy), with unified and per-source firing modes, a decal-source selection dropdown, appliance-authority tracking (who or what applied it — creatures included), ambient follow-up cues on an interval you set, and LLM disposition of the aftermath (how each character deals with, or deals with having, the cum on them). |
-| **FHU (v2)** | [Fill Her Up — Baka Edition](https://www.loverslab.com/) inflation fully narrated: level-up swelling, level-down release, creature fills, read live from FHU's own per-actor state; **ambient inflation narration on by default** (first cue fires the moment a band is entered, then on its own interval), and an **OStim climax driver** so OStim scenes drive their own inflation fills even without a SexLab bridge. |
-| **SlaveTats (v2)** | LLM-driven degradation tattoos: spank marks, tears, drool, and related sets applied with NPC/player reactions, an in-game set-picker menu, **Force Tattoo LLM lanes** (a downed-gated Apply action; a Command action for "mark them / brand them" intent), and **ambient exposure** — ambient rolls narrating who notices the marks a character is wearing, and how they feel about being seen. |
-| **Acheron Bridge** | Downed-consequence SkyrimNet triggers bridged to [Acheron](https://www.loverslab.com/)'s consequence system: the downed handoff, consequence cues in a capped cadence (one at the down moment, a couple in the following minute, then quiet), and the Downed State MCM page. |
-| **DeD Service** | The always-installed service DLL behind the modules: a central state store with save-game-safe persistence, a single shared scheduler for every ambient pass, and the event pump the modules talk through. |
+### Baka Interactions — the interaction core
 
+Walk up to any NPC and the LLM decides what happens: flirtation, harassment, escalation,
+capture — narrated in-character the whole way. Every emergent NSFW moment in DeD starts
+here.
+
+- **Paired actions through the Interact power** — affectionate, forced, and sexual actions
+  targeted at any NPC, a downed victim, a hostile creature, or yourself.
+- **Escalation with resistance** — a resist / struggle / submit / call-for-help chain the
+  model plays out in context.
+- **Capture, tie-up, and slavery** — defeated NPCs can be bound, enslaved, or sold; the
+  LLM narrates their state and reactions.
+- **Creature escalation** — hostile creatures can be drawn into the same lanes (with your
+  installed creature animation packs).
+- **The background daemon** — Mephala and Molag Bal modes let dominant NPCs escalate on
+  their own initiative, on cadence sliders you set.
+- **Execute gate (experimental)** — how the Execute action may be used: unlimited,
+  companions ask, or always ask.
+
+### GS Poses — solo posing, made ambient
+
+Any NPC can hold a pose that fits the moment — and NPCs will do it on their own, because
+the model decided they would.
+
+- **PrismaUI pose grid** — 19 high-quality pose categories, on the player or any targeted
+  NPC.
+- **Sanguine Mode** — the background daemon that puts nearby NPCs into mood-fitting poses,
+  on a cadence slider you set. Every pick is one consideration pass: the LLM reads the
+  live scene and picks both the pose and the exact move.
+- **Sheogorath Mode** — raises the ambient intensity when you want a livelier room.
+- **Pose narration** — optional pose narration routes, plus per-mode narration toggles
+  (default off).
+- **Pose gender policy** — female-only / curated / all-poses dropdown.
+
+### Cum (v2) — applied cum, fully narrated
+
+Applied cum becomes part of the story: SkyrimNet sees every application, tracks who or
+what applied it, and narrates the aftermath.
+
+- **Full awareness** — fires on the OCum ModEvent path, plus a SexLab end-of-scene proxy;
+  unified or per-source firing modes.
+- **Appliance authority** — who or what applied it, creatures included.
+- **Decal source selection** — a dropdown choosing which decal sets get applied.
+- **Ambient follow-up cues** — on an interval you set, with LLM disposition of the
+  aftermath: how each character deals with — or deals with having — the cum on them.
+
+### Fill Her Up (v2) — inflation with a voice
+
+[Fill Her Up — Baka Edition](https://www.loverslab.com/) inflation, fully narrated, read
+live from FHU's own per-actor state.
+
+- **Level-up swelling and level-down release** — every band change narrated as it
+  happens, plus creature fills.
+- **Ambient narration on by default** — the first cue fires the moment a band is entered,
+  then follow-ups on an interval you set.
+- **OStim self-drive** — OStim scenes drive their own inflation fills through the built-in
+  climax driver; no SexLab bridge required.
+
+### SlaveTats (v2) — the body keeps the story
+
+LLM-driven degradation tattoos: applied with reactions, and noticed by the world around
+them.
+
+- **Mark sets** — spank marks, tears, drool, and related sets, applied with NPC and player
+  reactions; an in-game set-picker menu for your own choices.
+- **Force Tattoo LLM lanes** — a downed-gated Apply action, and a Command action for
+  "mark them / brand them" intent.
+- **Ambient exposure** — ambient rolls narrating who notices the marks a character is
+  wearing, and how they feel about being seen.
+
+### Acheron Bridge — losing a fight becomes a scene
+
+Downed-consequence SkyrimNet triggers bridged to [Acheron](https://www.loverslab.com/)'s
+consequence system — a defeat is the start of a story, not a game over.
+
+- **The downed handoff** — DeD's downed cues feed Acheron's consequence system.
+- **Capped cadence** — consequence cues land one at the down moment, a couple in the
+  following minute, then go quiet.
+- **Downed State MCM page** — configure the lane.
+
+### DeD Service — the quiet machinery
+
+The always-installed service DLL behind the modules: a central state store with
+save-game-safe persistence, a single shared scheduler for every ambient pass, and the
+event pump the modules talk through.
+
+**Independence model:** every module is presence-gated and independently removable. The
 **Independence model:** every module is presence-gated and independently removable. The
 FOMOD's module toggles install or remove each module's files (esp, DLL, content pack,
 assets); the content layers the framework carries stay installed but inert, so nothing
@@ -143,13 +226,18 @@ state checks, a configurable ask-first gate) and labeled in-game as
 *"Execute action: experimental — community feedback welcome."* It can be disabled
 entirely in the MCM.
 
-**The pose picker is retired.** Pose picking now happens in one pass: the Muse
+**The pose picker is retired.** Pose picking now happens in one pass: the Sanguine Mode
 consideration prompt reads the live pose catalog (per-category move lists with content
 descriptions) and answers with both the pose and the exact move. The old separate
 pose-picker decision step no longer exists — there is nothing to configure.
 
 **OStim self-drive (FHU).** OStim scenes drive their own inflation fills via the built-in
 climax driver; no SexLab bridge is required for OStim users.
+
+**A tip for livelier posing.** For best results with Sanguine Mode, update SkyrimNet's
+world setting prompt to give the people of Skyrim a background of being very expressive
+and liking to dance when they experience strong feelings — characters will pose far more
+readily when the world itself tells them it's in their nature.
 
 ## Credits
 
@@ -164,14 +252,16 @@ Delectatio et Dominium is a full re-release of the project under its own name: t
 upcoming version is a different beast from when Around906 put the project down, with
 restructured content packs, a new MCM, and new modules — but the lineage is his.
 
-Other credits: the [Gunslicer](https://www.loverslab.com/) poses animation pack
-(GS Poses), [Acheron](https://www.loverslab.com/),
-[CommonLibSSE-NG / CommonLibVR](https://github.com/alandtse/CommonLibVR)
-contributors, and the SkyrimNet project.
+**Oldcustard** — community contributor: bug hunting and Execute contributions — the
+creature-struggle fix batch from his PR #2 (six of seven fixes folded, plus the Execute
+mention phrasing on the downed cue), folded with his consent.
 
-**Oldcustard** — community contributor: the creature-struggle fix batch from his PR #2
-(six of seven fixes folded, plus the Execute mention phrasing on the downed cue), folded
-with his consent.
+The source mods DeD integrates: [Gunslicer](https://www.loverslab.com/)'s pose
+animation pack (GS Poses) and [Acheron](https://www.loverslab.com/) (the downed-consequence
+system).
+
+And above all, the [SkyrimNet](https://github.com/goncalo22/SkyrimNet) project — the LLM
+framework this whole mod exists inside.
 
 ## Disclaimer
 
@@ -195,8 +285,8 @@ with his consent.
 ## Roadmap
 
 This is **v0.3.0-alpha — the first full release.** Every module above is shipped,
-polished, and dogfood-tested: the background-daemon era (the Baka Muse modes, the
-consideration-prompt pose system), the Cum / FHU / SlaveTats v2 systems with their
+polished, and dogfood-tested: the background-daemon era (the Baka Mephala / Molag Bal
+modes, the Sanguine / Sheogorath pose system), the Cum / FHU / SlaveTats v2 systems with their
 ambient narration layers, the independence audit, and the full story-voice pass are all
 in. Version numbers will increment as milestones ship — plans include further mod
 integrations and deeper scene-aware reactions. The v0.1.0 polish-and-expansion pass this
