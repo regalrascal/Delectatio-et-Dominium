@@ -1,9 +1,10 @@
 name: ApplyTattoo
 description: |
-  The initiator brands the target with a degrading tattoo set (SlaveTats) — ownership
+  The initiator brands the DOWNED target with a degrading tattoo set (SlaveTats) — ownership
   marks, degrading words, or shame symbols drawn onto their skin. Applied on top of any
-  existing marks; only the set configured in the Baka MCM (SlaveTats Degradation Sets)
-  is used.
+  existing marks; the set configured in the Baka MCM (SlaveTats Degradation Sets) is used
+  when one is configured, otherwise a set drawn from the target's own available tattoo
+  packs (REV-164: the lane no longer requires a configured set).
 
   WHEN A CHARACTER WOULD DO THIS:
   - Claiming or marking a submissive, slave or captive
@@ -16,12 +17,12 @@ description: |
   - Cultists, slavers, owners
 
   DO NOT USE:
-  - If no degradation set is configured (silent no-op)
+  - On a target who is not downed (the lane is downed-gated, REV-164)
   - On someone the initiator has no power over or relationship with
   - As a friendly or affectionate gesture
 
   CONSEQUENCES:
-  - The configured degradation tattoo set appears on the target's skin
+  - A degradation tattoo set appears on the target's skin
   - Persists until removed (Remove Tattoos) or the module's cleanup
 
 questEditorId: SkyrimNet_BakaIntegration

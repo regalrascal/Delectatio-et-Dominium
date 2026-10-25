@@ -75,6 +75,12 @@ Actor Function GetLastHitAggressor(Actor akTarget) Global Native
 ; now starts the QTE). Any negative value hides the bar. Safe to call every tick while the key is held.
 Function SetGetUpCharge(Float afPct) Global Native
 
+;  Feature B: pushes the ambient mode-button ON/OFF highlight state to the open
+; SNBaka_Menu footer (Mephala/Molag Bal buttons). Papyrus is the arbiter -- it owns the
+; SNBaka.MephalaMode / SNBaka.MolagBalMode flags and calls this at panel open and after
+; every toggle; the DLL relays the payload to JS (the SetGetUpCharge invoke pattern).
+Function SetModeStates(Bool abMephala, Bool abMolagBal) Global Native
+
 ; : opens the SlaveTats degradation-set picker (SNSlaveTats_Menu view). asJson is the payload
 ; built by SNBaka_SlaveTatsModule.BuildMenuJSON(). The player's pick comes back to
 ; SkyrimNet_BakaIntegration._ST_MenuChoice(slot, section, name) via the DLL's modal dispatch:

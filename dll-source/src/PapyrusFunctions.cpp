@@ -123,6 +123,12 @@ static void SNBakaUI_SetGetUpCharge(RE::StaticFunctionTag*, float afPct) {
     PrismaUIBridge::SetGetUpCharge(afPct);
 }
 
+//  Feature B: push the ambient mode-button ON/OFF highlight state to the open
+// SNBaka_Menu footer (Papyrus -> bridge -> JS payload; Papyrus owns the flags).
+static void SNBakaUI_SetModeStates(RE::StaticFunctionTag*, bool abMephala, bool abMolagBal) {
+    PrismaUIBridge::SetModeStates(abMephala, abMolagBal);
+}
+
 // : SlaveTats set-picker entry point (SNSlaveTats_Menu view, modal).
 static void SNBakaUI_ShowSlaveTatsMenu(RE::StaticFunctionTag*, RE::BSFixedString json) {
     PrismaUIBridge::ShowSlaveTatsMenu(json.c_str() ? json.c_str() : "{}");
@@ -148,6 +154,7 @@ bool PapyrusFunctions::Register(RE::BSScript::IVirtualMachine* vm) {
     vm->RegisterFunction("ReloadOffsets",       kScriptName, SNBakaUI_ReloadOffsets);
     vm->RegisterFunction("GetLastHitAggressor", kScriptName, SNBakaUI_GetLastHitAggressor);
     vm->RegisterFunction("SetGetUpCharge",      kScriptName, SNBakaUI_SetGetUpCharge);
+    vm->RegisterFunction("SetModeStates",       kScriptName, SNBakaUI_SetModeStates);
     vm->RegisterFunction("ShowSlaveTatsMenu",   kScriptName, SNBakaUI_ShowSlaveTatsMenu);
     vm->RegisterFunction("ShowExecuteConfirm",  kScriptName, SNBakaUI_ShowExecuteConfirm);
     SKSE::log::info("Papyrus functions registered.");

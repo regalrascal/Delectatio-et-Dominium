@@ -42,6 +42,20 @@
       min-width: 380px;
       max-width: 460px;
       width: 420px;
+      /* REV-150 3.1 (panel-width fix, JS/CSS only): the panel is WIDTH-fixed
+         but its height was content-unbounded -- with the REV-147 no-target
+         overlay row added on top of the greyed tab/action grid, the panel
+         (scaled by `zoom`, base 1.5, user 0.6-2.0) can exceed the PrismaUI
+         viewport, and body{overflow:hidden} then clips the FOOTER buttons
+         off-screen (the dogfood finding: no-target panel "does not fit its
+         buttons"). Fix = auto-height per content, viewport-capped: the cap
+         divides by the live zoom factor so the SCALED panel never exceeds
+         100vh; --sn-zoom is kept in sync with panel.style.zoom by
+         snbakaApplyScale(). Targeted mode is unchanged (the cap only binds
+         when content alone would overflow). */
+      max-height: calc(100vh / var(--sn-zoom, 1.5));
+      display: flex;
+      flex-direction: column;
       background:
         linear-gradient(160deg,
           rgba(10, 8, 5, 0.97) 0%,
@@ -58,6 +72,19 @@
     #backdrop.visible #panel {
       transform: translateY(0) scale(1);
       opacity: 1;
+    }
+
+    /* REV-159 3.1 (dogfood fix; JS/CSS only): the no-target state is still
+       too narrow (the REV-150 fix capped HEIGHT only). The no-target session
+       gets an AUTO-WIDTH class: width follows content between widened
+       bounds, so the "no target selected" overlay + mode footer render
+       comfortably at any ui-scale. Targeted mode is UNCHANGED (fixed 420px).
+       The max is zoom-safe the same way the height cap is: at the default
+       zoom 1.5 the scaled panel stays inside a 100vw viewport. */
+    #panel.no-target {
+      width: auto;
+      min-width: 460px;
+      max-width: 600px;
     }
 
     /* Gold corner accents */
@@ -181,6 +208,7 @@
     /* Action grid — right column: rectangular buttons, 2 per row */
     .action-list {
       flex: 1;
+      min-height: 0;
       padding: 8px;
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -287,6 +315,81 @@
       padding-left: 19px;
     }
 
+    /* ── REV-146a 4.2: ambient mode buttons restyled to MATCH THE PANEL ── */
+    /* (dogfood finding: the old shared .btn styling rendered darker / hard
+       to see against the panel). Same gold language as the accents + tabs. */
+    #btn-mephala, #btn-molagbal {
+      border: 1px solid rgba(196, 162, 72, 0.55);
+      color: #c4a248;
+      background: rgba(196, 162, 72, 0.10);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+    #btn-mephala:hover, #btn-molagbal:hover {
+      border-color: rgba(220, 185, 95, 0.85);
+      color: #e6c35a;
+      background: rgba(196, 162, 72, 0.22);
+    }
+    #btn-mephala:active, #btn-molagbal:active {
+      background: rgba(196, 162, 72, 0.30);
+    }
+
+    /* ── REV-147 Feature B: live ON/OFF highlight (payload-pushed state) ── */
+    /* Pushed from Papyrus via the DLL (window.snbakaSetModeStates, the
+       SetGetUpCharge invoke pattern) at panel open and after every toggle. */
+    #btn-mephala.on, #btn-molagbal.on {
+      border-color: rgba(230, 195, 100, 0.95);
+      color: #ecd28a;
+      background: rgba(196, 162, 72, 0.30);
+      box-shadow: 0 0 10px rgba(196, 162, 72, 0.35);
+    }
+
+    /* ── REV-147 Feature A: no-target session ("no target selected" overlay) ── */
+    /* User ruling: power with no target opens the panel; all target-actions
+       greyed + the overlay; the two ambient-mode buttons stay live. */
+    /* REV-150 3.1: the interact row must be able to SHRINK (flex chain with
+       min-height:0) so the panel cap converts an oversized action grid into
+       an internal scroll instead of overflowing the footer. */
+    .interact-row {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+    #mode-interact {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    /* REV-150 3.1 no-target compaction: a no-target session renders the FULL
+       greyed grid plus the overlay; compact the greyed rows so the ambient
+       footer buttons sit inside the viewport without scrolling. Targeted
+       sessions never match this selector - unchanged rendering. */
+    #panel.no-target .action-item {
+      min-height: 0;
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+    #panel.no-target .tab {
+      padding: 6px 15px 6px 18px;
+    }
+    #no-target-overlay {
+      margin: 10px 18px 4px;
+      padding: 7px 10px;
+      border: 1px dashed rgba(196, 162, 72, 0.45);
+      color: rgba(230, 195, 90, 0.85);
+      background: rgba(196, 162, 72, 0.06);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    #panel.no-target .tab,
+    #panel.no-target .action-item {
+      opacity: 0.28;
+      pointer-events: none;
+    }
+
     /* ── Footer ──────────────────────────────────────── */
     .panel-footer {
       padding: 9px 18px;
@@ -366,7 +469,13 @@
 
     <!-- ══ INTERACT MODE ══ -->
     <div id="mode-interact" class="hidden">
-      <div style="display:flex;">
+      <!-- REV-147 Feature A: no-target overlay ("no target selected", user-ruled,
+           register-cited, 17b precedent). Hidden unless the panel is in a no-target
+           session; the tabs/actions below it grey out via #panel.no-target CSS.
+           REV-150 3.1: the row uses the .interact-row class (was an inline
+           display:flex) so the viewport-capped panel can shrink + scroll it. -->
+      <div id="no-target-overlay" class="hidden">no target selected</div>
+      <div class="interact-row">
         <div class="tab-list" id="tab-list"></div>
         <div class="action-list" id="action-list"></div>
       </div>
@@ -389,6 +498,10 @@
     <div class="panel-footer">
       <span class="footer-hint" id="footer-hint">Esc · cancel</span>
       <div class="footer-buttons">
+        <!-- REV-145 3.6: ambient mode buttons (GS footer-button pattern -> SNBaka.* keys;
+             blind send, Papyrus arbitrates: flips the StorageUtil mode flag + notification). -->
+        <button class="btn" id="btn-mephala" onclick="toggleMephala()">Mephala Mode</button>
+        <button class="btn" id="btn-molagbal" onclick="toggleMolagBal()">Molag Bal Mode</button>
         <button class="btn hidden" id="btn-back" onclick="goBack()">← Back</button>
         <button class="btn btn-cancel" onclick="cancel()">Cancel</button>
       </div>
@@ -460,6 +573,22 @@ const DOWNED_ACTIONS = [
   // silent no-op). Papyrus handles 8/9; the DLL's numeric pipe is untouched.
   { id: 8, label: 'Apply Tattoo' },
   { id: 9, label: 'Remove Tattoos' },
+  //  — the Strip action (baka-module.md  spec +  rulings
+  // (i)(a)/(ii)(b)/(iii); built this rev, BEFORE the daemon, so the action pool is
+  // complete at daemon launch). id 10 strips the downed victim (player-clicked, ungated);
+  // id 11 "Allow to dress" (renamed  Task 10, user-authored verbatim) restores ONLY our tracked queue (restore OFF by default after
+  // the strip — it stays off until this tile activates it). Same unconditional-affordance
+  // contract as 8/9 (ruling ②B): the button list is host surface; Papyrus handles
+  // empty-state refusals reason-coded. The DLL's numeric pipe is untouched (ids 10/11
+  // sit below the +100 regular-pick offset).
+  { id: 10, label: 'Strip'         },
+  { id: 11, label: 'Allow to dress' },
+  //  (Issue #3, user ruling): the "Force Tattoo" tile (id 12) is
+  // RETIRED from the panel -- the LLM lane (ApplyTattoo action, now
+  // downed-gated + decoupled from the configured-set requirement per the
+  //  why-trace) and the gated AI-aggressor daemon lane cover both
+  // remaining surfaces; the tile was the silent-[noset] failure surface.
+  // The DLL's numeric pipe is untouched (id 12 simply no longer ships).
 ];
 
 // In-combat "Grapple" menu — shown instead of the normal interact menu when the target is hostile
@@ -489,6 +618,7 @@ let ACTIONS    = BASE_ACTIONS;
 //  STATE
 // ════════════════════════════════════════════════════════════
 let g_mode          = null;    // 'interact' | 'sexspank' | 'encounter'
+let g_noTarget      = false;   // REV-147 Feature A: no-target session (interact panel)
 let g_activeTab     = 'affectionate';
 let g_sexNames      = [];
 let g_playerInScene = false;
@@ -534,10 +664,18 @@ let g_encChoice = {};
 
 window.snbaka_open_interact = function(targetName) {
   g_mode = 'interact';
+  //  Feature A: empty/null targetName = the no-target session (power
+  // pressed with nobody on the crosshair). targetName is the ONLY target-context
+  // field this entry reads (header-target text, already null-guarded below); all
+  // grey-out/overlay state derives from it. The ambient-mode footer buttons stay
+  // live in this session.
+  g_noTarget = !targetName;
   CATEGORIES = BASE_CATEGORIES;
   ACTIONS    = BASE_ACTIONS;
   _el('header-label').textContent = 'Interact with';
   _el('header-target').textContent = targetName || '';
+  _el('panel').classList.toggle('no-target', g_noTarget);
+  if (g_noTarget) _show('no-target-overlay'); else _hide('no-target-overlay');
   _show('mode-interact');
   _hide('mode-sex');
   _hide('mode-encounter');
@@ -550,6 +688,9 @@ window.snbaka_open_interact = function(targetName) {
 
 window.snbaka_open_sexspank = function(json) {
   const data = (typeof json === 'string') ? JSON.parse(json) : json;
+  g_noTarget = false;                              // REV-147 Feature A
+  _el('panel').classList.remove('no-target');
+  _hide('no-target-overlay');
   g_sexNames      = Array.isArray(data.names) ? data.names : [];
   g_playerInScene = !!data.playerInScene;
   g_sexPhase      = 'who';
@@ -567,6 +708,9 @@ window.snbaka_open_sexspank = function(json) {
 window.snbaka_open_encounter = function(json) {
   let data = {};
   try { data = (typeof json === 'string') ? JSON.parse(json) : (json || {}); } catch(e) {}
+  g_noTarget = false;                              // REV-147 Feature A
+  _el('panel').classList.remove('no-target');
+  _hide('no-target-overlay');
   g_mode      = 'encounter';
   g_encStep   = 0;
   g_encChoice = {};
@@ -588,6 +732,9 @@ window.snbaka_open_encounter = function(json) {
 // subtracts it back off and forwards to the normal interact dispatcher).
 window.snbaka_open_downed = function(targetName) {
   g_mode = 'downed';
+  g_noTarget = false;                              // REV-147 Feature A
+  _el('panel').classList.remove('no-target');
+  _hide('no-target-overlay');
 
   const offsetActions = {};
   BASE_CATEGORIES.forEach(cat => {
@@ -613,6 +760,9 @@ window.snbaka_open_downed = function(targetName) {
 // dispatch through the same _choose -> _DispatchMidCombatAction, ids unchanged from BASE_ACTIONS.
 window.snbaka_open_midcombat = function(targetName) {
   g_mode = 'midcombat';
+  g_noTarget = false;                              // REV-147 Feature A
+  _el('panel').classList.remove('no-target');
+  _hide('no-target-overlay');
 
   CATEGORIES = [{ id: 'grapple', label: 'Grapple' }];
   ACTIONS    = { grapple: MIDCOMBAT_ACTIONS };
@@ -796,6 +946,10 @@ function sexBack() {
 // ════════════════════════════════════════════════════════════
 
 function _choose(id) {
+  //  Feature A: a no-target session never dispatches target-actions (the
+  // grey-out already blocks pointer events; this guards keyboard/Enter paths).
+  // Papyrus-side _DispatchInteractAction refuses any that slip through anyway.
+  if (g_noTarget) return;
   _close();
   _sendChoice(String(id));
 }
@@ -823,6 +977,33 @@ function _sendChoice(value) {
   }
 }
 
+// ──  4.2: ambient mode toggles (GS footer-button pattern) ────────────────
+// DISPATCH FIX (finding: both buttons dispatched a back hug): the 
+// string sends ('mephalatoggle'/'molagbaltoggle') fell into the DLL's NUMERIC
+// choice pipe and coerced to 0 = BackHug. Fixed: numeric reserved ids 900/901.
+//  Feature B: the DLL now intercepts 900/901 BEFORE the modal unfocus/
+// hide path, so the menu GENUINELY stays open ("both modes toggled in one
+// visit" is now true bridge-side too), and the new ON/OFF highlight state is
+// pushed back via window.snbakaSetModeStates below (at panel open + per toggle).
+function toggleMephala() {
+  _sendChoice('900');
+}
+function toggleMolagBal() {
+  _sendChoice('901');
+}
+
+// ──  Feature B: mode-button live state, pushed from Papyrus via the DLL ──
+// Payload surface: window.snbakaSetModeStates(mephala, molagbal) - the proven
+// Invoke/payload pattern (SetGetUpCharge shape), invoked on the menu view.
+// mephala/molagbal are the authoritative Papyrus flags (SNBaka.MephalaMode /
+// SNBaka.MolagBalMode); we only mirror them into the footer buttons' .on class.
+window.snbakaSetModeStates = function(mephala, molagbal) {
+  const m = document.getElementById('btn-mephala');
+  const b = document.getElementById('btn-molagbal');
+  if (m) m.classList.toggle('on', !!mephala);
+  if (b) b.classList.toggle('on', !!molagbal);
+};
+
 // ════════════════════════════════════════════════════════════
 //  OPEN / CLOSE ANIMATION
 // ════════════════════════════════════════════════════════════
@@ -847,7 +1028,12 @@ function snbakaGetScale() {
 function snbakaApplyScale() {
   const s = snbakaGetScale();
   const panel = document.getElementById('panel');
-  if (panel) panel.style.zoom = (SNBAKA_BASE_ZOOM * s).toFixed(3);
+  if (panel) {
+    panel.style.zoom = (SNBAKA_BASE_ZOOM * s).toFixed(3);
+    //  3.1: keep the panel's viewport cap in step with the live zoom
+    // (the cap divides 100vh by this factor; see the #panel CSS comment).
+    panel.style.setProperty('--sn-zoom', (SNBAKA_BASE_ZOOM * s).toFixed(3));
+  }
   const val = document.getElementById('ui-scale-val');
   if (val) val.textContent = Math.round(s * 100) + '%';
 }
@@ -934,7 +1120,10 @@ function _hide(id) { _el(id).classList.add('hidden'); }
 //  This block is completely inert inside Skyrim/PrismaUI.
 // ════════════════════════════════════════════════════════════
 (function browserPreview() {
-  const inSkyrim = typeof window.snbaka_chose === 'function';
+  const inSkyrim = typeof window.snbaka_chose === 'function'
+    || location.href.indexOf('file:///views/') === 0;   // [REV-161 fix 2.2] in-game PrismaUI
+  // (the bridge injects snbaka_chose after page-load, so the typeof test alone passes
+  // at page-load in-game; PrismaUI serves views from file:///views/ -- gate on that)
   if (inSkyrim) return;
 
   // Cycle through demos on each page load using sessionStorage

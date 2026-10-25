@@ -100,7 +100,28 @@ EndFunction
 ;   GSAnim.Overdrive          1 = performance mode running (T1 cues, T2 floored cooldowns,
 ;                             T3 silence-floor auto-pose; expires ~5 min; 2nd press = OFF)
 ;   GSAnim.Muse               1 = ambient thought-seeder running (throttled GenerateNPCThought)
-;   GSAnim.LastPoseFire       global timestamp of the last pose fire — T3's silence-floor clock
+;   GSAnim.LastPoseFire       global timestamp of the last pose fire — observability only
+;                           since  3.3 (the T3 silence-floor reader is retired)
+;   GSAnim.LastT3Fire         3.3: T3 multi-poser fire clock — a NEW candidate every
+;                           fOdT3IntervalSec; fresh key (absent from old saves, no residue)
+;   GSAnim.T3Mark             3.1: per-actor timestamp of the latest T3 dispatch;
+;                           consumed by _PoseVibe's success leg within 30s for the user-ruled
+;                           on-screen Sheogorath receipt (replaces the _bT3InFlight window)
+;   GSAnim.NudgeInterval      3.2: Sanguine nudge interval of record (StorageUtil;
+;                           defaults to the fMuseNudgeIntervalSec compile-time value — a KEY,
+;                           because the save-resident member value 100.0 was shadowing the
+;                           compiled 30.0 on long-lived saves, the diagnosed ~100s gap source)
+;   GSAnim.T3Interval         5.2: Sheogorath T3 cadence (StorageUtil, default = the
+;                           fOdT3IntervalSec compiled member 15.0; the GS Poses MCM slider
+;                           writes it live, 15s-240s)
+;   GSAnim.SanguineModeNarr / GSAnim.SheogorathModeNarr
+;                            5.1: the per-mode direct-narration toggles (DEFAULT 0 =
+;                           OFF; the gated second surface for mode-action executions, 134f
+;                           pattern; yamls gsanim_sanguine_mode_narr/gsanim_sheogorath_mode_narr)
+;   GSAnim.PoseNarrSanguine / GSAnim.PoseNarrEmergent / GSAnim.PoseNarrPlayer
+;                            5.3: the three per-route pose-cue narration toggles
+;                           (DEFAULT 1 = ON, current behavior preserved; the GS Poses page
+;                           owns them, user-authored titles)
 ;   GSAnim.LastOdCue          global timestamp of the last T1 ambience cue
 ;   GSAnim.OverdriveExpire    absolute real-time timestamp when performance mode auto-OFFs
 ;   GSAnim.CombatSuspendStart when the current player-combat suspend began (0 = not suspended;
@@ -218,10 +239,335 @@ Bool Function _IsBusyElsewhere(Actor ak)
     If ak.IsInCombat()
         Return True
     EndIf
-    If ak.GetSitState() != 0
-        Return True
+    ;  (idle-interrupt service, spec gs-poses.md  1.4.3): the
+    ; GetSitState leg is now CLASS-AWARE — interruptible idle classes (furniture
+    ; sits + IdleMarker holds) no longer hard-exclude here; callers route those
+    ; actors through _IdleFirePath (detect -> exit -> fire-time recheck -> fire)
+    ; instead of silently dropping them. This is the  seated-exclusion
+    ; strangling fix: the seated tavern population is REACHABLE now. Essential
+    ; idle classes (sleep/downed/mounted/swimming/sneaking) stay
+    ; hard-excluded via the callers' own state guards + _IdleClass in the service
+    ; (: dialogue dropped from this list — no longer an ESSENTIAL class).
+    If _IdleClass(ak) > 0
+        Return False
     EndIf
     Return False
+EndFunction
+
+; ===================== : THE IDLE-INTERRUPT SERVICE =====================
+; Spec of record: gs-poses.md  1.4.1-1.4.3. Pure Papyrus, no DLL, no
+; esp; no LLM strings anywhere in the service. The Baka motherboard inherits
+; this at the daemon build by calling the two GLOBAL functions cross-script:
+;   SkyrimNet_AnimationsGS._IdleClass(ak)
+;   SkyrimNet_AnimationsGS._ExitIdle(ak, iClass)
+; Idle classes (the taxonomy, 1.4.1):
+;    0 = not idle-anchored;  1 = furniture sit (INTERRUPTIBLE);  2 = IdleMarker
+;    hold (INTERRUPTIBLE);  -1 sleep, -2 bleedout/downed, -3 mounted, -4
+;    swimming, -5 sneaking (all ESSENTIAL, never interrupted). : the
+;    -6 mid-dialogue class is RETIRED (user ruling — dialogue guards removed).
+; Carried rulings  (2026-10-22): sneaking ESSENTIAL (edge ruled);
+;     (2026-10-22) SUPERSEDES the  mid-dialogue narrowing —
+;    dialogue is NO LONGER an ESSENTIAL class (guards removed; the
+;    vanilla-Dialogue-Menu discriminator UI.IsMenuOpen is gone with it); the
+;     PathToReference stand shape RETIRED — stand-in-place
+;    only (no pathing, no translation toward ANY reference, no teleports); AI
+;    re-grab PREVENTED (hold at exit-issue, supersedes tolerate-and-skip).
+; Scripted/quest idles have NO direct Papyrus native — covered ONLY by the
+;    fire-time scene/combat guard in _IdleFirePath (surfaced in the 
+;    gate report); the  mid-dialogue approximation is retired with the
+;    class ( user ruling — unguarded testing).
+; Natives verified against installed source ( 3b discipline):
+; GetSleepState/GetSitState/IsBleedingOut/IsOnMount/IsSneaking (vanilla
+; Actor.psc, Data\Source\Scripts), IsSwimming/GetFurnitureReference (SKSE64
+; Actor.psc, installed mods tree), Debug.SendAnimationEvent (vanilla Debug.psc).
+; (: UI.IsMenuOpen dropped from this list — no longer called.)
+
+Int Function _IdleClass(Actor ak) Global
+    If !ak
+        Return 0
+    EndIf
+    If ak.GetSleepState() != 0
+        Return -1
+    EndIf
+    If ak.IsBleedingOut()
+        Return -2
+    EndIf
+    If StorageUtil.GetIntValue(ak, "SNBaka.OnGround", 0) == 1
+        Return -2
+    EndIf
+    If StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1
+        Return -2
+    EndIf
+    If ak.IsOnMount()
+        Return -3
+    EndIf
+    If ak.IsSwimming()
+        Return -4
+    EndIf
+    If ak.IsSneaking()
+        Return -5
+    EndIf
+    ;  (user ruling, 2026-10-22 session): the dialogue guard is REMOVED
+    ; — no dialogue class in the taxonomy at all. HONEST LIMIT, updated to
+    ; record the ruling: the  vanilla-Dialogue-Menu discriminator
+    ; (UI.IsMenuOpen) was ruled out by the user — poses are to be tested
+    ; UNGUARDED against dialogue; guards removed pending live testing. The
+    ; old -6 mid-dialogue class is retired; scripted/quest idles have no
+    ; direct Papyrus native and are covered only by the fire-time
+    ; scene/combat guard in _IdleFirePath (surfaced in the  gate
+    ; report; unchanged by this removal).
+    If ak.GetSitState() != 0
+        Return 1
+    EndIf
+    If ak.GetFurnitureReference()
+        Return 2
+    EndIf
+    Return 0
+EndFunction
+
+; The exit primitive (1.4.2,  2.1 ruling: STAND-IN-PLACE — no pathing,
+; no translation toward ANY reference, no teleports; the 
+; PathToReference(player) shape is RETIRED as ruled wrong). ONE technique
+; for BOTH interruptible classes: the proven Acheron-pair event
+; IdleForceDefaultState (AcheronIntegration L211/L486/L529-531 precedent)
+; breaks the furniture sit AND the marker hold; the actor stands where they
+; are (pop-stand MVP — smooth-stand polish is OUT OF SCOPE this rev).
+; Returns True ONLY when CONFIRMED: the actor is UP (SitState 0) within the
+; 4.0s REAL-clock poll window ( 2.1: was 2.0s; the L6998 real-clock
+; lesson — never count naive ticks under VM load). PASS signal = SitState 0
+; alone; the furniture/marker reference is demoted to the NAMED DISCRIMINATOR
+; in the pass/fail sentinels, so a residual failure self-diagnoses from the
+; next log. Hold timing: SetDontMove during the confirm window (blocks
+; package walk-away mid-stand without fighting the stand anim); on confirm
+; the caller swaps to the standard re-grab hold (SetRestrained,
+; GSAnim.IdleHold) through the pose; on fail _ReleaseIdleHold releases BOTH
+; cleanly (never strand).
+Bool Function _ExitIdle(Actor ak, Int iClass) Global
+    If !ak || (iClass != 1 && iClass != 2)
+        Return False
+    EndIf
+    ak.SetDontMove(True)   ; : stand-window hold -- blocks walk-away, not the stand
+    ; : the DontMove span WIDENED -- held through CONFIRM and the fire handoff
+    ; (the [] dogfood evidence: 8/8 BACKSTOP re-anchors were class 2 -- the
+    ; sandbox package walked freshly-standed actors to a nearby idle marker inside
+    ; the confirm->recheck->fire window the moment DontMove cleared; sub-poll re-sits
+    ; produced the exit-FAILED refusals). Released ONLY by the no-fire legs
+    ; (_ReleaseIdleHold) and the pose-end machinery (_StopActorPose clears both
+    ; restraints) -- a fired pose never strands the hold.
+    Debug.SendAnimationEvent(ak, "IdleForceDefaultState")
+    Float fStart = Utility.GetCurrentRealTime()
+    While (Utility.GetCurrentRealTime() - fStart) < 4.0
+        If ak.GetSitState() == 0
+            ; : NO SetDontMove(False) here -- the hold persists through fire
+            If ak.GetFurnitureReference()
+                Debug.Trace("[SNAnimGS] idle-svc exit confirmed: SitState clear, furniture-ref PERSISTED (named discriminator): " + ak.GetDisplayName() + " class=" + iClass)
+            Else
+                Debug.Trace("[SNAnimGS] idle-svc exit confirmed: both anchors clear: " + ak.GetDisplayName() + " class=" + iClass)
+            EndIf
+            Debug.Trace("[SNAnimGS] idle-svc exit confirmed: hold spans through fire handoff (REV-137b): " + ak.GetDisplayName() + " class=" + iClass)
+            Return True
+        EndIf
+        Utility.Wait(0.1)   ; : 0.25 -> 0.1 poll (sub-0.25s stand/resit races defeated the [] poll)
+    EndWhile
+    ; FAIL at 4.0s -- NAME the persisted anchor (the  hypothesis-pair discriminator)
+    String sWhich = "sitstate"
+    If ak.GetSitState() == 0
+        sWhich = "furniture-ref (sitstate clear)"
+    ElseIf ak.GetFurnitureReference()
+        sWhich = "sitstate AND furniture-ref"
+    EndIf
+    ak.SetDontMove(False)
+    Debug.Trace("[SNAnimGS] idle-svc exit FAILED after 4.0s: " + ak.GetDisplayName() + " class=" + iClass + " -- persisted: " + sWhich)
+    Return False
+EndFunction
+
+; The fire-time pipeline (1.4.3,  2.2): class detect -> AI HOLD ->
+; exit -> RECHECK -> caller fires. The RECHECK is the  revalidation
+; precedent, as-built at the Execute kill-time recheck (motherboard
+; L7467-7500): re-essential states, RE-ANCHOR (backstop ONLY while the AI
+; hold is held — see 2.2 note), candidate validity (gender-policy admit
+; live, no scene/combat/pose-active).  sentinels on EVERY leg, unconditional,
+; ASCII. Returns True = safe to fire NOW. Member function (reaches member
+; guards _IsInSexScene/_GenderAdmits/_GenderPolicy); the GLOBAL primitive pair
+; above is the module-neutral cross-script surface the Baka motherboard
+; inherits.
+Bool Function _IdleFirePath(Actor ak, String sCat)
+    Int iClass = _IdleClass(ak)
+    Debug.Trace("[SNAnimGS] idle-svc class detect: " + ak.GetDisplayName() + " class=" + iClass)
+    If iClass < 0
+        Debug.Trace("[SNAnimGS] idle-svc refuse: essential idle class " + iClass + " (" + ak.GetDisplayName() + ") -- never interruptible, skip")
+        Return False
+    EndIf
+    If iClass == 0
+        ;  2.2 (finding 2.1, the wander-while-posing defect): the
+        ; class-0 leg acquires the re-grab hold AT FIRE — moving/standing
+        ; actors were previously NEVER held (early return, no restrain), so
+        ; their packages walked them through the pose. Released by the
+        ; existing pose-end machinery (_StopActorPose clears IdleHold and
+        ; both restraints — belt-and-suspenders) and by the flag-guarded
+        ; _ReleaseIdleHold calls on _PoseVibe's refusal legs; the fire paths
+        ; re-restrain anyway (_PoseVibe/_PoseDirect), so the swap is a no-op.
+        ak.SetRestrained(True)
+        StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 1)
+        Debug.Trace("[SNAnimGS] idle-svc AI hold acquired at fire (class 0): " + ak.GetDisplayName())
+        _PkgHoldActorAI(ak, True)   ;  3.1: in-flight pathing stop -- DontMove does not stop a travel procedure
+        Return True
+    EndIf
+    ;  2.2 (user ruling, SUPERSEDES tolerate-and-skip): the AI hold is
+    ; acquired at EXIT-ISSUE, BEFORE the stand break — the _PoseVibe/
+    ; _PoseDirect SetRestrained pattern the codebase already uses — so the
+    ; actor's AI package cannot re-grab mid-stand. The hold PERSISTS through
+    ; the pose (every fire path re-restrains; every pose-end exit releases
+    ; via _StopActorPose, so the actor returns to their package naturally
+    ; afterward), which also covers the user-observed NPCs-wandering-mid-pose
+    ; defect. Every refusal past this point releases via _ReleaseIdleHold
+    ; (no release path strands the hold); on PASS the hold hands off to the
+    ; pose machinery and the IdleHold flag clears.
+    ak.SetRestrained(True)
+    StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 1)
+    Debug.Trace("[SNAnimGS] idle-svc AI hold acquired at exit-issue: " + ak.GetDisplayName() + " class=" + iClass)
+    ;  3.1: engage the DoNothing override BEFORE the stand event --
+    ; the [] dogfood sitState-persistence refusals (Kleppr/Cosnach)
+    ; were the sandbox package re-sitting the freshly-standed actor inside
+    ; the confirm poll; with the package pinned, SitState clears clean and
+    ; the fire path proceeds. DontMove alone provably did not stop it.
+    _PkgHoldActorAI(ak, True)
+    Debug.Trace("[SNAnimGS] idle-svc exit issued (stand-in-place): " + ak.GetDisplayName() + " class=" + iClass)
+    If !_ExitIdle(ak, iClass)
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc exit FAILED: " + ak.GetDisplayName() + " class=" + iClass + " -- skip with reason (idle state did not clear)")
+        Return False
+    EndIf
+    Debug.Trace("[SNAnimGS] idle-svc exit confirmed (stand-in-place): " + ak.GetDisplayName() + " class=" + iClass)
+    Int iRe = _IdleClass(ak)
+    If iRe < 0
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: essential state entered after exit (class " + iRe + ", " + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    If iRe > 0
+        ;  2.2: UNREACHABLE BACKSTOP ONLY — the AI hold is held from
+        ; exit-issue through recheck, so a package re-anchor cannot happen;
+        ; the  one-re-exit-then-skip path stays per ruling as the
+        ; last-resort sentinel, never the primary path.
+        Debug.Trace("[SNAnimGS] idle-svc recheck BACKSTOP: re-anchored despite AI hold (class " + iRe + ", " + ak.GetDisplayName() + ") -- re-exit")
+        If !_ExitIdle(ak, iRe)
+            _ReleaseIdleHold(ak)
+            Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: backstop re-exit did not clear (" + ak.GetDisplayName() + ") -- skip")
+            Return False
+        EndIf
+    EndIf
+    If ak.IsInCombat()
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: combat at fire time (" + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    If _IsInSexScene(ak)
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: sex scene at fire time (" + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    If ak.IsBleedingOut()
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: bleedout at fire time (" + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    If StorageUtil.GetStringValue(ak, "GSAnim.Pose", "") != ""
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: pose already active (" + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    If !_GenderAdmits(ak, sCat)
+        _ReleaseIdleHold(ak)
+        Debug.Trace("[SNAnimGS] idle-svc recheck FAIL: gender policy veto (cat '" + sCat + "', mode " + _GenderPolicy() + ", " + ak.GetDisplayName() + ") -- skip")
+        Return False
+    EndIf
+    Debug.Trace("[SNAnimGS] idle-svc recheck PASS: safe to fire (" + ak.GetDisplayName() + ", cat '" + sCat + "') -- hold hands off to pose machinery")
+    StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 0)
+    Return True
+EndFunction
+
+;  3.1 (verdict 2.1c): the Baka-grade package hold. The []
+; dogfood proved SetDontMove does NOT stop in-flight package pathing (5
+; recheck BACKSTOPs + class-0 glides with the hold live throughout), and
+; the in-repo proven comparison (BakaIntegration _HoldActorAI L1775-1799
+; + its shipped comment: "SetRestrained/SetDontMove stop walking but NOT
+; package re-evaluation") holds: the ONE missing primitive is the
+; condition-free DoNothing package override at priority 100 + EvaluatePackage.
+; Ported WITHOUT a hard script dependency (the era doctrine: no hard
+; Baka dep): the Baka esp's own DoNothing package (PACK local 0xD6A
+; (0x04000D6A), SkyrimNet_BakaIntegration.esp; : the 
+; literal 0x1E6 was a header misparse - the PACK record's DATA-SIZE
+; field read as formID; corrected per the -R rider hex receipt) is soft-read via GetFormFromFile, gated
+; on the existing busy.baka-half service probe ( S2 class -- absent
+; Baka = present behavior, DontMove/Sandbox hold only, miss sentinel once
+; per load). Engaged with the AI hold at fire (class 0) and BEFORE the
+; stand (class 1/2 exit-issue -- so the package cannot re-sit mid-stand:
+; the [] sitState-persistence refusals class); released at every
+; _ReleaseIdleHold no-fire leg, _StopActorPose (pose end), and the
+; _PoseVibe empty-pool belt-and-suspenders leg (the flag guards against
+; double-add; RemovePackageOverride is safe/idempotent).
+Function _PkgHoldActorAI(Actor ak, Bool bHold)
+    If !ak
+        Return
+    EndIf
+    Package pkgDoNothing = None
+    If _BakaBusyServicePresent()
+        pkgDoNothing = Game.GetFormFromFile(0xD6A, "SkyrimNet_BakaIntegration.esp") as Package
+    EndIf
+    If bHold
+        If !pkgDoNothing
+            ; : the UNAVAILABLE sentinel is SPLIT into two
+            ; independently-latched miss classes (once per load each) -
+            ; probe-miss (Baka module absent) vs form-miss (half present,
+            ; package form unresolved). The class must never be ambiguous
+            ; again (records-hygiene guard for the 137c misparse class).
+            Bool bHalfAbsent = !_BakaBusyServicePresent()
+            String sMissKey = "GSAnim.PkgFormMiss"
+            String sMissMsg = "idle-svc package hold FORM-MISS (Baka half present but DoNothing package unresolved -- check the formID literal) -- DontMove/Sandbox hold only (REV-137e)"
+            If bHalfAbsent
+                sMissKey = "GSAnim.PkgProbeMiss"
+                sMissMsg = "idle-svc package hold PROBE-MISS (busy.baka-half service absent = Baka module not present) -- DontMove/Sandbox hold only (REV-137e)"
+            EndIf
+            If StorageUtil.GetIntValue(None, sMissKey, 0) == 0
+                StorageUtil.SetIntValue(None, sMissKey, 1)
+                Debug.Trace("[SNAnimGS] " + sMissMsg)
+            EndIf
+            Return
+        EndIf
+        ActorUtil.AddPackageOverride(ak, pkgDoNothing, 100, 1)
+        ak.EvaluatePackage()
+        StorageUtil.SetIntValue(ak, "GSAnim.PkgHold", 1)
+        Debug.Trace("[SNAnimGS] idle-svc package hold ENGAGED (DoNothing override): " + ak.GetDisplayName() + " (REV-137c 3.1)")
+    Else
+        If StorageUtil.GetIntValue(ak, "GSAnim.PkgHold", 0) != 1
+            Return
+        EndIf
+        If pkgDoNothing
+            ActorUtil.RemovePackageOverride(ak, pkgDoNothing)
+            ak.EvaluatePackage()
+        EndIf
+        StorageUtil.SetIntValue(ak, "GSAnim.PkgHold", 0)
+        Debug.Trace("[SNAnimGS] idle-svc package hold RELEASED (DoNothing override): " + ak.GetDisplayName() + " (REV-137c 3.1)")
+    EndIf
+EndFunction
+
+;  2.2: the service AI-hold release — called ONLY on the no-fire paths
+; (exit/recheck refusal: the caller skips, the actor must return to their
+; package immediately). The FIRE path never releases here — the pose
+; machinery takes the hold over at fire (_PoseVibe/_PoseDirect re-restrain),
+; and every pose-end exit releases via _StopActorPose (timeout / combat /
+; stop-pose; belt-and-suspenders: _StopActorPose clears the IdleHold flag
+; itself, so no pose-end exit can strand the hold).
+Function _ReleaseIdleHold(Actor ak)
+    If !ak
+        Return
+    EndIf
+    StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 0)
+    ak.SetRestrained(False)
+    ak.SetDontMove(False)
+    _PkgHoldActorAI(ak, False)   ;  3.1: package pin rides the no-fire legs too (never strand)
+    Debug.Trace("[SNAnimGS] idle-svc AI hold released (no fire): " + ak.GetDisplayName())
 EndFunction
 
 Event OnInit()
@@ -300,10 +646,16 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
             String sVibe = StorageUtil.GetStringValue(akStop, "GSAnim.Vibe", "")
             _StopActorPose(akStop)
             Debug.Notification(akStop.GetDisplayName() + " stops posing.")
-            SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
-                PlayerRef.GetDisplayName() + " gestures for " + akStop.GetDisplayName() \
-                + " to stop posing; " + akStop.GetDisplayName() + _StopWording(sVibe), \
-                akStop, None)
+            ;  5.3: the stop gesture is a player-initiated pose event --
+            ; gated by the player route toggle (DEFAULT ON), same as _PoseDirect.
+            If StorageUtil.GetIntValue(None, "GSAnim.PoseNarrPlayer", 1) == 1
+                SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
+                    PlayerRef.GetDisplayName() + " gestures for " + akStop.GetDisplayName() \
+                    + " to stop posing; " + akStop.GetDisplayName() + _StopWording(sVibe), \
+                    akStop, None)
+            Else
+                Debug.Trace("[SNAnimGS] gsanim_npc_pose cue GATED-OFF (route 3 player stop, " + akStop.GetDisplayName() + ") -- REV-159 5.3")
+            EndIf
         EndIf
         Return
     EndIf
@@ -314,8 +666,9 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
         _PendingNpcTarget = None      ; the footer button ignores crosshair targeting — stay clean
         _EnsurePools()   ; Phase 4d: this toggle branch demonstrably runs FIRST in a stale instance (flag + notification succeed while everything array-touching downstream is None) — heal at the switch
         If StorageUtil.GetIntValue(None, "GSAnim.Overdrive", 0) == 1
-            _OverdriveOff("Overdrive mode ended.")    ; 2nd press = OFF (full restore path)
+            _OverdriveOff("Sheogorath Mode ended.")    ; 2nd press = OFF (full restore path)
         Else
+            Debug.Trace("[SNAnimGS] sheogorath mode toggle: ON requested (grid footer)")   ;  3.2 receipt
             _OverdriveOn()
         EndIf
         Return
@@ -333,9 +686,11 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
         _EnsurePools()   ; Phase 4d: stale-instance heal at the muse switch — the 4c arm transaction below is StorageUtil-only (member-safe, audited), but the _MuseTick chain behind the flag is not
         If StorageUtil.GetIntValue(None, "GSAnim.Muse", 0) == 1
             StorageUtil.SetIntValue(None, "GSAnim.Muse", 0)
-            Debug.Notification("Muse quieted.")
+            Debug.Trace("[SNAnimGS] sanguine mode toggle: OFF (grid footer)")   ;  3.2 receipt
+            Debug.Notification("Sanguine Mode quieted.")
         Else
             StorageUtil.SetIntValue(None, "GSAnim.Muse", 1)
+            Debug.Trace("[SNAnimGS] sanguine mode toggle: ON (grid footer)")   ;  3.2 receipt
             ;  Task 2: the session-scope reset now rides the ReferenceAlias load reset
             ; (SkyrimNet_AnimGS_LoadAlias / SNAnimGS_LoadAlias quest —  Option A ruling,
             ; the skynet_PlayerAlias production pattern). The  MuseSetAt stamp heuristic
@@ -358,7 +713,7 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
                     Utility.GetCurrentRealTime() + fMuseDebugWindow)
                 StorageUtil.SetIntValue(None, "GSAnim.MuseDebugDone", 1)
             EndIf
-            Debug.Notification("Muse stirring - thoughts turn warm.")
+            Debug.Notification("Sanguine Mode stirring - thoughts turn warm.")
         EndIf
         Return
     EndIf
@@ -423,10 +778,20 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
                 + " gender policy veto (cat '" + sCat + "', mode " + _GenderPolicy() + ")")
             Return
         EndIf
-        If _IsBusyElsewhere(akTarget)   ; mid-scene/combat/seated -- reason stays vague on purpose
+        If _IsBusyElsewhere(akTarget)   ; mid-scene/combat -- reason stays vague on purpose
             Debug.Notification(akTarget.GetDisplayName() + " can't pose right now.")
             ;  rider sentinel ( registration,  3.1; unconditional per ).
             Debug.Trace("[SNAnimGS] crosshair refuse: " + akTarget.GetDisplayName() + " busy at pick time")
+            Return
+        EndIf
+        ;  (idle-interrupt service, spec 1.4.4): the crosshair pick path
+        ; routes through the service — interruptible idle classes (seated/
+        ; marker-held) now EXIT -> RECHECK (incl. the gender-policy admit,
+        ; re-checked live here per the fire-time contract) -> fire, instead of
+        ; being hard-refused by the formerly class-blind sit leg.
+        If !_IdleFirePath(akTarget, sCat)
+            Debug.Notification(akTarget.GetDisplayName() + " can't pose right now.")
+            Debug.Trace("[SNAnimGS] crosshair refuse: idle interrupt refused at pick time (" + akTarget.GetDisplayName() + ", class-aware)")
             Return
         EndIf
         ;  rider sentinel ( registration,  3.1; unconditional per ): the
@@ -440,7 +805,7 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
     ; ── Player path (unchanged behavior) ──
     ; Don't pose the player mid-scene elsewhere (Baka paired anim/struggle/downed, Acheron hold,
     ; bleedout, or any sex scene) -- see _IsBusyElsewhere.
-    If _IsBusyElsewhere(PlayerRef)
+    If _IsBusyElsewhere(PlayerRef) || PlayerRef.GetSitState() != 0
         Return
     EndIf
     _sCurrentPose     = sEv
@@ -448,7 +813,7 @@ Event OnPoseSelected(String asEventName, String asPose, Float afNum, Form akSend
     Debug.SendAnimationEvent(PlayerRef, sEv)
     String what = "a deliberate pose"
     If sDesc != ""
-        what = "a pose — " + sDesc
+        what = "a pose - " + sDesc
     EndIf
     SkyrimNetApi.RegisterEvent("gsanim_player_pose", \
         PlayerRef.GetDisplayName() + " strikes " + what + ", holding it for show.", \
@@ -586,20 +951,238 @@ String Function _VibeEventsFor(Actor ak, String vibe)
     Return _VibeCSV(vibe)
 EndFunction
 
+; ═══════════════════════════════════════════════════════════════════════════
+; : THE POSE PICKER DECOMMISSION (user ruling 2026-10-25, the
+; pose_picker_pipeline_descision.txt extract; supersedes the  build
+; and the  spec's decision-model leg).
+;
+; The ruling, verbatim rationale: the picker's thin context pack "robs
+; choice context rather than sharpening the decision" -- arousal and
+; location may hint at the CATEGORY, but not enough to pick between six
+; similar dances, and it is all information the FIRST model already held.
+; A pose choice is a semantic judgment made of exactly the context the
+; consideration LLM is already holding; paying a second (lesser) model to
+; reconstruct that judgment from a stripped pack is cost and latency for
+; worse decisions.
+;
+; The shape now: the consideration call (gsanim_muse_consideration) picks
+; the category AND the exact move IN ONE PASS -- its context pack gains the
+; itemized pose catalog (warning + description + move list per category,
+; _MusePoseCatalogText below; the same payload the retired picker's options
+; carried, _VibePoseOptions = poses.js catalog of record), and its output
+; contract gains "CLIP: <move key>". The answer's CLIP fires through the
+;  sForceEvent exact-pick plumbing (kept -- the machinery was proven;
+; only the decision-model call is retired). The ded/pose_picker decision
+; template is DELETED; _PosePickWanted/_PosePickPack/_PosePickFallbackFire/
+; OnPosePicked and the _posePick* members are RETIRED with it.
+;
+; Random selection is now RESTRICTED TO SHEOGORATH MODE (the GSAnim.Overdrive
+; lane, _OdAutoPose -- deliberately random, no LLM anywhere on that path)
+; plus two ruled degenerate cases: single-move categories (random over one
+; event is deterministic) and the aroused pair (near-identical clips -- a
+; choice over indistinguishable options is not a choice). An absent/invalid
+; CLIP in the consideration answer degrades to the pool's random draw,
+; sentinel'd (the launch-one fallback discipline: never lose the fire).
+; The dialogue/emergent lane is unchanged (137f(d) standing): the main LLM
+; picks the member action from its yaml descriptions (the  4.3
+; pool-move lines are the semantic-selection mechanism there).
+; ═══════════════════════════════════════════════════════════════════════════
+
+; A category's poses as a JSON array of "EVENTKEY: description" strings
+; (per-pose descriptions straight from poses.js, the catalog of record --
+; descriptions, not bare event keys, so "twerk for me" resolves to the
+; twerk-bearing dance_sexy/ground_sexy moves). : with the picker's
+; decision-model leg retired, this is the CATALOG SOURCE for the muse
+; consideration prompt (via _MuseCatalogOptions/_MusePoseCatalogLine ->
+; _MusePackContext's poseCatalog field) -- the same payload the retired
+; picker carried, now surfaced to the model that already holds the scene
+; context. Returns "" for vibes with no catalog descriptions (the Babo
+; single-event vibes, the aroused pair). Sets are the _VibeCSV pools
+; verbatim.
+String Function _VibePoseOptions(String vibe)
+    If vibe == "seduce"
+        Return "[\"GS1: seducing\",\"GS2: seducing forward\",\"GS3: seducing, looking back\",\"GS17: flirting suggestively\",\"GS25: seducing, moving butt (subtle)\",\"GS26: seducing, moving butt (subtle)\",\"GS31: hip heart, showing\",\"GS36: butt-showing, seductive\",\"GS56: shy provoking, seducing\",\"GS62: looking back suggestively\",\"GS63: moving body slowly down\",\"GS66: horny, side to side\",\"GS70: shy, biting thumb\",\"GS80: slow hip, shy seducing\",\"GS84: boob-carrying, seducing\",\"GS189: tying hair provocatively\",\"GS198: slow, looking forward\"]"
+    ElseIf vibe == "selftouch"
+        Return "[\"GS6: touching self, horny\",\"GS7: touching self, very horny\",\"GS18: spanking self provocatively\",\"GS46: touching tits suggestively\",\"GS55: super horny, touching self\",\"GS60: touching self all over\",\"GS69: horny, side to side\",\"GS71: touching self all over\",\"GS72: shyly touching tits\",\"GS87: touching boobs, shy\"]"
+    ElseIf vibe == "present"
+        Return "[\"GS4: bent, showing ass\",\"GS5: bent showing ass, looking forward\",\"GS11: bent, hands to knees, presenting\",\"GS37: bent over, showing butt (slow)\",\"GS38: moving butt slow, looking back\",\"GS43: round butt showing, sexy slow\",\"GS86: bend over shy, showing butt\",\"GS88: hands to knees, presenting\",\"GS99: bent, slutty slow butt\",\"GS118: bend over, looking forward\",\"GS130: bend over, showing butt shyly\",\"GS162: bend over, showing butt shy\",\"GS190: bending, concentrated (kinda sexy)\",\"GS193: showing a bit of butt, seducing\",\"GS202: bending, concentrated (kinda sexy)\"]"
+    ElseIf vibe == "dance"
+        Return "[\"GS21: skyrim arm dance\",\"GS27: mambo\",\"GS34: victory dance\",\"GS42: good lateral dance\",\"GS47: modest dance\",\"GS48: long static dance\",\"GS58: modest, no seducing\",\"GS59: waiting, hips, no seducing\",\"GS79: joyful, touching hips\",\"GS95: hip + funny hands\",\"GS125: funny dance\",\"GS132: cool, not only sexy\",\"GS133: cool, not only sexy\",\"GS154: valiant, girly\",\"GS209: funny, useful\"]"
+    ElseIf vibe == "dance_sexy"
+        Return "[\"GS9: twerking, looking back\",\"GS10: sensual, semi-shy\",\"GS12: sensual hips, hands up\",\"GS13: provocative\",\"GS14: sexy, in circles, bent\",\"GS15: distracted, hips moving\",\"GS23: tik-tok hips\",\"GS29: hip dance, sensual slow\",\"GS44: slow twerking, seducing\",\"GS52: man, lewd suggestion\",\"GS61: slow hips, hand on chin\",\"GS83: heating up\",\"GS102: slutty, butt showing\",\"GS107: slutty, side to side\",\"GS144: sexy, not too slutty\",\"GS187: hands up, hips\"]"
+    ElseIf vibe == "ground_sexy"
+        Return "[\"GS253: all fours, suggestive\",\"GS257: laying, legs up, sexy\",\"GS261: on stomach, looking back, sexy\",\"GS267: all fours, suggesting\",\"GS271: waiting, sexy, thinking\",\"GS275: on stomach, sexy\",\"GS282: seated, sexy\",\"GS285: sexy, suggesting\",\"GS305: twerking on ground\",\"GS306: twerking on ground\",\"GS311: all fours, provocative\",\"GS316: all fours, provocative\"]"
+    ;  (cont.): the remaining six catalog-bearing vibes.
+    ElseIf vibe == "ground_idle"
+        Return "[\"GS128: squatting, looking at ground\",\"GS256: sitting, playful\",\"GS270: recovering, exhausted\",\"GS276: on stomach, bored\",\"GS278: on stomach, moving legs, bored\",\"GS286: seated, exhausted\",\"GS287: exhausted, trauma\",\"GS289: on stomach, bored\",\"GS295: kneeled\",\"GS296: exhausted, trauma\",\"GS313: back resting\",\"GS314: back resting\",\"GS317: laying laterally\",\"GS697: seated, dark-souls-by-fire\",\"GS698: seated, hugging legs\",\"GS699: hand on stomach\",\"GS706: looking down, thinking\",\"GS712: resting, dark-souls\"]"
+    ElseIf vibe == "workout"
+        Return "[\"GS156: knees up (kinda sexy)\",\"GS182: jumping, training\",\"GS658: jumping warmup\",\"GS659: push-ups\",\"GS660: deadlifts\",\"GS661: glute lateral raises\",\"GS663: abs\",\"GS664: glute bridge\",\"GS665: static footing\",\"GS666: abs, legs up\",\"GS667: mountain climbers\",\"GS672: lateral leg raises\",\"GS676: squats\",\"GS681: leg up + abs\",\"GS683: glute bridge\",\"GS690: footing, hands on hips\"]"
+    ElseIf vibe == "stretch"
+        Return "[\"GS662: stretching\",\"GS668: dolphin stretch\",\"GS669: leg stretch\",\"GS670: back stretch\",\"GS671: wall stretch\",\"GS673: all-fours stretch\",\"GS674: sun salute yoga\",\"GS678: leg-stride stretch\",\"GS679: hip stretch (ground)\",\"GS680: butt-up stretch\",\"GS684: back/butt-up stretch\",\"GS686: standing back stretch\",\"GS689: legs-up yoga\",\"GS691: arms-up side stretch\"]"
+    ElseIf vibe == "submission"
+        Return "[\"GS51: cuffed, dancing (prisoner)\",\"GS700: tied, kneeling, hands behind head\",\"GS705: surrendered, hands up\",\"GS707: standing, hands tied back\",\"GS708: standing, hands tied back\",\"GS709: on ground, tied\",\"GS710: on ground, tied, resting on side\"]"
+    ElseIf vibe == "plead"
+        Return "[\"GS701: sorry (Japanese dogeza)\",\"GS702: praying / sorry\",\"GS703: begging for money\"]"
+    ElseIf vibe == "idle"
+        Return "[\"GS131: support / friendship gesture\",\"GS135: shy, nervous, contained\",\"GS147: hands behind, slightly sexy\",\"GS177: arms crossed, suggesting\",\"GS196: victory pose\",\"GS624: idle\",\"GS628: idle\",\"GS629: fist battle prep\",\"GS632: mad, arms crossed\",\"GS639: shy waiting\"]"
+    EndIf
+    Return ""
+EndFunction
+
+; : _VibePoseOptions' JSON array flattened to plain prompt prose for
+; the consideration catalog: "GS9 twerking, looking back; GS10 sensual,
+; semi-shy; ..." -- the CLIP key stays first (it is what the answer names
+; back), the description rides after it. Returns "" for catalog-less vibes.
+String Function _MuseCatalogOptions(String vibe)
+    String sJson = _VibePoseOptions(vibe)
+    If sJson == ""
+        Return ""
+    EndIf
+    Int len = StringUtil.GetLength(sJson)
+    If len < 4
+        Return ""
+    EndIf
+    String sBody = StringUtil.Substring(sJson, 2, len - 4)
+    String[] items = StringUtil.Split(sBody, "\",\"")
+    String sOut = ""
+    Int i = 0
+    While i < items.Length
+        String sItem = items[i]
+        Int iColon = StringUtil.Find(sItem, ": ")
+        If iColon > 0
+            sItem = StringUtil.Substring(sItem, 0, iColon) + " " \
+                + StringUtil.Substring(sItem, iColon + 2, StringUtil.GetLength(sItem) - iColon - 2)
+        EndIf
+        If i > 0
+            sOut = sOut + "; "
+        EndIf
+        sOut = sOut + sItem
+        i += 1
+    EndWhile
+    Return sOut
+EndFunction
+
+; : ONE library entry for the consideration prompt's pose catalog --
+; the user-ruled shape: (a) the category warning (a category of similar
+; moves, not one fixed pose), (b) the short content description (the
+; approved _MuseFireLabel one-liner register, reused verbatim), (c) the
+; itemized move list (the CLIP keys the answer names back). Catalog-less
+; members say so in plain text (one fixed move / near-identical variants --
+; no CLIP needed; their draw is the ruled degenerate random).
+String Function _MusePoseCatalogLine(String sPose)
+    String sVibe = _MuseFireVibe(sPose)
+    If sVibe == ""
+        Return ""
+    EndIf
+    String sDesc = _MuseFireLabel(sPose)
+    String sOpts = _MuseCatalogOptions(sVibe)
+    If sOpts == ""
+        If sVibe == "aroused"
+            Return sPose + " - " + sDesc + " (two near-identical variants - no CLIP needed)"
+        EndIf
+        Return sPose + " - " + sDesc + " (one fixed move - no CLIP needed)"
+    EndIf
+    Return sPose + " - " + sDesc + " [a CATEGORY of similar moves, not one fixed pose - you also pick the exact move]: " + sOpts
+EndFunction
+
+; : the full pose catalog for the muse consideration context pack --
+; every fireable library member, one entry per line. The separators are the
+; two-character JSON escape \n (written \\n here; decoded to a real newline
+; at render), and the text carries no quotes/backslashes, so the pack stays
+; valid JSON. Order matches the prompt's library/male-safe split and the
+; _MuseFireVibe allowlist -- the catalog and the fireable set are ONE list
+; (the  2a discipline).
+String Function _MusePoseCatalogText()
+    String s = _MusePoseCatalogLine("PoseSeduce")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseSelfTouch")
+    s = s + "\\n" + _MusePoseCatalogLine("PosePresent")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseDance")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseDanceSexy")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseGroundSexy")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseGroundIdle")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseWorkout")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseStretch")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseSubmission")
+    s = s + "\\n" + _MusePoseCatalogLine("PosePlead")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseAroused")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseBraceArm")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseDrink")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseDrool")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseHandOnChin")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseHandOnFace")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseMeditate")
+    s = s + "\\n" + _MusePoseCatalogLine("PoseScratchHead")
+    Return s
+EndFunction
+
+; The post-fire bookkeeping of the muse direct fire (extracted ; 
+; note: the decision-callback path is retired with the picker, so this now
+; serves the single consideration-fire path -- sentinels, notification and
+; interval re-arm stay identical).
+Function _MuseFireSuccess(Actor ak, String sPose, Float fStamp)
+    ;  Task 1b: male fires carry an explicit [male vocab] tag.
+    If _SexOf(ak) == 0
+        Debug.Trace("[SNAnimGS] sanguine mode direct fire: " + ak.GetDisplayName() + " (" + sPose + ") [male vocab]")
+    Else
+        Debug.Trace("[SNAnimGS] sanguine mode direct fire: " + ak.GetDisplayName() + " (" + sPose + ")")
+    EndIf
+    ;  aroused-lean leg 3: the [arousal lean] sentinel (unchanged).
+    If StringUtil.Find(_sMuseArous, "high") != -1
+        Debug.Trace("[SNAnimGS] sanguine mode direct fire: high-arousal seed - [arousal lean] applies")
+    EndIf
+    ;  Task 2e: on-screen notification ONLY on actual fires. ASCII-only.
+    Debug.Notification("Sanguine Mode - " + ak.GetDisplayName() + " (" + sPose + ")")
+    ;  3.2: the next-nudge clock re-armed at pose START. fStamp: the
+    ; synchronous path passes the tick's fNow (unchanged semantics); the
+    ; decision-callback path passes the callback-time clock.
+    StorageUtil.SetFloatValue(None, "GSAnim.MuseGlobal", fStamp)
+    Debug.Trace("[SNAnimGS] sanguine mode interval re-armed at pose start: " + ak.GetDisplayName() + " (REV-137f)")
+    ;  5.1 (user-ruled at the dogfood; 134f pattern): the Sanguine MODE
+    ; direct-narration trigger -- DEFAULT OFF, GS Poses page toggle
+    ; (GSAnim.SanguineModeNarr). Desc = what just happened (actor + pose); the
+    ; yaml gsanim_sanguine_mode_narr.yaml (register entry 37 DRAFT) matches the
+    ; event type ONLY and asks surrounding NPCs to react. Silent-with-sentinel
+    ; on the OFF leg. _MuseFireSuccess is the single choke point for every
+    ; genuine Sanguine fire (sync + decision-callback paths).
+    If StorageUtil.GetIntValue(None, "GSAnim.SanguineModeNarr", 0) == 1
+        SkyrimNetApi.RegisterEvent("gsanim_sanguine_mode_narr", \
+            ak.GetDisplayName() + " has just slipped into a pose (" + sPose + ").", ak, None)
+        Debug.Trace("[SNAnimGS] sanguine mode narration FIRED (gsanim_sanguine_mode_narr, " + ak.GetDisplayName() + ") -- REV-159 5.1")
+    Else
+        Debug.Trace("[SNAnimGS] sanguine mode narration OFF -- narration event skipped -- REV-159 5.1")
+    EndIf
+EndFunction
+
+; : OnPosePicked (the ded/pose_picker decision callback) is RETIRED
+; with the picker lane -- the consideration call's own answer now carries the
+; exact move (CLIP), parsed in OnMuseConsideration and fired through
+; _PoseVibe's sForceEvent leg. No decision callback exists on this path.
+
 Function _PacifyGS(Actor ak, Bool on)
     If !ak
         Return
     EndIf
     If on
-        If StorageUtil.GetIntValue(ak, "GSAnim.Pacified", 0) == 0
-            StorageUtil.SetFloatValue(ak, "GSAnim.OrigAggr", ak.GetActorValue("Aggression"))
+        ; [ PR#2 fold (2) - Oldcustard credit, by-concept] CLAIM-BEFORE-READ
+        ; + CROSS-TREE ORIGINAL REUSE with the Baka tree: when the Baka side
+        ; already holds the pacify, its stored original (SHARED key
+        ; SNBaka.OrigAggr) is the true pre-pacify aggression -- store nothing of
+        ; our own or the release would restore the already-zeroed value. We
+        ; still track our own on/off pairing.
+        If StorageUtil.GetIntValue(ak, "GSAnim.Pacified", 0) == 0 && StorageUtil.GetIntValue(ak, "SNBaka.Pacified", 0) == 0
+            StorageUtil.SetFloatValue(ak, "SNBaka.OrigAggr", ak.GetActorValue("Aggression"))
             StorageUtil.SetIntValue(ak, "GSAnim.Pacified", 1)
+        ElseIf StorageUtil.GetIntValue(ak, "GSAnim.Pacified", 0) == 0
+            StorageUtil.SetIntValue(ak, "GSAnim.Pacified", 1)   ; Baka owns the original; we ride it
         EndIf
         ak.SetActorValue("Aggression", 0.0)
         ak.StopCombatAlarm()
         ak.StopCombat()
     ElseIf StorageUtil.GetIntValue(ak, "GSAnim.Pacified", 0) == 1
-        ak.SetActorValue("Aggression", StorageUtil.GetFloatValue(ak, "GSAnim.OrigAggr", 1.0))
+        ; [ PR#2 fold (2)] release only when the LAST pacify owner goes.
+        If StorageUtil.GetIntValue(ak, "SNBaka.Pacified", 0) == 0
+            ak.SetActorValue("Aggression", StorageUtil.GetFloatValue(ak, "SNBaka.OrigAggr", 1.0))
+        EndIf
         StorageUtil.SetIntValue(ak, "GSAnim.Pacified", 0)
     EndIf
 EndFunction
@@ -612,32 +1195,102 @@ EndFunction
 ; (poses breaking sex scenes/downed poses/Baka struggles), which the eligibility-only snapshot
 ; can't catch. No hard SexLab/Baka/Acheron script dependency: factions are resolved by FormID and
 ; the rest are plain StorageUtil keys, so this still compiles and runs standalone.
-Function _PoseVibe(Actor ak, String vibe, String label)
+;  2.3 (outcome-true sentinel,  finding 2.3): _PoseVibe now
+; RETURNS Bool — True only when a pose event was actually SENT. The old
+; caller-side fire sentinel printed after an internal refusal (gender/busy/
+; empty-pool early returns happen BEFORE SendAnimationEvent), misreporting
+; fires. Refusal legs release any live idle hold (flag-guarded — the T3
+; pre-fire path acquires the class-0 hold BEFORE this dispatch, so a
+; refusal here must never strand it).
+; /163: sForceEvent -- the exact-pick leg. The retired picker's
+; plumbing, kept: the consideration call's CLIP answer () fires
+; through this same hardened chain (idle-interrupt + hold + recheck +
+; guards) instead of the random draw; empty = the random draw (Sheogorath/T3,
+; degenerate pools, and the ruled absent/invalid-CLIP fallback -- every
+; pre-existing callsite unchanged). The forced event is validated against
+; the pool at draw time (belt-and-suspenders; the caller validates before
+; calling too).
+;  5.3: aiRoute tags the fire lane for the per-route pose-narration
+; toggles (user-authored titles, 137f rider): 1 = Sanguine mode fire
+; (consideration picks + fallbacks), 2 = emergent autonomous fire (Sheogorath
+; T3 + any LLM-chosen pose action via the Pose*_Execute executors),
+; 3 = player-initiated (the grid/crosshair pick; also the stop gesture).
+; 0/unknown = untagged -- the cue fires ungated (no behavior change).
+; The gate reads StorageUtil keys GSAnim.PoseNarrSanguine/Emergent/Player
+; (DEFAULT 1 = ON -- current behavior preserved; the MCM "GS Poses" page owns
+; them, register entry 37 DRAFT tooltips).
+Bool Function _PoseVibe(Actor ak, String vibe, String label, String sForceEvent = "", Int aiRoute = 0)
     If !ak || ak == PlayerRef
-        Return
+        Return False
     EndIf
     ;  Phase B: gender gate routes through _GenderAdmits (the  vibe-level
     ; split is now mode-aware: mode 0 keeps it exactly — females pass, males only via
     ; _VibeMaleOK, unknown sex stays blocked, never a silent change on an unread value;
     ; mode 1 is the same table as the crosshair admission; mode 2 drops the gate).
     If !_GenderAdmits(ak, vibe)
-        Return
+        ;  3.2 full-chain receipt: the gender-policy refusal is named (was a
+        ; silent False on the muse/T3 lanes; the crosshair path has its notification).
+        Debug.Trace("[SNAnimGS] pose fire refused: GENDER-POLICY (mode " + _GenderPolicy() \
+            + " does not admit " + ak.GetDisplayName() + " for vibe '" + vibe + "')")
+        If StorageUtil.GetIntValue(ak, "GSAnim.IdleHold", 0) == 1
+            _ReleaseIdleHold(ak)
+        EndIf
+        Return False
     EndIf
     ; Don't pose someone already busy elsewhere (Baka paired anim/struggle/downed, Acheron hold,
     ; bleedout, or any sex scene) -- see _IsBusyElsewhere. Re-checked live at exec time: the is_busy
     ; YAML eligibility gate is only a snapshot from when the LLM decided, and can't see the NPC
     ; becoming busy between that decision and this actually running.
     If _IsBusyElsewhere(ak)
-        Return
+        ;  3.2 full-chain receipt: the busy refusal is named (was silent).
+        Debug.Trace("[SNAnimGS] pose fire refused: BUSY (" + ak.GetDisplayName() + " busy at exec time)")
+        If StorageUtil.GetIntValue(ak, "GSAnim.IdleHold", 0) == 1
+            _ReleaseIdleHold(ak)
+        EndIf
+        Return False
+    EndIf
+    ;  (idle-interrupt service, spec 1.4.4): the exec-time leg routes
+    ; through the service — with _IsBusyElsewhere class-aware, seated/marker
+    ; candidates reach here and must EXIT -> RECHECK -> fire (covers the muse
+    ; direct-fire call and the T3 wrapper dispatch, both of which land in
+    ; _PoseVibe); every refusal skips with a  sentinel inside the service.
+    If !_IdleFirePath(ak, vibe)
+        Return False   ; the service already released the hold + sentinel'd every refusal
     EndIf
     ;  A.3: the draw routes through _VibeEventsFor (the A.3 sex-split for
     ; "aroused"; every other vibe unchanged from _VibeCSV).
     String csv = _VibeEventsFor(ak, vibe)
     If csv == ""
-        Return
+        ;  2.2 belt-and-suspenders: no fire — never strand the hold
+        ; (the recheck PASS already handed restraint to this machinery).
+        ak.SetRestrained(False)
+        ak.SetDontMove(False)
+        _PkgHoldActorAI(ak, False)   ;  3.1: same belt-and-suspenders for the package pin
+        StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 0)
+        Debug.Trace("[SNAnimGS] pose fire refused: empty vibe event pool ('" + vibe + "', " + ak.GetDisplayName() + ")")
+        Return False
     EndIf
     String[] list = StringUtil.Split(csv, ",")
     String ev = list[Utility.RandomInt(0, list.Length - 1)]
+    If sForceEvent != ""
+        ; : the decision callback's pick -- must be a member of the pool
+        ; (the template's options came from this same CSV; a stray key refuses,
+        ; the hold was never taken at this point so nothing to release).
+        Int iFound = -1
+        Int iEv = 0
+        While iEv < list.Length && iFound < 0
+            If list[iEv] == sForceEvent
+                iFound = iEv
+            EndIf
+            iEv += 1
+        EndWhile
+        If iFound < 0
+            Debug.Trace("[SNAnimGS] pose fire refused: forced event '" + sForceEvent + "' not in pool '" + vibe + "' (REV-152 guard)")
+            Return False
+        EndIf
+        ev = sForceEvent
+        Debug.Trace("[SNAnimGS] exact-pick fires: " + ak.GetDisplayName() + " -> " + ev + " (cat '" + vibe + "', consideration CLIP)")
+    EndIf
     Bool lockAI = (vibe == "submission")
     ak.SetRestrained(True)
     _PacifyGS(ak, True)
@@ -651,10 +1304,58 @@ Function _PoseVibe(Actor ak, String vibe, String label)
     StorageUtil.SetIntValue(ak,    "GSAnim.LockAI",  lockAI as Int)
     StorageUtil.FormListAdd(None,  "GSAnim.Posing", ak, False)
     StorageUtil.SetStringValue(ak,  "GSAnim.Vibe",   label)   ; Phase 4 rider: named-pose stop wording
-    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())  ; Phase 4: T3 silence-floor clock
-    SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
-        ak.GetDisplayName() + " strikes " + label + ", holding it in place.", ak, None)
+    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())  ; observability only since  (silence-floor reader retired)
+    ;  5.3: the per-route pose-narration gate (DEFAULT ON -- the cue fires
+    ; exactly as before unless the user turns a route's toggle off on the GS
+    ; Poses page; silent-with-sentinel on the gated-skip leg, ruleset 5).
+    Int iNarrGate = 1
+    If aiRoute == 1
+        iNarrGate = StorageUtil.GetIntValue(None, "GSAnim.PoseNarrSanguine", 1)
+    ElseIf aiRoute == 2
+        iNarrGate = StorageUtil.GetIntValue(None, "GSAnim.PoseNarrEmergent", 1)
+    ElseIf aiRoute == 3
+        iNarrGate = StorageUtil.GetIntValue(None, "GSAnim.PoseNarrPlayer", 1)
+    EndIf
+    If iNarrGate == 1
+        SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
+            ak.GetDisplayName() + _PoseVibeDesc(vibe, label), ak, None)
+    Else
+        Debug.Trace("[SNAnimGS] gsanim_npc_pose cue GATED-OFF (route " + aiRoute + ", " + ak.GetDisplayName() + ") -- REV-159 5.3")
+    EndIf
+    ;  4.1 (user ruling 2026-10-22, USER-AUTHORED per this ruling -- 17b
+    ; precedent, register-cited in gs-poses.md  + posing-gender.md): every
+    ; genuine Sheogorath/T3 fire carries an on-screen receipt mirroring the Sanguine
+    ; notification format ("Sanguine Mode - <NPC> (<pose>)"). ASCII-only (4f rule).
+    ;  3.1 (gated-behind-a-branch verdict, 2.1): the old _bT3InFlight member
+    ; window closed at the synchronous ExecuteAction RETURN, before the async dispatch's
+    ; fire reached this success leg -- the 10-22 dogfood log shows 4/4 dispatched rc=0
+    ; fires with package-hold ENGAGED receipts and 0/4 "T3 FIRE receipt" lines. The gate
+    ; is now a per-actor GSAnim.T3Mark timestamp (set at dispatch in _OdAutoPose,
+    ; consumed here within 30s) + the overdrive flag, so genuine T3 fires notify while
+    ; crosshair/muse fires that merely happen while overdrive runs never masquerade.
+    Float fT3Mark = StorageUtil.GetFloatValue(ak, "GSAnim.T3Mark", 0.0)
+    Float fNowT3  = Utility.GetCurrentRealTime()
+    If fT3Mark > 0.0 && fT3Mark <= fNowT3 && fNowT3 - fT3Mark <= 30.0 \
+       && StorageUtil.GetIntValue(None, "GSAnim.Overdrive", 0) == 1
+        StorageUtil.SetFloatValue(ak, "GSAnim.T3Mark", 0.0)   ; consume (0.0 = no mark; UnSetValue is not in this API surface)
+        Debug.Trace("[SNAnimGS] sheogorath T3 FIRE receipt: " + ak.GetDisplayName() + " (" + vibe + ")")
+        Debug.Notification("Sheogorath - " + ak.GetDisplayName() + " (" + vibe + ")")
+        ;  5.1 (user-ruled at the dogfood; 134f pattern): the Sheogorath
+        ; MODE direct-narration trigger -- DEFAULT OFF, GS Poses page toggle
+        ; (GSAnim.SheogorathModeNarr). The desc says what just happened (actor
+        ; + pose); the yaml gsanim_sheogorath_mode_narr.yaml (register entry 37
+        ; DRAFT) matches the event type ONLY and asks surrounding NPCs to react.
+        ; Silent-with-sentinel on the OFF leg.
+        If StorageUtil.GetIntValue(None, "GSAnim.SheogorathModeNarr", 0) == 1
+            SkyrimNetApi.RegisterEvent("gsanim_sheogorath_mode_narr", \
+                ak.GetDisplayName() + " has just been moved into a pose (" + vibe + ").", ak, None)
+            Debug.Trace("[SNAnimGS] sheogorath mode narration FIRED (gsanim_sheogorath_mode_narr, " + ak.GetDisplayName() + ") -- REV-159 5.1")
+        Else
+            Debug.Trace("[SNAnimGS] sheogorath mode narration OFF -- narration event skipped -- REV-159 5.1")
+        EndIf
+    EndIf
     RegisterForSingleUpdate(3.0)
+    Return True   ;  2.3: outcome-true — the event WAS sent
 EndFunction
 
 ; Phase 2: pose a specific NPC with a specific event — the player's explicit grid pick,
@@ -664,7 +1365,14 @@ EndFunction
 ; the NPC via OnUpdate). Validation + refusal notifications already happened in
 ; OnPoseSelected; on refusal nothing was posed and nothing falls back to the player.
 Function _PoseDirect(Actor ak, String ev, String desc, String cat)
+    ;  2.2: _PoseDirect acquires the re-grab hold AT FIRE (finding
+    ; 2.1 — the wander defect). The restrain call was already here; the
+    ; IdleHold flag + sentinel are new so _StopActorPose's belt-and-
+    ; suspenders clearing covers this path uniformly (the crosshair service
+    ; path sets the flag too — idempotent).
     ak.SetRestrained(True)
+    StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 1)
+    Debug.Trace("[SNAnimGS] pose hold acquired at direct fire: " + ak.GetDisplayName())
     _PacifyGS(ak, True)
     Debug.SendAnimationEvent(ak, ev)
     StorageUtil.SetStringValue(ak, "GSAnim.Pose",    ev)
@@ -673,15 +1381,22 @@ Function _PoseDirect(Actor ak, String ev, String desc, String cat)
     StorageUtil.SetIntValue(ak,    "GSAnim.LockAI",  0)
     StorageUtil.FormListAdd(None,  "GSAnim.Posing", ak, False)
     StorageUtil.SetStringValue(ak,  "GSAnim.Vibe",   desc)    ; Phase 4 rider (desc; "" if the pick carried none)
-    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())  ; Phase 4: T3 silence-floor clock
+    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())  ; observability only since  (silence-floor reader retired)
     RegisterForSingleUpdate(3.0)
     String what = "a pose"
     If desc != ""
-        what = "a pose — " + desc
+        what = "a pose - " + desc
     EndIf
-    SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
-        ak.GetDisplayName() + " strikes " + what + " at " + PlayerRef.GetDisplayName() + "'s direction.", \
-        ak, None)
+    ;  5.3: the player-initiated route's pose-narration gate (DEFAULT ON;
+    ; GSAnim.PoseNarrPlayer, GS Poses page -- "Player Initiated Pose Narration",
+    ; user-authored title).
+    If StorageUtil.GetIntValue(None, "GSAnim.PoseNarrPlayer", 1) == 1
+        SkyrimNetApi.RegisterEvent("gsanim_npc_pose", \
+            ak.GetDisplayName() + " strikes " + what + " at " + PlayerRef.GetDisplayName() + "'s direction.", \
+            ak, None)
+    Else
+        Debug.Trace("[SNAnimGS] gsanim_npc_pose cue GATED-OFF (route 3 player, " + ak.GetDisplayName() + ") -- REV-159 5.3")
+    EndIf
 EndFunction
 
 Function _StopActorPose(Actor ak)
@@ -691,6 +1406,8 @@ Function _StopActorPose(Actor ak)
     Debug.SendAnimationEvent(ak, "IdleForceDefaultState")
     ak.SetRestrained(False)
     ak.SetDontMove(False)
+    StorageUtil.SetIntValue(ak, "GSAnim.IdleHold", 0)   ;  2.2 belt-and-suspenders: never strand the idle hold
+    _PkgHoldActorAI(ak, False)   ;  3.1: pose end -- return the actor to their package naturally
     _PacifyGS(ak, False)
     StorageUtil.SetStringValue(ak, "GSAnim.Pose", "")
     StorageUtil.SetStringValue(ak, "GSAnim.Vibe", "")   ; Phase 4 rider: consumed by whichever stop path ran
@@ -757,14 +1474,15 @@ Event OnUpdate()
         EndIf
     EndIf
     ; ── Interval arbiter — the script's ONLY re-register point ──
-    ; Posers need the fast sweep; overdrive polls at 10s (T1 ~20s cadence, T3 30-45s floor,
-    ; both time-based inside the tick, so a faster sweep tick can't accelerate them); muse
+    ; Posers need the fast sweep; overdrive polls at 15s (T1 ~20s cadence internal, T3
+    ; every-15s multi-poser internal — both time-based inside the tick, so a faster sweep
+    ; tick can't accelerate them;  3.3); muse
     ; polls at 15s (internal 2-min/5-min clocks). Both flags off + no posers = idle, zero
     ; cost (same as before Phase 4) — casting the selector power re-arms the loop.
     If anyLeft
         RegisterForSingleUpdate(3.0)
     ElseIf StorageUtil.GetIntValue(None, "GSAnim.Overdrive", 0) == 1
-        RegisterForSingleUpdate(10.0)
+        RegisterForSingleUpdate(15.0)
     ElseIf StorageUtil.GetIntValue(None, "GSAnim.Muse", 0) == 1
         RegisterForSingleUpdate(15.0)
     EndIf
@@ -792,7 +1510,11 @@ Int   iOdCooldownFloor   = 10        ; T2 (Fix B, 4f): floor ON applies to all 2
                                      ;   spam confirmed in the 4e re-test). USER TASTE CALL 2026-09-10:
                                      ;   10s; retune here, recompile. OFF restores 0 (live-config parity).
                                      ;   Int — SetActionCooldown takes cooldownTimeSeconds as int.
-Float fOdSilenceFloor    = 40.0      ; T3: auto-pose after this long without a pose fire (30-45s band)
+Float fOdT3IntervalSec  = 15.0      ; T3 ( 3.3, user ruling 2026-10-22 "I want chaos --
+                                     ;   multiple posers and poses at the same time"): a NEW candidate
+                                     ;   fires every interval with overlapping pose lifetimes permitted
+                                     ;   (planner overdrive cadence 15s; the 40s silence floor is RETIRED —
+                                     ;   the one-at-a-time constraint it enforced is the subdued feel)
 Float fOdCueSeconds      = 20.0      ; T1: ambience cue cadence
 Float fMuseNudgeIntervalSec = 30.0   ; muse (v1.2 redesign, docs/MUSE_REDESIGN_DESIGN.md): nudge loop — ONE
                                      ;   consideration call per interval.  Task 2b (user tempo ruling,
@@ -801,6 +1523,13 @@ Float fMuseNudgeIntervalSec = 30.0   ; muse (v1.2 redesign, docs/MUSE_REDESIGN_D
                                      ;   cost while ON — the cadence itself bounds spend. Replaces the old
                                      ;   120s-global / 300s-per-NPC throttle pair (user spec); 's
                                      ;   100.0->60.0 hold is superseded by this ruling.
+                                     ;  3.2: this member is NO LONGER the interval of record on
+                                     ;   long-lived saves — save state restores a pre- member value
+                                     ;   (100.0) over this compiled 30.0 initializer (the deployed []
+                                     ;   pex hash-matched the dist yet the 10-22 dogfood log printed
+                                     ;   100.000000s — the diagnosed ~100s-gap source). The live interval
+                                     ;   now reads the StorageUtil key GSAnim.NudgeInterval with THIS
+                                     ;   value as default (fresh key, absent from old saves -> 30.0).
 Float fMusePerNpcSec     = 60.0       ;  Task 2b (user tempo ruling): per-NPC floor 120s -> 60s — a
                                      ;   candidate whose LastMuse seed is younger than this is skipped in
                                      ;   the walk (seed-time write of GSAnim.LastMuse unchanged; the READ
@@ -835,6 +1564,10 @@ String[] _PoseActions
 ; own action selection — the thought is the nudge, cue-not-floor stands.
 ; The pending actor bridges the call to OnMuseConsideration (guards re-checked at seed time).
 Actor   _musePendingActor = None
+;  4.1 ->  3.1: the _bT3InFlight member is RETIRED (save-member of no
+; further use; Papyrus silently skips absent names on load). The T3 receipt gate is now
+; the per-actor StorageUtil stamp GSAnim.T3Mark, set at dispatch and consumed within 30s
+; by _PoseVibe's success leg — see the receipt block there for the async-window evidence.
 ; OStimExcitementFaction, resolved once via PO3 editor-ID lookup (arousal context for the
 ; nudge pack); None when OStim is absent — arousal then drops out of the pack gracefully.
 Faction _kMuseArousalFaction = None
@@ -844,6 +1577,11 @@ Bool    _bMuseArousalResolved = False
 ; sentinel) — the single-in-flight pattern of _musePendingActor (one ask, one
 ; callback; never multi-set).
 String  _sMuseArous = ""
+;  (picker decommission, user ruling 2026-10-25): the _posePick*
+; decision-call pending state (Actor/_posePickVibe/_posePickPose, )
+; is RETIRED -- no decision call exists on the muse path anymore; the exact
+; move rides the consideration answer itself (OnMuseConsideration's CLIP
+; parse), so _musePendingActor is once again the only in-flight state.
 ; Phase 4c rider: heartbeat rate-limit clock for the one-shot muse debug window. Member,
 ; not StorageUtil: diagnostic-only precision — a script reload mid-window at worst resets
 ; the 30s beat spacing; the window BOUNDS are StorageUtil so saves keep them.
@@ -963,15 +1701,23 @@ EndFunction
 Actor[] _DaemonPool
 
 Int Function _DaemonScan(Bool bAllowMales = False)
-    ;  Task 1b: the muse walk passes bAllowMales=True (ruling: the muse alone gains
-    ; males); T3 keeps the default False — its candidate pool and behavior are unchanged.
+    ;  3.1 GENDER-POLICY BLANKET (user ruling 2026-10-22, supersedes the 
+    ; scope note): the GS pose gender-policy modes apply to ALL pose routes -- the Prisma
+    ; crosshair, Sanguine (muse) and Sheogorath (overdrive/T3) all adopt the SAME policy
+    ; the crosshair uses. The T3 female-only pool is RETIRED and the muse's mode-blind
+    ; male admission is RETIRED: pool admission is now purely policy-driven -- mode 0 =
+    ; female-only everywhere; mode 1 = males enter every pool (vibe curated at fire time
+    ; by the existing _GenderAdmits legs in _PoseVibe / the muse fire veto); mode 2 =
+    ; everyone. bAllowMales is kept for signature compatibility only (callers unchanged);
+    ; it no longer gates anything. Unknown sex: blocked in modes 0/1, admitted in mode 2
+    ; (never a silent behavior change on an unread value -- the 6a discipline).
     Int n = 0
     Actor[] akAll = PO3_SKSEFunctions.GetActorsByProcessingLevel(0)
     Int i = 0
     While i < akAll.Length && n < _DaemonPool.Length
         Actor ak = akAll[i]
         If ak && ak != PlayerRef && !ak.IsDead() \
-           && (_SexOf(ak) == 1 || _GenderPolicy() == 2 || (bAllowMales && _SexOf(ak) == 0)) \
+           && (_SexOf(ak) == 1 || _GenderPolicy() >= 1) \
            && ak.GetDistance(PlayerRef) <= fDaemonRadius \
            && StorageUtil.GetStringValue(ak, "GSAnim.Pose", "") == "" \
            && !ak.IsInCombat() \
@@ -990,7 +1736,7 @@ Int Function _DaemonScan(Bool bAllowMales = False)
 EndFunction
 
 ; Muse nudge loop (v1.2 redesign — docs/MUSE_REDESIGN_DESIGN.md, user-authoritative spec).
-; Every ~100s (fMuseNudgeIntervalSec) ONE consideration call: pull context -> present the 27
+; Every ~30s (GSAnim.NudgeInterval, default fMuseNudgeIntervalSec;  key of record) ONE consideration call: pull context -> present the 27
 ; pose categories -> WEIGHTED TOWARD YES — pick the best-fitting pose unless ALL are unsuited
 ; (a miss is the EXCEPTION, not the goal). The YES-output is a JOB, not a flag: the call
 ; returns WHICH pose fits + the grounded in-world thought; OnMuseConsideration seeds it via
@@ -1013,7 +1759,7 @@ Function _MuseTick()
     ; cleanly at the interval cadence once the fight ends. Unconditional reason-coded
     ; sentinel (NOT gated on bDebug) so the ON session log confirms suspend + resume.
     If PlayerRef.IsInCombat()
-        Debug.Trace("[SNAnimGS] MuseSuspend-PlayerCombat: tick skipped (player in combat)")
+        Debug.Trace("[SNAnimGS] SanguineSuspend-PlayerCombat: tick skipped (player in combat)")
         Return
     EndIf
     Float fNow = Utility.GetCurrentRealTime()
@@ -1027,28 +1773,44 @@ Function _MuseTick()
     ; correction (one rewrite, then the store is clean for the rest of the boot).
     Float fLastGlobal = StorageUtil.GetFloatValue(None, "GSAnim.MuseGlobal", 0.0)
     If fLastGlobal > fNow
-        Debug.Trace("[SNAnimGS] muse interval stamp clamped: stale cross-session stamp " \
-            + fLastGlobal + " > boot clock " + fNow + " — treating as 0")
+        Debug.Trace("[SNAnimGS] sanguine mode interval stamp clamped: stale cross-session stamp " \
+            + fLastGlobal + " > boot clock " + fNow + " - treating as 0")
         fLastGlobal = 0.0
         StorageUtil.SetFloatValue(None, "GSAnim.MuseGlobal", 0.0)
     EndIf
     ;  1b rider: one unconditional trace on the FIRST gated tick of each boot with
     ; the actual compare values, so a silent-muse session diagnoses itself from one grep —
     ; no re-arm dance needed, the sentinel rides along every session from now on.
+    ;  3.2: the interval OF RECORD is the StorageUtil key GSAnim.NudgeInterval
+    ; (default = the compiled member). The member alone was being shadowed on long-lived
+    ; saves by a pre- save-resident value of 100.0 (the deployed [] pex
+    ; hash-matched its dist yet the 10-22 dogfood log printed 100.000000s) -- a fresh key
+    ; carries no such residue, so the ruled 30s cadence finally takes effect. First-read
+    ; sentinel per ruleset 5 rides the first-gate trace below.
+    Float fInterval = StorageUtil.GetFloatValue(None, "GSAnim.NudgeInterval", fMuseNudgeIntervalSec)
     If !_bMuseGateLogged
         _bMuseGateLogged = True
-        Debug.Trace("[SNAnimGS] muse gate (first check this boot): fNow=" + fNow \
+        Debug.Trace("[SNAnimGS] sanguine mode gate (first check this boot): fNow=" + fNow \
             + " stamp=" + fLastGlobal + " delta=" + (fNow - fLastGlobal) \
-            + " interval=" + fMuseNudgeIntervalSec)
+            + " interval=" + fInterval + " (key of record GSAnim.NudgeInterval, default " \
+            + fMuseNudgeIntervalSec + "s;  save-residue member retired)")
     EndIf
-    If fNow - fLastGlobal < fMuseNudgeIntervalSec
+    If fNow - fLastGlobal < fInterval
+        ;  3.2 full-chain receipt (user ruling 2026-10-22): the tick-opportunity
+        ; sentinel is now UNCONDITIONAL, not bDebug-gated -- the cadence itself must be
+        ; readable from the log on every session.
+        Debug.Trace("[SNAnimGS] sanguine mode tick: no opportunity (interval clock " + (fNow - fLastGlobal) \
+            + "s < " + fInterval + "s)")
         If bDebug
             _MuseDebugHeartbeat(fNow, "interval clock")
         EndIf
         Return
     EndIf
-    Int n = _DaemonScan(True)   ;  Task 1b: the muse walk admits males per the approved split (guards unchanged below)
+    Int n = _DaemonScan(True)   ;  3.1: policy-blanket scan; bAllowMales is vestigial (see _DaemonScan)
     If n == 0
+        ;  3.2 full-chain receipt: the pool-empty refusal is named and unconditional.
+        Debug.Trace("[SNAnimGS] sanguine mode attempt REFUSED: candidate pool EMPTY (scan n=0; policy mode " \
+            + _GenderPolicy() + ")")
         If bDebug
             _MuseDebugHeartbeat(fNow, "scan empty")
         EndIf
@@ -1068,13 +1830,13 @@ Function _MuseTick()
             ; right. Reason-coded sentinels, unconditional per . The scan filter above
             ; makes these near-silent in steady state; they fire in the scan->tick race.
             If ak.GetSleepState() != 0
-                Debug.Trace("[SNAnimGS] muse state skip: " + ak.GetDisplayName() + " sleeping (state " + ak.GetSleepState() + ") — excluded, mirrors the seated exclusion")
+                Debug.Trace("[SNAnimGS] sanguine mode state skip: " + ak.GetDisplayName() + " sleeping (state " + ak.GetSleepState() + ") - excluded, mirrors the seated exclusion")
             ElseIf ak.IsSwimming()
-                Debug.Trace("[SNAnimGS] muse state skip: " + ak.GetDisplayName() + " swimming — excluded")
+                Debug.Trace("[SNAnimGS] sanguine mode state skip: " + ak.GetDisplayName() + " swimming - excluded")
             ElseIf ak.IsOnMount()
-                Debug.Trace("[SNAnimGS] muse state skip: " + ak.GetDisplayName() + " mounted — excluded")
+                Debug.Trace("[SNAnimGS] sanguine mode state skip: " + ak.GetDisplayName() + " mounted - excluded")
             ElseIf ak.IsSneaking()
-                Debug.Trace("[SNAnimGS] muse state skip: " + ak.GetDisplayName() + " sneaking — excluded")
+                Debug.Trace("[SNAnimGS] sanguine mode state skip: " + ak.GetDisplayName() + " sneaking - excluded")
             Else
             ;  Task 1: per-NPC floor (fMusePerNpcSec). Read LastMuse with the same
             ; stale-stamp clamp as MuseGlobal above (boot-relative clock, save-persisted
@@ -1083,9 +1845,9 @@ Function _MuseTick()
             ; eligible" lap exit, no call spent. Unconditional sentinel per ruleset 5.
             Float fLastNpc = StorageUtil.GetFloatValue(ak, "GSAnim.LastMuse", 0.0)
             If fLastNpc > fNow
-                Debug.Trace("[SNAnimGS] muse npc floor stamp clamped: stale cross-session " \
+                Debug.Trace("[SNAnimGS] sanguine mode npc floor stamp clamped: stale cross-session " \
                     + fLastNpc + " > boot clock " + fNow + " for " + ak.GetDisplayName() \
-                    + " — treating as 0")
+                    + " - treating as 0")
                 fLastNpc = 0.0
                 StorageUtil.SetFloatValue(ak, "GSAnim.LastMuse", 0.0)
             EndIf
@@ -1097,17 +1859,19 @@ Function _MuseTick()
                 ; tick at worst — the same discipline the old rc!=0 path had, now on the clock).
                 StorageUtil.SetFloatValue(None, "GSAnim.MuseGlobal", fNow)
                 If sent == 1
-                    Debug.Trace("[SNAnimGS] muse nudge asked: " + ak.GetDisplayName())
+                    Debug.Trace("[SNAnimGS] sanguine mode candidate selected: " + ak.GetDisplayName() \
+                        + " (first eligible in random walk, pool n=" + n + ", policy mode " + _GenderPolicy() + ")")
+                    Debug.Trace("[SNAnimGS] sanguine mode nudge asked: " + ak.GetDisplayName())
                 Else
                     _musePendingActor = None
-                    Debug.Trace("[SNAnimGS] muse nudge not queued (rc=" + sent + "): " + ak.GetDisplayName())
+                    Debug.Trace("[SNAnimGS] sanguine mode nudge not queued (rc=" + sent + "): " + ak.GetDisplayName())
                     If bDebug
                         _MuseDebugHeartbeat(fNow, "nudge rc=" + sent)
                     EndIf
                 EndIf
                 Return
             Else
-                Debug.Trace("[SNAnimGS] muse npc floor skip: " + ak.GetDisplayName() \
+                Debug.Trace("[SNAnimGS] sanguine mode npc floor skip: " + ak.GetDisplayName() \
                     + " (last seed " + (fNow - fLastNpc) + "s ago < " + fMusePerNpcSec + "s)")
                 ; Papyrus has no Continue — fall through to the shared advance below
                 ; (the guard If ends, the loop tail moves to the next candidate).
@@ -1120,9 +1884,12 @@ Function _MuseTick()
             ; (gs-poses.md  .4: idle-dense pool composition was unmeasurable).
             ; Reason-coded, so the combat and busy legs stay distinguishable.
             If ak.IsInCombat()
-                Debug.Trace("[SNAnimGS] muse walk skip: " + ak.GetDisplayName() + " in combat at walk time — excluded")
+                Debug.Trace("[SNAnimGS] sanguine mode walk skip: " + ak.GetDisplayName() + " in combat at walk time - excluded")
             Else
-                Debug.Trace("[SNAnimGS] muse walk skip: " + ak.GetDisplayName() + " busy at walk time — excluded (formerly SILENT skip)")
+                ; : sentinel class-tagged — with _IsBusyElsewhere class-aware,
+                ; only non-interruptible busy legs reach this branch (interruptible
+                ; idle classes are admitted as candidates and routed at fire time).
+                Debug.Trace("[SNAnimGS] sanguine mode walk skip: " + ak.GetDisplayName() + " busy at walk time - excluded (formerly SILENT skip;  class-aware, idleclass=" + _IdleClass(ak) + ")")
             EndIf
         EndIf   ;  busy/combat walk-guard Else
         i = (i + 1) % n
@@ -1246,7 +2013,7 @@ String Function _MusePackContext(Actor ak, Int anPool)
                 sName = "a " + sSex + " nearby"
             EndIf
         EndIf
-        Debug.Trace("[SNAnimGS] muse npcName fallback engaged: race=\"" + sRace \
+        Debug.Trace("[SNAnimGS] sanguine mode npcName fallback engaged: race=\"" + sRace \
             + "\" resolved=\"" + sName + "\" for actor " + ak)
     EndIf
     ;  aroused-lean: stash the tier for the fire-time [arousal lean] sentinel
@@ -1273,13 +2040,20 @@ String Function _MusePackContext(Actor ak, Int anPool)
     ElseIf _GenderPolicy() == 2
         sPolicy = "all-poses"
     EndIf
+    ;  (picker decommission): the itemized pose catalog rides the SAME
+    ; consideration call -- warning + description + move list per category
+    ; (_MusePoseCatalogText), so the model that already holds the full scene
+    ; context also picks the exact move. Text carries no quotes/backslashes;
+    ; line separators are JSON-escaped newlines, decoded at render.
+    String sCatalog = _MusePoseCatalogText()
     Return "{\"npcName\":\"" + sName + "\",\"npcRace\":\"" + sRace \
         + "\",\"npcSex\":\"" + sSex \
         + "\",\"location\":\"" + sLoc + "\",\"nearby\":\"" + sNear \
         + "\",\"arousal\":\"" + sArous \
         + "\",\"arousalTier\":\"" + sTier + "\",\"posePolicy\":\"" + sPolicy \
         + "\",\"timeOfDay\":\"" + sTod \
-        + "\",\"maxRecentEvents\":12}"
+        + "\",\"poseCatalog\":\"" + sCatalog + "\"" \
+        + ",\"maxRecentEvents\":12}"
 EndFunction
 
 ;  Task 1a (user ruling, approved split): MALE-OK vibe set — vibe-level split. The
@@ -1382,63 +2156,84 @@ String Function _MuseFireVibe(String sPose)
     Return ""
 EndFunction
 
+;  4.4 (register entry 29, user's 2026-10-24 edit pass - pending text of
+; record): the three REWORDED per-pose variants ship as FULL-SENTENCE event
+; descs on the vibe route (the registered texts carry "<NPC>" inline - they
+; are desc lines, not slot-in labels, so the "strikes <label>." frame does
+; not fit them; every other vibe keeps the  Task 3.1 frame). The
+; noun-phrase labels stay in GSAnim.Vibe / _MuseFireLabel so the shared
+; STOP wording ("relaxes out of <label>.") stays grammatical - the variant
+; replaces only the gsanim_npc_pose EVENT TEXT on this route.
+String Function _PoseVibeDesc(String sVibe, String sLabel)
+    If sVibe == "selftouch"
+        Return " trails a slow line along their own skin - provocative and sensual."
+    ElseIf sVibe == "ground_sexy"
+        Return " stretches out along the ground in a wanton and obscene display of arousal."
+    ElseIf sVibe == "present"
+        Return " holds a presenting pose - deliberately trying to entice."
+    EndIf
+    Return " strikes " + sLabel + "."
+EndFunction
+
 ; : event/stop-wording label for a direct-fired pose. The three GS-vibe picks reuse
 ; the exact distilled one-liners their Pose*_Execute wrappers already ship (an approved
 ; string class, Phase 4); the three Babo-event picks carry new one-liners in the same
 ; register (flagged for user text approval in the  build report, ruleset ).
 String Function _MuseFireLabel(String sPose)
     If sPose == "PoseSeduce"
-        Return "a seductive pose — weight on one hip, gaze holding the room"
+        Return "a seductive pose - weight on one hip, gaze holding the room"
     ElseIf sPose == "PoseDance"
-        Return "a light, playful dance — feet answering the music"
+        Return "a light, playful dance - feet answering the music"
     ElseIf sPose == "PoseDanceSexy"
-        Return "a slow, provocative dance — a performance with a single intended victim"
+        Return "a slow, provocative dance - a performance with a single intended victim"
     ElseIf sPose == "PoseHandOnChin"
-        Return "a thoughtful pose — a hand resting on her chin"
+        Return "a thoughtful pose - a hand resting on her chin"
     ElseIf sPose == "PoseHandOnFace"
         Return "a hand brought to her face, something to hold in"
     ElseIf sPose == "PoseAroused"
-        Return "a restless, heated shift of weight — arousal worn openly"
+        Return "a restless, heated shift of weight - arousal worn openly"
     ;  Task 3: fire labels for the approved tiers. Stretch/Workout reuse their
     ; Pose*_Execute one-liner register; the four Babo-idle picks + Drink carry new lines
     ; in the same register (presented for retro-approval per ruleset ). Drink's wording
     ; deliberately claims only what BaboDrinkNormal does: a drink, never a stupor.
     ElseIf sPose == "PoseStretch"
-        Return "a long, unhurried stretch — arms overhead, back arching"
+        Return "a long, unhurried stretch - arms overhead, back arching"
     ElseIf sPose == "PoseWorkout"
-        Return "a quick workout drill — keeping the body busy"
+        Return "a quick workout drill - keeping the body busy"
     ElseIf sPose == "PoseScratchHead"
         Return "a scratch at her head, faintly unsure of something"
     ElseIf sPose == "PoseBraceArm"
         Return "an arm braced, weight settling, tension held"
     ElseIf sPose == "PoseMeditate"
-        Return "a quiet meditative seat — eyes closed, breath slowing"
+        Return "a quiet meditative seat - eyes closed, breath slowing"
     ElseIf sPose == "PoseDrink"
         Return "a slow pull from a tankard, throat working"
     ;  Task 2a/2c labels (retro-approval per , same register). Submission deliberately
     ; claims only the pose; Drool carries the user's "reduced to it" frame in-world.
     ElseIf sPose == "PoseSelfTouch"
-        Return "a slow trail of her own fingers — touch with nowhere else to go"
+        Return "a slow trail of her own fingers - touch with nowhere else to go"
     ElseIf sPose == "PosePresent"
-        Return "a presenting pose — offered up, deliberately on display"
+        Return "a presenting pose - offered up, deliberately on display"
     ElseIf sPose == "PoseGroundSexy"
-        Return "a stretch out along the ground — slow, and inviting about it"
+        Return "a stretch out along the ground - slow, and inviting about it"
     ElseIf sPose == "PoseGroundIdle"
-        Return "a slide down to the floor — resting right where she stood"
+        Return "a slide down to the floor - resting right where she stood"
     ElseIf sPose == "PoseSubmission"
-        Return "a surrender pose — hands open, will set aside"
+        Return "a surrender pose - hands open, will set aside"
     ElseIf sPose == "PosePlead"
-        Return "a pleading pose — hands clasped, eyes begging"
+        Return "a pleading pose - hands clasped, eyes begging"
     ElseIf sPose == "PoseDrool"
-        Return "a dazed stare, mouth gone slack — somewhere past words"
+        Return "a dazed stare, mouth gone slack - somewhere past words"
     EndIf
     Return "a pose"
 EndFunction
 
 ; SendCustomPromptToLLM callback for the muse nudge (gsanim_muse_consideration.prompt).
 ; success 1 = real answer; 0 = render/network failure -> treated as MISS (no seed, logged).
-; Output contract: "POSE: <name> | THOUGHT: <one-sentence grounded in-world thought>" or
-; "MISS". Guards are RE-CHECKED here (seed time) — the moment between ask and answer can
+; Output contract (): "POSE: <name> | CLIP: <move key> | THOUGHT: <one-sentence
+; grounded in-world thought>" (CLIP optional — single-move / near-identical picks),
+; "POSE: <name> | THOUGHT: <line>", or "MISS". Guards are RE-CHECKED here (seed
+; time) — the moment between ask and answer can
 ; change everything; a failed guard is a dropped nudge, never a seed.
 Function OnMuseConsideration(String response, Int success)
     Actor ak = _musePendingActor
@@ -1447,9 +2242,9 @@ Function OnMuseConsideration(String response, Int success)
     Bool bDebug = _MuseDebugWindowOpen(fNow)
     If !ak || ak.IsDead() || ak.IsInCombat() || _IsBusyElsewhere(ak)
         If ak
-            Debug.Trace("[SNAnimGS] muse nudge dropped — actor-local guard failed at seed time: " + ak.GetDisplayName())
+            Debug.Trace("[SNAnimGS] sanguine mode nudge dropped - actor-local guard failed at seed time: " + ak.GetDisplayName())
         Else
-            Debug.Trace("[SNAnimGS] muse nudge dropped — pending actor vanished at seed time")
+            Debug.Trace("[SNAnimGS] sanguine mode nudge dropped - pending actor vanished at seed time")
         EndIf
         If bDebug
             _MuseDebugHeartbeat(fNow, "guard failed at seed")
@@ -1459,27 +2254,52 @@ Function OnMuseConsideration(String response, Int success)
     ;  ruling (b) re-check: combat that began during the in-flight consideration —
     ; drop to no-op, no seed, no LastMuse stamp. Reason-coded sentinel, unconditional.
     If PlayerRef.IsInCombat()
-        Debug.Trace("[SNAnimGS] MuseSuspend-PlayerCombat: nudge dropped at seed time (player in combat): " + ak.GetDisplayName())
+        Debug.Trace("[SNAnimGS] SanguineSuspend-PlayerCombat: nudge dropped at seed time (player in combat): " + ak.GetDisplayName())
         Return
     EndIf
     If success != 1 || response == ""
-        Debug.Trace("[SNAnimGS] muse nudge miss (success=" + success + "): " + ak.GetDisplayName())
+        Debug.Trace("[SNAnimGS] sanguine mode nudge miss (success=" + success + "): " + ak.GetDisplayName())
         If bDebug
             _MuseDebugHeartbeat(fNow, "nudge success=" + success)
         EndIf
         Return
     EndIf
-    ; Marker parse, whitespace-tolerant: "POSE: <name> | THOUGHT: <line>" / "MISS".
+    ; Marker parse, whitespace-tolerant ( contract):
+    ;   "POSE: <name> | CLIP: <move key> | THOUGHT: <line>"
+    ;   "POSE: <name> | THOUGHT: <line>"  (single-move / near-identical picks, or a dropped CLIP)
+    ;   "MISS"
     Int iPose = StringUtil.Find(response, "POSE:")
     Int iThought = StringUtil.Find(response, "| THOUGHT:")
     If iPose < 0 || iThought < 0 || iThought <= iPose
-        Debug.Trace("[SNAnimGS] muse nudge miss (parse): " + ak.GetDisplayName() + " — " + response)
+        Debug.Trace("[SNAnimGS] sanguine mode nudge miss (parse): " + ak.GetDisplayName() + " - " + response)
         If bDebug
             _MuseDebugHeartbeat(fNow, "miss (parse)")
         EndIf
         Return
     EndIf
-    String sPose = StringUtil.Substring(response, iPose + 5, iThought - iPose - 5)
+    ;  (picker decommission): the CLIP field -- the exact move within
+    ; the picked category, picked by the consideration model itself from the
+    ; poseCatalog in its own context pack. Optional: single-move picks and the
+    ; near-identical aroused pair carry no CLIP, and a dropped CLIP merely
+    ; degrades to the pool's random draw (sentinel at fire time, never a miss).
+    Int iClipMark = StringUtil.Find(response, "| CLIP:")
+    String sClip = ""
+    If iClipMark > iPose && iClipMark < iThought
+        sClip = StringUtil.Substring(response, iClipMark + 7, iThought - iClipMark - 7)
+        If StringUtil.GetNthChar(sClip, 0) == " "
+            sClip = StringUtil.Substring(sClip, 1, StringUtil.GetLength(sClip) - 1)
+        EndIf
+        While StringUtil.GetLength(sClip) > 0 \
+           && StringUtil.GetNthChar(sClip, StringUtil.GetLength(sClip) - 1) == " "
+            sClip = StringUtil.Substring(sClip, 0, StringUtil.GetLength(sClip) - 1)
+        EndWhile
+    EndIf
+    String sPose = ""
+    If iClipMark > iPose && iClipMark < iThought
+        sPose = StringUtil.Substring(response, iPose + 5, iClipMark - iPose - 5)
+    Else
+        sPose = StringUtil.Substring(response, iPose + 5, iThought - iPose - 5)
+    EndIf
     Int iBar = StringUtil.Find(sPose, "|")
     If iBar >= 0
         sPose = StringUtil.Substring(sPose, 0, iBar)
@@ -1501,7 +2321,7 @@ Function OnMuseConsideration(String response, Int success)
         sThought = StringUtil.Substring(sThought, 1, StringUtil.GetLength(sThought) - 1)
     EndIf
     If sPose == "" || sThought == ""
-        Debug.Trace("[SNAnimGS] muse nudge miss (empty fields): " + ak.GetDisplayName())
+        Debug.Trace("[SNAnimGS] sanguine mode nudge miss (empty fields): " + ak.GetDisplayName())
         If bDebug
             _MuseDebugHeartbeat(fNow, "miss (empty fields)")
         EndIf
@@ -1518,8 +2338,8 @@ Function OnMuseConsideration(String response, Int success)
         ; below carries the paired message+pose notification; seed-only outcomes exist
         ; only in trace logs. The unconditional seed TRACE stays (screen and logs were
         ; parallel before; now the trace alone carries seed-only outcomes).
-        String sLine = "Muse: nudge -> " + ak.GetDisplayName() + " (" + sPose + ")"
-        Debug.Trace("[SNAnimGS] " + sLine + " — thought: " + sThought)
+        String sLine = "Sanguine Mode: nudge -> " + ak.GetDisplayName() + " (" + sPose + ")"
+        Debug.Trace("[SNAnimGS] " + sLine + " - thought: " + sThought)
         If bDebug
             Debug.Notification(sLine)
         EndIf
@@ -1537,41 +2357,50 @@ Function OnMuseConsideration(String response, Int success)
         ; distribution is the  headline funnel metric.
         String sFireVibe = _MuseFireVibe(sPose)
         If sFireVibe == ""
-            Debug.Trace("[SNAnimGS] muse direct fire skipped: not allowlisted (" + sPose + ") — seed-only")
+            Debug.Trace("[SNAnimGS] sanguine mode direct fire skipped: not allowlisted (" + sPose + ") - seed-only")
         ElseIf !_GenderAdmits(ak, sFireVibe)
             ;  Phase B: the fire-time veto is now policy-mode-aware (was the 
             ; flat male veto) — mode 0/1 constrain picks exactly as the prompt's split
             ; guidance does (mode 1: male picks to the male-ok table; mode 0: males out
             ; entirely); mode 2 admits everyone. _PoseVibe re-runs the gate live as the
             ; third layer. Sentinel per  so the veto rate stays measurable.
-            Debug.Trace("[SNAnimGS] muse direct fire skipped: gender policy veto (" + sPose + " not admitted, mode " + _GenderPolicy() + ") — seed-only")
+            Debug.Trace("[SNAnimGS] sanguine mode direct fire skipped: gender policy veto (" + sPose + " not admitted, mode " + _GenderPolicy() + ") - seed-only")
         ElseIf StorageUtil.GetIntValue(None, "GSAnim.Overdrive", 0) == 1
-            Debug.Trace("[SNAnimGS] muse direct fire skipped: overdrive running — seed-only")
+            Debug.Trace("[SNAnimGS] sanguine mode direct fire skipped: sheogorath mode running - seed-only")
         ElseIf _IsBusyElsewhere(ak)
-            Debug.Trace("[SNAnimGS] muse direct fire skipped: busy at fire time — seed-only")
+            Debug.Trace("[SNAnimGS] sanguine mode direct fire skipped: busy at fire time - seed-only")
         Else
-            _PoseVibe(ak, sFireVibe, _MuseFireLabel(sPose))
-            ;  Task 1b: male fires carry an explicit [male vocab] tag — the split's
-            ; first live data must be identifiable in traces (1b sentinel requirement).
-            If _SexOf(ak) == 0
-                Debug.Trace("[SNAnimGS] muse direct fire: " + ak.GetDisplayName() + " (" + sPose + ") [male vocab]")
+            ;  (picker decommission): the consideration answer's CLIP
+            ; fires through the exact-pick plumbing (sForceEvent -- the proven
+            ;  machinery, minus the decision call). Validation here +
+            ; the _PoseVibe pool guard (defense in depth). An absent/invalid
+            ; CLIP degrades to the pool's random draw, sentinel'd -- the only
+            ; random lanes left are Sheogorath/T3, degenerate pools, and this
+            ; ruled fallback.
+            String sForceEvent = ""
+            If sClip != ""
+                String csvMuse = _VibeEventsFor(ak, sFireVibe)
+                If StringUtil.Find("," + csvMuse + ",", "," + sClip + ",") != -1
+                    sForceEvent = sClip
+                    Debug.Trace("[SNAnimGS] sanguine mode direct fire: LLM move pick '" + sClip + "' (cat '" + sFireVibe + "')")
+                Else
+                    Debug.Trace("[SNAnimGS] sanguine mode direct fire: LLM move pick '" + sClip + "' NOT in pool '" + sFireVibe + "' - degrading to random draw")
+                EndIf
             Else
-                Debug.Trace("[SNAnimGS] muse direct fire: " + ak.GetDisplayName() + " (" + sPose + ")")
+                Debug.Trace("[SNAnimGS] sanguine mode direct fire: no CLIP in answer - random draw (single-move or near-identical category, or a dropped field)")
             EndIf
-            ;  aroused-lean leg 3 (): the [arousal lean] sentinel — extends the
-            ; [male vocab] tag pattern so the lean's live effect is measurable (): the
-            ; bland-picks rate (neutral-family fire share at high arousal) is the funnel
-            ; metric. High-tier = the  chain's >=75 leg (OStim rank is its own
-            ; signal; unknown arousal is NOT lean-flagged — silence about the unknown).
-            If StringUtil.Find(_sMuseArous, "high") != -1
-                Debug.Trace("[SNAnimGS] muse direct fire: high-arousal seed — [arousal lean] applies")
+            If _PoseVibe(ak, sFireVibe, _MuseFireLabel(sPose), sForceEvent, 1)
+                ;  2.3 (outcome-true,  finding 2.3): the fire sentinel
+                ; fires ONLY on a True return from _PoseVibe (event actually sent).
+                ; The success bookkeeping (_MuseFireSuccess) carries the exact
+                ; sentinels, notification and interval re-arm on every fire path.
+                _MuseFireSuccess(ak, sPose, fNow)
+            Else
+                Debug.Trace("[SNAnimGS] sanguine mode direct fire REFUSED (no event sent): " + ak.GetDisplayName() + " (" + sPose + ") -- reason per the refusal sentinel above")
             EndIf
-            ;  Task 2e (user spec): on-screen notification ONLY on actual fires —
-            ; paired message+pose, always. ASCII-only (4f glyph rule).
-            Debug.Notification("Muse - " + ak.GetDisplayName() + " (" + sPose + ")")
         EndIf
     Else
-        Debug.Trace("[SNAnimGS] muse nudge seed skipped (rc=" + rc + "): " + ak.GetDisplayName())
+        Debug.Trace("[SNAnimGS] sanguine mode nudge seed skipped (rc=" + rc + "): " + ak.GetDisplayName())
         If bDebug
             _MuseDebugHeartbeat(fNow, "seed rc=" + rc)
         EndIf
@@ -1605,8 +2434,8 @@ Function _MuseDebugHeartbeat(Float afNow, String asWhy)
         Return
     EndIf
     _fMuseDebugBeat = afNow
-    Debug.Notification("Muse: stirring (no nudge this cycle)")
-    Debug.Trace("[SNAnimGS] muse heartbeat (no nudge this cycle): " + asWhy)
+    Debug.Notification("Sanguine Mode: stirring (no nudge this cycle)")
+    Debug.Trace("[SNAnimGS] sanguine mode heartbeat (no nudge this cycle): " + asWhy)
 EndFunction
 
 ; ── Phase 4d rider: muse debug window re-arm (the manual override) ─────────────────
@@ -1625,8 +2454,8 @@ EndFunction
 Function ReArmMuseDebug()
     StorageUtil.SetIntValue(None, "GSAnim.MuseDebugDone", 0)
     StorageUtil.SetFloatValue(None, "GSAnim.MuseDebugEnd", 0.0)
-    Debug.Notification("Muse debug window re-armed (next activation).")
-    Debug.Trace("[SNAnimGS] muse debug window re-armed via ReArmMuseDebug().")
+    Debug.Notification("Sanguine Mode debug window re-armed (next activation).")
+    Debug.Trace("[SNAnimGS] sanguine mode debug window re-armed via ReArmMuseDebug().")
 EndFunction
 
 ; ──  S3: Baka-half presence probe ─────────────────────────────────────
@@ -1710,14 +2539,20 @@ Function _OverdriveOn()
         i += 1
     EndWhile
     If iSkipped > 0
-        Debug.Trace("[SNAnimGS] overdrive T2 floor: " + iSkipped + " Baka-hosted pose cooldowns skipped - Baka half absent (REV-103 S3 guard)")
+        Debug.Trace("[SNAnimGS] sheogorath mode T2 floor: " + iSkipped + " Baka-hosted pose cooldowns skipped - Baka half absent (REV-103 S3 guard)")
     EndIf
     StorageUtil.SetFloatValue(None, "GSAnim.OverdriveExpire", Utility.GetCurrentRealTime() + fOdExpireSeconds)
-    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())
+    StorageUtil.SetFloatValue(None, "GSAnim.LastPoseFire", Utility.GetCurrentRealTime())  ; observability only since  3.3 (silence-floor reader retired)
     StorageUtil.SetFloatValue(None, "GSAnim.LastOdCue", 0.0)
-    Debug.Notification("Overdrive mode - the room is yours.")
+    ;  3.2 ->  3.3 receipt: the ON state, its armed cadence parameters
+    ; and the policy mode are trace-receipted. Census of the armed machinery
+    ; (): poll 15s, T3 every-15s multi-poser (silence floor RETIRED), expire 300s.
+    Debug.Trace("[SNAnimGS] sheogorath mode ON (REV-137f receipt): armed -- poll 15s, T3 multi-poser every " \
+        + fOdT3IntervalSec + "s (one-at-a-time silence floor retired; overlapping lifetimes permitted), expire " + fOdExpireSeconds \
+        + "s, T3 pool policy mode " + _GenderPolicy() + " (REV-137d 3.1 blanket)")
+    Debug.Notification("Sheogorath Mode - the room is yours.")
     _OdCue()                 ; first ambience cue right away (sets GSAnim.LastOdCue)
-    RegisterForSingleUpdate(10.0)
+    RegisterForSingleUpdate(15.0)
 EndFunction
 
 ; Performance Mode OFF — the single exit path shared by 2nd-press (button branch) and
@@ -1738,12 +2573,13 @@ Function _OverdriveOff(String sNotify)
         i += 1
     EndWhile
     If iSkipped > 0
-        Debug.Trace("[SNAnimGS] overdrive T2 restore: " + iSkipped + " Baka-hosted pose cooldowns skipped - Baka half absent (REV-103 S3 guard)")
+        Debug.Trace("[SNAnimGS] sheogorath mode T2 restore: " + iSkipped + " Baka-hosted pose cooldowns skipped - Baka half absent (REV-103 S3 guard)")
     EndIf
     StorageUtil.SetIntValue(None, "GSAnim.Overdrive", 0)
     StorageUtil.SetFloatValue(None, "GSAnim.OverdriveExpire", 0.0)
     StorageUtil.SetFloatValue(None, "GSAnim.LastOdCue", 0.0)
     StorageUtil.SetFloatValue(None, "GSAnim.CombatSuspendStart", 0.0)
+    Debug.Trace("[SNAnimGS] sheogorath mode OFF (REV-137d receipt): " + sNotify)   ; 3.2 receipt: 2nd-press and time-expiry both land here
     If sNotify != ""
         Debug.Notification(sNotify)
     EndIf
@@ -1763,35 +2599,72 @@ Function _OdCue()
         _OdCues[Utility.RandomInt(0, _OdCues.Length - 1)], "", 75000, PlayerRef, None)
 EndFunction
 
-; The 10s overdrive tick: expiry check (incl. combat-pause already applied upstream in
-; OnUpdate), T1 cue if due, T3 silence-floor auto-pose if due.
+; The 15s overdrive tick ( 3.3): expiry check (incl. combat-pause already applied
+; upstream in OnUpdate), T1 cue if due, T3 every-interval multi-poser fire if due.
 Function _OverdriveTick()
     _EnsurePools()   ; Phase 4d: heal BEFORE the body — in the stale instance the _OdCue crash aborted this tick before the T3 floor check could even run
     Float fNow = Utility.GetCurrentRealTime()
     If fNow >= StorageUtil.GetFloatValue(None, "GSAnim.OverdriveExpire", 0.0)
-        _OverdriveOff("Overdrive mode ended (time).")
+        _OverdriveOff("Sheogorath Mode ended (time).")
         Return
     EndIf
     _OdCue()
-    If fNow - StorageUtil.GetFloatValue(None, "GSAnim.LastPoseFire", 0.0) >= fOdSilenceFloor
+    ;  3.3 (user ruling 2026-10-22, "I want chaos -- multiple posers and poses
+    ; at the same time"): the one-at-a-time silence floor is RETIRED -- a NEW candidate
+    ; fires every fOdT3IntervalSec (15s, planner overdrive cadence) with overlapping pose
+    ; lifetimes permitted; eligibility gates UNCHANGED (policy/loaded/near/not-posing/
+    ; not-combat + busy backstop). Concurrency verified safe: all GSAnim bookkeeping is
+    ; per-actor keyed (Pose/Start/Timeout/LockAI/Vibe/IdleHold/T3Mark), the posing list
+    ; is a FormList append, and no global lock exists. The clock is a fresh key
+    ; (GSAnim.LastT3Fire) so save-resident members can't shadow it; a faster live sweep
+    ; (3s, posers up) cannot accelerate the 15s cadence. Census sentinels unconditional.
+    Float fLastT3 = StorageUtil.GetFloatValue(None, "GSAnim.LastT3Fire", 0.0)
+    If fLastT3 > fNow
+        fLastT3 = 0.0   ; stale cross-session stamp -- house clamp class ( pattern)
+    EndIf
+    ;  5.2: the T3 cadence is now an MCM SLIDER value (15s-240s, the GS
+    ; Poses page) carried on the fresh key GSAnim.T3Interval (default = the
+    ; historic compiled member -- the 137f save-residue-safe pattern; existing
+    ; installs keep 15s).
+    Float fT3Interval = StorageUtil.GetFloatValue(None, "GSAnim.T3Interval", fOdT3IntervalSec)
+    If fNow - fLastT3 >= fT3Interval
+        StorageUtil.SetFloatValue(None, "GSAnim.LastT3Fire", fNow)
+        Debug.Trace("[SNAnimGS] sheogorath mode tick: T3 multi-poser fire (clock " + (fNow - fLastT3) \
+            + "s >= interval " + fT3Interval + "s; expire in " \
+            + (StorageUtil.GetFloatValue(None, "GSAnim.OverdriveExpire", 0.0) - fNow) + "s; )")
         _OdAutoPose()
+    Else
+        Debug.Trace("[SNAnimGS] sheogorath mode tick: T3 window not yet due (clock " + (fNow - fLastT3) \
+            + "s < interval " + fT3Interval + "s; )")
     EndIf
 EndFunction
 
-; T3 silence floor: one random eligible female NPC strikes a weighted solo-safe GS vibe.
-; ExecuteAction bypasses eligibility AND cooldowns by design — our guard chain is the ONLY
-; protection, so it's strict: _DaemonCandidates (loaded/female/near/not-posing/not-combat)
-; + _IsBusyElsewhere backstop + not currently T3-posed. The Pose*_Execute wrappers re-run
-; their own female/busy guards at dispatch, defense in depth. GS VIBES ONLY — never Baka,
-; never two-actor, never targeted. After the fire, a justification thought seed lands (rc
-; checked, harmless if it fails) and the silence clock re-arms via _PoseVibe's stamp.
+; T3 multi-poser ( 3.3): one random eligible NPC (policy-admitted,  3.1 blanket)
+; strikes a weighted solo-safe GS vibe. ExecuteAction bypasses eligibility AND cooldowns
+; by design — our guard chain is the ONLY protection, so it's strict: _DaemonScan
+; (policy-admitted/loaded/near/not-posing/not-combat) + _IsBusyElsewhere backstop + not
+; currently T3-posed. The Pose*_Execute wrappers re-run their own gender/busy guards at
+; dispatch, defense in depth. GS VIBES ONLY — never Baka, never two-actor, never
+; targeted. After the fire, a justification thought seed lands (rc checked, harmless if
+; it fails) and the silence clock re-arms via _PoseVibe's stamp.
+;  3.2: every attempt leg is receipted — pool-empty, candidate selection
+; (who + why), every refusal named, dispatch rc, and the fire receipt lands via
+; _PoseVibe's success leg (with the user-ruled on-screen Sheogorath notification, 4.1).
 Function _OdAutoPose()
     Int n = _DaemonScan()
     If n == 0
+        Debug.Trace("[SNAnimGS] sheogorath T3 attempt REFUSED: candidate pool EMPTY (scan n=0; filters: policy mode " \
+            + _GenderPolicy() + ", radius " + fDaemonRadius + ", posing, combat, sleep, swim/mount/sneak)")
         Return
     EndIf
     Actor ak = _DaemonPool[Utility.RandomInt(0, n - 1)]
-    If !ak || _IsBusyElsewhere(ak)
+    If !ak
+        Debug.Trace("[SNAnimGS] sheogorath T3 attempt REFUSED: random slot resolved None (pool n=" + n + ")")
+        Return
+    EndIf
+    If _IsBusyElsewhere(ak)
+        Debug.Trace("[SNAnimGS] sheogorath T3 attempt REFUSED: " + ak.GetDisplayName() \
+            + " busy at pick time (backstop; pool n=" + n + ")")
         Return
     EndIf
     ; Weighted pick from the named constant pool (Edit 2 block — retune _OdVibeWeights).
@@ -1807,50 +2680,72 @@ Function _OdAutoPose()
         EndIf
         i += 1
     EndWhile
-    Debug.Trace("[SNAnimGS] T3 silence-floor auto-pose: " + ak.GetDisplayName() + " -> " + sAction)
-    SkyrimNetApi.ExecuteAction(sAction, ak, "{}")
+    Debug.Trace("[SNAnimGS] sheogorath T3 attempt: candidate " + ak.GetDisplayName() \
+        + " selected (random draw from policy-admitted pool n=" + n + ", policy mode " + _GenderPolicy() \
+        + ") -> vibe " + sAction + " (weighted pick)")
+    ;  (idle-interrupt service, spec 1.4.4): T3 routes through the same
+    ; primitive — interruptible idle classes exit->recheck (incl. the
+    ; gender-policy admit, live) -> fire instead of being silently dropped.
+    If !_IdleFirePath(ak, sAction)
+        Debug.Trace("[SNAnimGS] sheogorath T3 attempt REFUSED: idle interrupt (exit/recheck refused -- reason per the idle-svc sentinel above): " + ak.GetDisplayName())
+        Return
+    EndIf
+    Debug.Trace("[SNAnimGS] T3 multi-poser auto-pose: " + ak.GetDisplayName() + " -> " + sAction)
+    ;  3.1: the receipt gate is a per-actor GSAnim.T3Mark timestamp set HERE at
+    ; dispatch (cleared on a non-zero rc) and consumed by _PoseVibe's success leg within
+    ; 30s -- the old _bT3InFlight member window closed at this function's synchronous
+    ; return, before the async dispatch's fire reached the receipt block, so the
+    ; user-ruled on-screen notification never printed (0/4 in the 10-22 dogfood log).
+    StorageUtil.SetFloatValue(ak, "GSAnim.T3Mark", Utility.GetCurrentRealTime())
+    Int rcOd = SkyrimNetApi.ExecuteAction(sAction, ak, "{}")
+    If rcOd != 0
+        StorageUtil.SetFloatValue(ak, "GSAnim.T3Mark", 0.0)   ; dispatch refused -- clear the mark (0.0 = none)
+    EndIf
+    Debug.Trace("[SNAnimGS] sheogorath T3 attempt dispatched (rc=" + rcOd + "): " + ak.GetDisplayName() \
+        + " -> " + sAction + "; accept/refuse receipt per the pose fire sentinels below")
     ; Justification seed: the same thought registers that drive muse, at performance pitch.
     SkyrimNetApi.GenerateNPCThought(ak, \
-        "The music and the crowd's eyes have gotten to you — you feel like dancing for them.")
+        "The music and the crowd's eyes have gotten to you - you feel like dancing for them.")
 EndFunction
 ; Phase 4 rider: labels below are the distilled Phase 3 one-liners — they flow into the
-; gsanim_npc_pose event ("strikes <label>, holding it in place") AND into the per-actor
+; gsanim_npc_pose event ("strikes <label>." since  Task 3.1 — the ", holding
+; it in place" tail removed by user ruling 2026-10-23) AND into the per-actor
 ; GSAnim.Vibe key the stop paths read for named-pose stop wording.
 Function PoseSeduce_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "seduce", "a seductive pose — weight on one hip, gaze holding the room")
+    _PoseVibe(akInitiator, "seduce", "a seductive pose - weight on one hip, gaze holding the room", 2)
 EndFunction
 Function PoseSelftouch_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "selftouch", "a suggestive, self-touching pose — arousal worn openly")
+    _PoseVibe(akInitiator, "selftouch", "a suggestive, self-touching pose - arousal worn openly", 2)
 EndFunction
 Function PosePresent_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "present", "a bent-forward presenting pose, deliberately offering the view")
+    _PoseVibe(akInitiator, "present", "a bent-forward presenting pose, deliberately offering the view", 2)
 EndFunction
 Function PoseDance_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "dance", "a light, playful dance — feet answering the music")
+    _PoseVibe(akInitiator, "dance", "a light, playful dance - feet answering the music", 2)
 EndFunction
 Function PoseDanceSexy_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "dance_sexy", "a slow, provocative dance — a performance with a single intended victim")
+    _PoseVibe(akInitiator, "dance_sexy", "a slow, provocative dance - a performance with a single intended victim", 2)
 EndFunction
 Function PoseGroundSexy_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "ground_sexy", "a sultry sprawl on the ground — low, languid, unhurried")
+    _PoseVibe(akInitiator, "ground_sexy", "a sultry sprawl on the ground - low, languid, unhurried", 2)
 EndFunction
 Function PoseGroundIdle_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "ground_idle", "a spent, sprawling rest on the ground")
+    _PoseVibe(akInitiator, "ground_idle", "a spent, sprawling rest on the ground", 2)
 EndFunction
 Function PoseWorkout_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "workout", "a set of exercises — strength and stamina on display")
+    _PoseVibe(akInitiator, "workout", "a set of exercises - strength and stamina on display", 2)
 EndFunction
 Function PoseStretch_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "stretch", "a long, reaching stretch")
+    _PoseVibe(akInitiator, "stretch", "a long, reaching stretch", 2)
 EndFunction
 Function PoseSubmission_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "submission", "a surrendered pose — body lowered, the shape of yielding")
+    _PoseVibe(akInitiator, "submission", "a surrendered pose - body lowered, the shape of yielding", 2)
 EndFunction
 Function PosePlead_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "plead", "a kneeling plea — lowered before someone it matters to")
+    _PoseVibe(akInitiator, "plead", "a kneeling plea - lowered before someone it matters to", 2)
 EndFunction
 Function PoseIdle_Execute(Actor akInitiator)
-    _PoseVibe(akInitiator, "idle", "an easy stance — hip against the wall, nowhere to be")
+    _PoseVibe(akInitiator, "idle", "an easy stance - hip against the wall, nowhere to be", 2)
 EndFunction
 
 ; Phase 4 rider: shared stop wording — names the held pose from GSAnim.Vibe when present,

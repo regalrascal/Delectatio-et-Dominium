@@ -2,7 +2,7 @@ name: PoseSubmission
 description: |
   YOU (a female NPC) take a submissive or surrendered pose — body lowered and bent, the physical
   shape of yielding.
-  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — unlike
+  You hold the pose until you choose to stop (use StopPosing) — unlike
   other poses, a fight breaking out does not free you; it ends when you stop it or after a while.
 
   WHEN yielding needs to be shown, not just said: surrendering to a captor, submitting to a
@@ -10,7 +10,9 @@ description: |
   attitude of surrender, not a plain kneeling posture — bent, lowered, given over. Pairs
   naturally with a line of dialogue — the "as you wish," the lowered "yes, my thane."
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: kneeling tied with hands behind the head, surrendered with hands up, standing with hands tied back, on the ground tied and resting on the side. (REV-161 4.3 moves enrichment - register batch DRAFT.)
+  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
+  begins in one.
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseSubmission_Execute

@@ -1,0 +1,36 @@
+{# DeD Tattoos — disposition guidance for witnesses. ACTING-NPC-keyed: the
+   branches read the ACTING NPC's arousal tier (get_ded_arousal), NOT the
+   wearer's — a neutral witness and a fascinated witness react differently
+   to the same visibly marked actor (the planner's fascination/disgust
+   matrix as disposition text). Eligibility via get_ded_marks_any
+   (module-owned companion decorator, the 132b class): a visibly marked
+   actor in the observer's cell. VISIBLE marks only (the REV-157 ruling —
+   covered marks do not enter this lane). Tier-0 = silence (the
+   anti-obsession rule; 0171's tier-1 floor).
+
+   REV-157 (2026-10-24) — the 0520 mold applied to SlaveTats. Lane
+   conventions transcribed exactly: this lane's actor variable is
+   npc.UUID (the 0050/0550 ufi precedent), NOT actor_uuid; NO
+   render_mode gate (the 0520 hardening — eligibility via
+   get_ded_marks_any already renders nothing when nothing is visible);
+   the tier read is guarded (default() + isNumber; tier defaults 0 =
+   silence when the arousal framework is absent — the s9 null contract).
+   NULL CONTRACT (psc side, REV-157): get_ded_marks_any always returns
+   well-formed JSON — {"any": false} under every absent-framework state.
+   Branch texts below are STRATEGIST DRAFT (register entry 36) — the
+   user's ruling gates INSTALL; first enabled render IS the probe
+   (clean = LIVE; error box = escalate). #}
+{% set dedany = get_ded_marks_any(npc.UUID) %}
+{% if dedany and dedany.any %}
+{% set tier = default(get_ded_arousal(npc.UUID).tier, 0) %}
+{% if not isNumber(tier) %}
+{% set tier = 0 %}
+{% endif %}
+{% if tier == 3 %}
+When reacting to the visible tattoos, run hot — open admiration and appetite; the marks on their skin hold your gaze and you make no effort to hide it.
+{% else if tier == 2 %}
+When reacting to the visible tattoos, be intrigued — curiosity and appraising interest, reading the marks and what they say about the one wearing them.
+{% else if tier == 1 %}
+When reacting to the visible tattoos, be taken aback — scandal, disapproval, or quiet contempt for what is written on their skin.
+{% endif %}
+{% endif %}

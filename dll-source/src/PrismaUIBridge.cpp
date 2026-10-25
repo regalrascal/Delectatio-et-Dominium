@@ -369,6 +369,26 @@ void PrismaUIBridge::SetGetUpCharge(float pct) noexcept {
     s_prisma->Invoke(s_hudView, script.c_str());
 }
 
+//  Feature B: pushes the ambient mode-button ON/OFF highlight to the open
+// SNBaka_Menu footer. Papyrus arbitrates the SNBaka.MephalaMode / SNBaka.MolagBalMode
+// flags and calls this at panel open and after every toggle; the DLL relays to JS via
+// the proven Invoke/payload pattern (the SetGetUpCharge shape, on the MENU view).
+// Safe when the panel is closed - the view exists from plugin init.
+void PrismaUIBridge::SetModeStates(bool mephala, bool molagBal) noexcept {
+    if (!s_prisma || !s_prisma->IsValid(s_view)) {
+        SKSE::log::warn("SetModeStates: menu view unavailable, attempting recovery (mephala={} molagbal={}).", mephala, molagBal);
+        CreateMenuView();
+        if (!s_prisma || !s_prisma->IsValid(s_view)) {
+            SKSE::log::error("SetModeStates: recovery failed, dropping call.");
+            return;
+        }
+    }
+    const auto script = std::format("window.snbakaSetModeStates({}, {})",
+        mephala ? "true" : "false", molagBal ? "true" : "false");
+    s_prisma->Invoke(s_view, script.c_str());
+    SKSE::log::info("SetModeStates: pushed mephala={} molagbal={}.", mephala, molagBal);
+}
+
 bool PrismaUIBridge::IsMenuOpen() noexcept {
     return s_mode.load() != MenuMode::None;
 }
@@ -426,25 +446,33 @@ void PrismaUIBridge::ShowInteractMenu(RE::Actor* caster, RE::Actor* target) noex
         if (resolved && resolved != player) {
             target = resolved;
         } else {
-            SKSE::log::warn("ShowInteractMenu: no target in crosshair/range - nothing to interact with.");
-            return;
+            //  Feature A (user ruling: a power press with no target OPENS the
+            // panel - all target-actions greyed + a "no target selected" overlay; the
+            // two ambient-mode buttons stay LIVE). The  abort becomes the
+            // null-target panel-open path: render the view with an empty name payload
+            // (the only target-context field the JS reads is the targetName string of
+            // snbaka_open_interact, already null-guarded `targetName || ''`). 0 FormID
+            // = no-target session; every target-action pick from it is refused
+            // Papyrus-side with the reason-coded sentinel (_DispatchInteractAction).
+            target = nullptr;
         }
     }
 
-    if (!caster || !target) {
-        SKSE::log::error("ShowInteractMenu: null caster or target after resolve.");
+    if (!caster) {
+        SKSE::log::error("ShowInteractMenu: null caster after resolve.");
         return;
     }
 
     // Capture the actors now, by FormID, so the dispatch uses these exact actors
     // regardless of what happens to Papyrus _pending* while the menu is open.
+    // : s_interactTarget == 0 marks the no-target session.
     s_interactCaster = caster->GetFormID();
-    s_interactTarget = target->GetFormID();
+    s_interactTarget = target ? target->GetFormID() : 0;
     SKSE::log::info("ShowInteractMenu: caster='{}' (0x{:08X})  target='{}' (0x{:08X})",
         caster->GetDisplayFullName(), s_interactCaster,
-        target->GetDisplayFullName(), s_interactTarget);
+        target ? target->GetDisplayFullName() : "(no target)", s_interactTarget);
 
-    std::string safe = target->GetDisplayFullName();
+    std::string safe = target ? target->GetDisplayFullName() : "";
     for (auto& c : safe) if (c == '\'') c = '\x60';
     s_mode = MenuMode::Interact;
     const auto script = std::format("window.snbaka_open_interact('{}')", safe);
@@ -695,6 +723,47 @@ void PrismaUIBridge::OnJSChoice(const char* value) noexcept {
 
     SKSE::log::info("OnJSChoice: value='{}'", value ? value : "(null)");
 
+    //  Feature B: reserved footer mode-button ids ("900"/"901") KEEP THE
+    // PANEL OPEN - no mode exchange, no Unfocus/Hide (the  JS design intent:
+    // "both modes can be toggled in one visit"; until now the bridge still closed the
+    // view on every pick, so a toggle also dismissed the panel). The toggle is
+    // dispatched to Papyrus _MenuModeButton, which arbitrates and pushes the new
+    // button states back via SetModeStates. Cuts across every panel mode (the footer
+    // is panel-wide), so it precedes the per-mode dispatch below.
+    if (value && value[0] == '9' && value[1] == '0'
+        && (value[2] == '0' || value[2] == '1') && value[3] == '\0') {
+        const int which = (value[2] == '0') ? 900 : 901;
+        SKSE::log::info("OnJSChoice: mode button {} - panel stays open (REV-147).", which);
+        SKSE::GetTaskInterface()->AddTask([which]() {
+            auto* vm      = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+            auto* handler = RE::TESDataHandler::GetSingleton();
+            if (!vm || !handler) {
+                SKSE::log::error("Task: VM or DataHandler unavailable (mode button).");
+                return;
+            }
+            auto* quest = handler->LookupForm<RE::TESQuest>(0x000D62, "SkyrimNet_BakaIntegration.esp");
+            if (!quest) {
+                SKSE::log::error("Task: BakaIntegration quest not found (mode button).");
+                return;
+            }
+            auto* policy = vm->GetObjectHandlePolicy();
+            RE::VMHandle handle = policy->GetHandleForObject(RE::FormType::Quest, quest);
+            if (handle == policy->EmptyHandle()) {
+                SKSE::log::error("Task: VMHandle invalid (mode button).");
+                return;
+            }
+            auto* args = RE::MakeFunctionArguments(std::int32_t{which});
+            RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> cb;
+            vm->DispatchMethodCall(handle,
+                RE::BSFixedString("SkyrimNet_BakaIntegration"),
+                RE::BSFixedString("_MenuModeButton"),
+                args, cb);
+            delete args;
+            SKSE::log::info("Task: _MenuModeButton dispatched ({}).", which);
+        });
+        return;
+    }
+
     // Read the mode FIRST so we unfocus the view this pick actually came from
     // (: the SlaveTats picker lives on its own s_stView, not s_view;
     //  : the Execute-confirm popup likewise lives on s_execView).
@@ -809,9 +878,17 @@ void PrismaUIBridge::OnJSChoice(const char* value) noexcept {
             SKSE::log::info("Task: interact dispatch  -  caster='{}' (0x{:08X}) target='{}' (0x{:08X}) choice={}",
                 cst ? cst->GetDisplayFullName() : "(null)", iCaster,
                 tgt ? tgt->GetDisplayFullName() : "(null)", iTarget, choice);
-            if (!cst || !tgt) {
-                SKSE::log::error("Task: interact  -  actor lookup failed.");
+            if (!cst) {
+                SKSE::log::error("Task: interact  -  caster lookup failed.");
                 return;
+            }
+            if (!tgt) {
+                //  Feature A: no-target session (iTarget == 0 from the null-target
+                // panel open). The footer mode ids never reach here (intercepted above,
+                // panel stays open); every target-action choice still dispatches so
+                // Papyrus refuses it with the reason-coded sentinel - defense-in-depth
+                // under the JS grey-out, which normally makes these clicks impossible.
+                SKSE::log::warn("Task: interact  -  no target captured; dispatching for Papyrus-side refusal (choice={}).", choice);
             }
             auto* args = RE::MakeFunctionArguments(
                 std::int32_t{choice},

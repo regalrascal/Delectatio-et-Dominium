@@ -7,10 +7,12 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ originator }} can talk to them first — interrogate, threaten, mock, demand their surrender or
-    belongings — but must still decide now: call the action, don't just narrate: Execute (the deliberate
-    killing blow on a downed victim — first when the loser is an enemy the winner wants dead),
-    Escalate (the Escalate action — never StartNewSex), HelpUp, or Release.
+    {{ originator }} holds the moment over {{ target }} -- words can fill it first
+    (questions, threats, mockery, demands for surrender or belongings), but it ends
+    in an act: Execute (the deliberate killing blow on a downed victim -- the one a
+    victor chooses when the loser is an enemy wanted dead), Escalate (the rival-
+    escalation between them, not a fresh bout), HelpUp, or Release. {{ target }}'s
+    fate hangs on which one {{ originator }} reaches for.
 
 audience: "nearby_npcs"
 

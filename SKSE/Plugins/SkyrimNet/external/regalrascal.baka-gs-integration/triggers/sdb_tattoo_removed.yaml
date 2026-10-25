@@ -7,15 +7,12 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    The mark on {{ target }}'s skin has just been wiped away. Generate one
-    short reaction beat from anyone who notices — relief, curiosity, a
-    comment, or pointed silence. Match their personality exactly.
+    The mark on {{ target }}'s skin has just been wiped away. Anyone who notices reacts
+    in their own register -- relief, curiosity, a comment, or pointed silence.
 
-    React only to what is observable. The specific mark that was removed is
-    named in the event text. Do not name any framework or source.
-
-    Do not describe {{ target }}'s own reaction in your beat — that belongs
-    to the conversation that follows.
+    The specific mark that was removed is named in the event text; nothing
+    beyond it is apparent to onlookers. {{ target }}'s own reaction belongs to
+    the conversation that follows.
 
 audience: "nearby_npcs"
 

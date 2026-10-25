@@ -1,0 +1,19 @@
+name: "sdb_fhu_deflate_oral"
+description: "An inflated actor brings the load back up in front of everyone (DRAFT - rev-149, re-voiced REV-164, sec.7 approval pending)"
+
+eventCriteria:
+  eventType: "sdb_fhu_deflate_oral"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} doubles over and brings the cum back up in front of
+    everyone, eyes watering. They react to what their body just did and who
+    saw it -- true to who they are.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

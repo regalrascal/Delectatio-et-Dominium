@@ -1,0 +1,118 @@
+{% if render_mode == "full" or render_mode == "thoughts" or render_mode == "transform" or render_mode == "action" %}
+{# DeD Cum — body-state facts. INFORMATIVE ONLY, never directive. Tier-0
+   (unmarked) renders NOTHING. Windowed: DeD_Cum_PromptShow opens ~1 min per
+   10 min of marked time, reopened immediately on application, so state
+   updates land without hygiene-style repetition (the 0171 windowing
+   precedent applied to cum). Brace-balanced.
+
+   REV-133 (2026-10-19) — THE NULL-HARDENING + THE PER-LOCATION CONSTRUCTION
+   (register entry 26's design directive). Errors fixed from the 132b draft:
+   (1) the bio lane's actor variable is actorUUID (0171 precedent), NOT
+   actor_uuid — the 132b draft's actor_uuid was an UNKNOWN VARIABLE (the
+   RenderTemplate error class; PromptEngineRender.cpp:372 receipts);
+   (2) actor must come from decnpc(actorUUID) (0171 precedent), NOT a bare
+   undefined actor; (3) every numeric read is guarded (default() + isNumber,
+   the beta-28 prompt-file-syntax.md function table) so no comparison can
+   see null/undefined. NULL CONTRACT (psc side, REV-133): freshness_s is
+   always an Int >= 0 (never null); locations is always a well-formed
+   (possibly empty) array; present false = {"present": false} only; tier
+   reads 0 when the arousal framework is absent.
+
+   DESIGN CHOICE (flagged, per the task): BRANCHES-INSIDE-LOOP — the location
+   for-loop runs FIRST and each location's phrase is chosen by per-location
+   branch, with the freshness band applied as a single surrounding sentence.
+   Loop-inside-bands was rejected: freshness is wearer-level (one band per
+   render), so wrapping the loop in the bands would duplicate the band text
+   per location. The phrase table below is STRATEGIST DRAFT (s7: entry 26's
+   batch — the user rules the family once). VERDICT STATUS: this bio surface's
+   decorator behavior is untested on beta-28 (132b receipts; REV-133 4.1:
+   the session's render errors were RESPONSE-CONTENT lane + unknown-variable
+   class, NOT this lane) — first enabled render = verdict (a)/(b) LIVE; an
+   error box = NOT (escalate). The user's entry-26 ruling gates INSTALL. #}
+{% if actorUUID and actorUUID != 0 %}
+{% set cum = get_ded_cum(actorUUID) %}
+{% if cum and cum.present %}
+{% set actor = decnpc(actorUUID) %}
+{% if actor and actor.UUID %}
+{% set show = papyrus_util("GetIntValue", actor.UUID, "DeD_Cum_PromptShow", 1) %}
+{% if show == 1 %}
+{% set fr = default(cum.freshness_s, 0) %}
+{% if not isNumber(fr) %}
+{% set fr = 0 %}
+{% endif %}
+{% if cum.self %}
+## Your Body
+{% if fr < 600 %}
+You have fresh cum on you from a very recent sexual encounter.
+{% elif fr < 3600 %}
+You have dried cum on you from a recent sexual encounter.
+{% else %}
+An old, faded residue from a past sexual encounter clings to you.
+{% endif %}
+{% if existsIn(cum, "locations") and isArray(cum.locations) %}
+{% for loc in cum.locations %}
+{% if loc == "belly" %}
+Your belly is smeared with cum.
+{% elif loc == "butt" %}
+Your ass is smeared with cum.
+{% elif loc == "chest" %}
+Your chest is smeared with cum.
+{% elif loc == "face" %}
+Cum is streaked across your face.
+{% elif loc == "feet" %}
+Your feet are splattered with cum.
+{% elif loc == "hands" %}
+Your hands are sticky with cum.
+{% elif loc == "mouth" %}
+You can taste cum in your mouth.
+{% elif loc == "rectum" %}
+Cum is leaking from your ass.
+{% elif loc == "thighs" %}
+Cum runs down your thighs.
+{% elif loc == "throat" %}
+Your throat tastes of cum.
+{% elif loc == "vagina" %}
+Cum is leaking from your pussy.
+{% endif %}
+{% endfor %}
+{% endif %}
+{% else %}
+## Who Is Nearby
+{{ default(cum.wearer_name, "The cum soaked person") }} is marked with cum{% if fr < 600 %}, still fresh{% elif fr < 3600 %}, now dried{% else %}, an old faded residue now{% endif %} from a sexual encounter.
+{% if existsIn(cum, "locations") and isArray(cum.locations) %}
+{% set parts = "" %}
+{% for loc in cum.locations %}
+{% if loc == "belly" %}
+{% set parts = parts + "belly, " %}
+{% elif loc == "butt" %}
+{% set parts = parts + "ass, " %}
+{% elif loc == "chest" %}
+{% set parts = parts + "chest, " %}
+{% elif loc == "face" %}
+{% set parts = parts + "face, " %}
+{% elif loc == "feet" %}
+{% set parts = parts + "feet, " %}
+{% elif loc == "hands" %}
+{% set parts = parts + "hands, " %}
+{% elif loc == "mouth" %}
+{% set parts = parts + "mouth, " %}
+{% elif loc == "rectum" %}
+{% set parts = parts + "ass, " %}
+{% elif loc == "thighs" %}
+{% set parts = parts + "thighs, " %}
+{% elif loc == "throat" %}
+{% set parts = parts + "throat, " %}
+{% elif loc == "vagina" %}
+{% set parts = parts + "pussy, " %}
+{% endif %}
+{% endfor %}
+{% if parts != "" %}
+It is visible on their {{ parts | trim(" ,") }}.
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endif %}

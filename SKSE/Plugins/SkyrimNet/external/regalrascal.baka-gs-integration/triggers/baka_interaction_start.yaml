@@ -7,18 +7,16 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ originator }} has just initiated physical contact with {{ target }} — the animation
-    is beginning right now. Generate {{ originator }}'s immediate in-character beat at
-    the moment they make their move: a word, a breath, a look, or one short line.
+    {{ originator }} has just initiated physical contact with {{ target }} -- the animation
+    begins right now, the first touch landing. The opening beat is {{ originator }}'s:
+    a word, a breath, a look, or one short line, in the register of the act and
+    the character behind it. A gentle hug sounds different from a forced grab; a
+    romantic kiss differs from a chokehold; affection, dominance, violation,
+    playfulness, and cruelty each carry their own voice in {{ originator }}'s mouth.
 
-    The tone must match the specific action and {{ originator }}'s personality exactly.
-    Gentle hugs feel different from forced grabs. A romantic kiss differs from a chokehold.
-    Read the context: is this affection, dominance, violation, playfulness, or cruelty?
-
-    Do NOT describe what {{ target }} is doing — their reaction comes naturally from
-    the conversation. Do NOT narrate the animation in third person — speak or act as
-    {{ originator }} in first person or through their immediate physical expression.
-    One beat only. Make it sharp and character-true.
+    The moment belongs to {{ originator }}'s body and voice. {{ target }}'s reaction
+    comes in its own time, from the conversation that follows. One sharp,
+    character-true beat.
 
 audience: "nearby_npcs"
 

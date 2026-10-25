@@ -7,17 +7,16 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ target }} is fighting back — actively struggling against {{ originator }}'s grip.
-    Generate {{ originator }}'s immediate in-character reaction to feeling resistance.
+    {{ target }} is fighting back -- actively struggling against {{ originator }}'s grip,
+    and the resistance registers on {{ originator }} at once. This is the moment it
+    becomes clear {{ target }} will not submit quietly.
 
-    This is the moment they realize the target is not going to submit quietly. What do
-    they do? A tightened grip, a sharp word, a threat, a cold laugh, a warning — or do
-    they say nothing and simply hold harder? The reaction must match their personality
-    exactly: a sadist might enjoy the struggle, a cold captor might find it tiresome,
-    a bully might be surprised.
+    What comes out of {{ originator }} follows their character: a tightened grip, a
+    sharp word, a threat, a cold laugh, a warning -- or silence and a hold that
+    simply clamps harder. A sadist enjoys the struggle, a cold captor finds it
+    tiresome, a bully is surprised.
 
-    One beat only. Do NOT describe {{ target }}'s actions — only {{ originator }}'s
-    response to feeling resistance. Keep it sharp and in-character.
+    The beat is {{ originator }}'s alone -- the grip answering the fight against it.
 
 audience: "nearby_npcs"
 

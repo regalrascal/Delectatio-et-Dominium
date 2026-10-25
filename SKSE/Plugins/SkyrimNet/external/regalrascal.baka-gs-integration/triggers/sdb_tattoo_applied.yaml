@@ -7,18 +7,14 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    {{ target }} now wears a fresh mark on their skin. Generate one short
-    reaction beat from anyone who sees it — a word, a look, a step closer or
-    away. Match their personality exactly.
+    {{ target }} now wears a fresh mark on their skin. Anyone who sees it reacts in
+    their own register -- a word, a look, a step closer or away.
 
-    React only to what is observable: the event text names the specific mark
-    and may describe the marked person's own visible reaction. Read that
-    before deciding the tone. Do not invent facts about how it was applied,
-    and do not name any framework or source.
-
-    Do not describe {{ target }}'s own reaction in your beat unless the event
-    text has already shown it — their reaction belongs to the conversation
-    that follows.
+    The mark itself is named in the event text, and where the marked one's own
+    visible reaction was shown, that is part of the scene too; the tone of the
+    beat follows what is on display. How the mark came to be is not apparent to
+    onlookers, and nothing beyond the event text is. The wearer's own reaction
+    belongs to the conversation that follows.
 
 audience: "nearby_npcs"
 

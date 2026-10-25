@@ -26,7 +26,7 @@ Scriptname SkyrimNet_AcheronIntegration extends Quest
 ; ── MCM-tunable (stored in StorageUtil by the MCM; read each tick) ──
 Bool  Property bEnabled             = True   Auto
 Float Property fProximityCheckSeconds = 10.0  Auto  ; how often we check for a nearby creature (engagement roll only, not recovery)
-Float Property fCueIntervalSeconds  = 30.0   Auto  ; narrative "still downed" reminder cadence
+Float Property fCueIntervalSeconds  = 60.0   Auto  ; narrative "still downed" reminder cadence (: 30 -> 60s spacing, Issue #5 ruling)
 ; Hard ceiling on how long an abandoned, unattended down lasts -- the ONLY way a victim recovers on
 ; their own now besides the get-up key, HelpUp, or winning a struggle. Set on every fresh down and
 ; reset to the full duration whenever a paired animation involving them ends, or they lose a struggle/
@@ -308,7 +308,7 @@ Function _LoadSettings()
         _player = Game.GetPlayer()
     EndIf
     bEnabled             = StorageUtil.GetIntValue(_player,   "SNAcheron.Enabled",      1) == 1
-    fCueIntervalSeconds  = StorageUtil.GetFloatValue(_player, "SNAcheron.CueInterval",  30.0)
+    fCueIntervalSeconds  = StorageUtil.GetFloatValue(_player, "SNAcheron.CueInterval",  60.0)   ; : default 30 -> 60 (Issue #5 cue-cap ruling; a key set at 30 by an older session is clamped by the 60s spacing check in _CueStillDowned)
     fProximityCheckSeconds = StorageUtil.GetFloatValue(_player, "SNAcheron.ProxInterval", 10.0)
     fAutoGetUpSeconds    = StorageUtil.GetFloatValue(_player, "SNAcheron.AutoGetUpSeconds", 600.0)
     fNearbyRadius        = StorageUtil.GetFloatValue(_player, "SNAcheron.Radius",       700.0)
@@ -855,6 +855,12 @@ Function _Recover(Actor a)
     ; experiment, which left every timer/QTE recovery still reading as down forever.)
     StorageUtil.SetIntValue(a,   "SNAcheron.Held",        0)
     StorageUtil.SetFloatValue(a, "SNAcheron.LastCheckRT",  0.0)
+    ;  (Issue #5): the downed-cue episode ends with the down. The 180s
+    ; DownCueGateRT deliberately SURVIVES recovery -- the cap's gate applies "in
+    ; any circumstance" (user ruling), so a rapid re-down on the same character
+    ; re-enters the still-running gate rather than a fresh cue flood.
+    StorageUtil.SetIntValue(a,   "SNAcheron.DownCueCount", 0)
+    StorageUtil.SetFloatValue(a, "SNAcheron.DownCueLastRT", 0.0)
     ; The victim is actually being freed now — if Baka pacified the tracked aggressor for an escalation
     ; scene (held pacified on purpose since _EscalationCleanup, so it wouldn't re-engage the still-
     ; subdued victim), restore its aggression here. No hard Baka reference needed: same shared
@@ -957,10 +963,40 @@ String Function _DownedMsg(Actor a) Global
     Return msg
 EndFunction
 
-; SHORT periodic reminder (every fCueIntervalSeconds, ~30s) that keeps the downed actor in the LLM's
+; SHORT periodic reminder (every fCueIntervalSeconds, 60s) that keeps the downed actor in the LLM's
 ; awareness. The concrete follow-up actions were already spelled out in the first cue (_CueDowned) and
 ; are surfaced by the get_baka_state decorator; this just keeps them present without a wall of text.
+;
+;  (Issue #5, user-ruled cue cap): the downed cue fires ONCE at the first moment of the down
+; (_CueDowned is fire #1), then AT MOST TWO more times at 60s spacing while the character is still
+; down -- after which that character is GATED FOR 180s before the cue can fire again in any
+; circumstance. Per-actor StorageUtil keys:
+;   SNAcheron.DownCueCount   fires this episode (set to 1 on fresh down; reset when a gate lapses)
+;   SNAcheron.DownCueLastRT  last cue fire RT (60s spacing enforcement -- clamps a faster tick/MCM key)
+;   SNAcheron.DownCueGateRT  silence-until RT (set when the cap trips; survives recovery)
 Function _CueStillDowned(Actor a)
+    Float now = Utility.GetCurrentRealTime()
+    Float gateUntil = StorageUtil.GetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
+    If gateUntil > now
+        Return    ; capped + gated: silent in any circumstance until the gate lapses ()
+    ElseIf gateUntil > 0.0
+        ; Gate lapsed on a down that is STILL running -- re-arm a fresh cue episode.
+        StorageUtil.SetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
+        StorageUtil.SetIntValue(a, "SNAcheron.DownCueCount", 0)
+        _Trace("still-downed cue gate lapsed on " + a + " -- cue re-armed (REV-164)")
+    EndIf
+    ; 60s spacing floor (the tick cadence or an older MCM key may be faster; the cue is not).
+    If (now - StorageUtil.GetFloatValue(a, "SNAcheron.DownCueLastRT", 0.0)) < 60.0
+        Return
+    EndIf
+    Int nCue = StorageUtil.GetIntValue(a, "SNAcheron.DownCueCount", 0)
+    If nCue >= 3
+        StorageUtil.SetFloatValue(a, "SNAcheron.DownCueGateRT", now + 180.0)
+        _Trace("still-downed cue CAP on " + a + " (" + nCue + " fires this episode) -- gated 180s (REV-164)")
+        Return
+    EndIf
+    StorageUtil.SetIntValue(a, "SNAcheron.DownCueCount", nCue + 1)
+    StorageUtil.SetFloatValue(a, "SNAcheron.DownCueLastRT", now)
     SkyrimNetApi.RegisterEvent("acheron_downed", _DownedMsg(a), a.GetCombatTarget(), a)
 EndFunction
 
@@ -1064,6 +1100,12 @@ Function _CueDowned(Actor a)
     ; Marks the moment of a genuinely FRESH down -- see fFreshDownGraceDuration. Read by both this
     ; script's own _TickActor and Baka's _TryCreatureEscalateOnDowned (shared key, no hard dependency).
     StorageUtil.SetFloatValue(a, "SNAcheron.FreshDownRT", now)
+    ;  (Issue #5): this cue IS fire #1 of the per-episode downed-cue cap
+    ; (1 at the down moment + 2 more at 60s spacing -> 180s gate). Fresh down =
+    ; fresh episode: counter re-anchored, gate cleared.
+    StorageUtil.SetIntValue(a, "SNAcheron.DownCueCount", 1)
+    StorageUtil.SetFloatValue(a, "SNAcheron.DownCueLastRT", now)
+    StorageUtil.SetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
     ; Track whoever/whatever downed them — same shared key Baka's own ground window sets for its
     ; aggressor (SNBaka.GroundWindowAggressor). Lets the proximity/creature checks below do a plain
     ; GetDistance() against one known reference instead of scanning (Yamete Redux's approach).

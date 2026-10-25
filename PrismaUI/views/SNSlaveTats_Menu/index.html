@@ -268,7 +268,10 @@ function _close() { _el('backdrop').classList.remove('visible'); }
 
 // Browser preview (inert inside Skyrim/PrismaUI).
 (function () {
-  if (typeof window.snbaka_chose === 'function') return;
+  if (typeof window.snbaka_chose === 'function') return;          // bridge already injected
+  if (location.href.indexOf('file:///views/') === 0) return;      // [REV-161 fix 2.2] in-game PrismaUI
+  // (bridge injects snbaka_chose after page-load, so the typeof guard alone is not
+  // enough in-game; see SNBaka_ExecuteConfirm for the full rationale)
   window.snbaka_open_slavetats({
     mode: 'picker', target: 'Lydia',
     spank: 'Sluts|cumdump', defeat: '', escalation: '',

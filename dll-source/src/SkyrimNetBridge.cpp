@@ -69,11 +69,23 @@ namespace {
             "lower body, kneel and perform oral.",
             [](RE::Actor* a) { return PreSexContact(a); });
 
+        //  (Issue #2, the description-misroute class): the old wording told the
+        // LLM to "show off your body for them" - so a "dance for me" request routed HERE,
+        // where the members actually make the TARGET perform. Rewritten to name the
+        // direction of performance, and (user note, ) to carry the full member
+        // list so the drilldown can see inside the category.
         RegisterOne("SNBaka_Display",
-            "Provocative, performative display FOR another character to see  -  flirt, tease, seduce, make eyes, "
-            "or show off your body for them. Always has a target watching or being addressed: a brief social "
-            "beat, NOT a held solo pose (hold a solo pose via the Pose category). "
-            "No physical contact.",
+            "Command or savor a display FROM the target  -  they perform, you watch and react. "
+            "Flirt to make them put on a teasing display for you, or have them show off their body "
+            "(ShowOffBody); or sit yourself down on their lap (SitOnLap). Also the tattoo-marking "
+            "members: ApplyTattoo (brand a DOWNED target), CommandTattoo (a standing target you "
+            "dominate takes your chosen mark), MarkPlayer (an NPC marks the player as owned), "
+            "RemoveTattoos (strip the marks you applied). Always a target being addressed, "
+            "commanded, or marked. If YOU are the one showing your body or dancing, that is the "
+            "Pose category (SNGS_Pose), not this one. THIS NAME IS A CATEGORY, NOT A CALLABLE "
+            "ACTION: never emit SNBaka_Display itself  -  always call the specific member action "
+            "that fits the moment (Flirt, ShowOffBody, SitOnLap, ApplyTattoo, CommandTattoo, "
+            "MarkPlayer, RemoveTattoos).",
             [](RE::Actor* a) { return NotInCombat(a); });
 
         // Confirmed live bug: this description used to also claim "escalate on a downed victim,
@@ -105,16 +117,34 @@ namespace {
         // rules; a != nullptr is the API header's canonical no-op gate. The GS DLL
         // (SNAnimGS_UI.dll) carries an esp-probe fallback for GS-only installs - with
         // both mods installed, this registration is the only one that fires.
+        //  (Task 3, itemization audit): the member list extended from the 8
+        // glossed names to the full 27-member enumeration (15 baka-pack + 12 gs-poses
+        // customCategory: SNGS_Pose yamls); every callable pose now visible by name.
+        //  (Issue #2, the description-misroute class): "for no one in particular"
+        // REPELLED audience-driven dances - a "dance for me" request misrouted to
+        // SNBaka_Display (whose members make the TARGET perform). Rewritten: posing on
+        // your own OR on request - they watch, you dance (PoseDance, PoseDanceSexy). The
+        // 27-member enumeration stays (user note, : category descriptions carry
+        // their member lists so the drilldown can see inside).
         RegisterOne("SNGS_Pose",
-            "Pose, dance, stretch, show off  -  express a mood through your body, on your own, for no one in "
-            "particular: a SOLO held pose or gesture, no target, no physical contact (unlike SNBaka_Display, "
-            "which is a brief beat performed FOR someone else). Use when the moment invites it: music playing "
+            "Pose, dance, stretch, show off  -  express a mood through your body, on your own OR because "
+            "someone asked to watch: they watch, you dance (PoseDance, PoseDanceSexy for dancing, twerking, "
+            "or any lewd hip/backside show performed for a watcher). A held pose or performance by YOU, "
+            "no physical contact (unlike SNBaka_Display, where the TARGET performs the display for you). "
+            "Use when the moment invites it: music playing "
             "and you feel like dancing, celebrating a win, flirting or being teased, freshly complimented, "
             "dared, flushed with wine, relaxing or bored, praying or meditating, pleading or surrendering to "
             "someone of higher status, training, stretching, or simply striking an attitude as you speak  -  "
             "a pose pairs naturally with a line of dialogue. Held until you stop it, combat starts, or it "
             "times out on its own. Skip it entirely in combat, danger, or mid-scene  -  nothing inside is "
-            "available then.",
+            "available then. THIS NAME IS A CATEGORY, NOT A CALLABLE ACTION: never emit SNGS_Pose itself  -  "
+            "always call the specific member action that fits the moment (PoseDanceSexy for dancing, "
+            "twerking or any lewd hip/backside show, PoseSeduce to lure, PosePresent to offer, "
+            "PoseGroundSexy for floor poses, PoseStretch, PoseWorkout, PoseSubmission, PosePlead, and "
+            "the rest by name: PoseAroused, PoseAutograph, PoseBraceArm, PoseCrouch, PoseDance, "
+            "PoseDogeza, PoseDrink, PoseDrool, PoseFood, PoseGroundIdle, PoseHandOnChin, "
+            "PoseHandOnFace, PoseIdle, PoseKneel, PoseMeditate, PosePickpocket, PoseScratchHead, "
+            "PoseSelfTouch, PoseSleep). The member's own description says who may use it and when.",
             [](RE::Actor* a) { return a != nullptr; });
 
     }

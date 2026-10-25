@@ -1,0 +1,19 @@
+name: "sdb_fhu_creature_cum"
+description: "An inflated actor feels a creature's cum sloshing inside them (DRAFT - rev-149, re-voiced REV-164, sec.7 approval pending; template fixed fields user-quoted REV-136 ruling d)"
+
+eventCriteria:
+  eventType: "sdb_fhu_creature_cum"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} is swollen with a creature's cum, a heavy foreign warmth
+    shifting inside them with every step. They react to how it looks, feels,
+    and what it was that filled them -- true to who they are.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 300
+priority: 6

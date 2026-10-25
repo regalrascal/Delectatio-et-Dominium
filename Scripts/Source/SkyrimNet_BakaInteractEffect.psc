@@ -68,8 +68,12 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
     If !realTarget
         If dbg
             Debug.Notification("[Baka] power pressed - no target on the crosshair")
-            Debug.Trace("[SNBaka][POWER] no interact target (no actor on crosshair / in range)")
         EndIf
+        ;  Feature A: the  blocked sentinel is now the PANEL-OPEN path
+        ; (user ruling: the power with no target opens the panel - actions greyed,
+        ; "no target selected" overlay, ambient-mode buttons live).
+        Debug.Trace("[SNBaka][POWER] no interact target (no actor on crosshair / in range) - routing to no-target panel (REV-147)")
+        BakaMain.Interact_NoTargetPanel(akCaster)
         Return
     EndIf
 

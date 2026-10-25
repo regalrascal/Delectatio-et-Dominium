@@ -1,0 +1,32 @@
+name: "sdb_molagbal_mode_narr"
+description: "Molag Bal Mode action narration (MCM-gated optional second surface; register entry 37 DRAFT)"
+
+#  5.1 (user-ruled at the dogfood; BOTH user rulings honored: Molag
+# Bal narration YES, thoughts still NO -- no thought-seeding rides this leg
+# under any setting). This yaml matches the gated sdb_molagbal_mode_narr
+# event type ONLY: SkyrimNet_BakaIntegration._DaemonModeNarration emits it
+# when (and only when) the Baka Interactions MCM "Molag Bal Mode Narration"
+# toggle (motherboard property bMolagBalModeNarration, DEFAULT OFF) is ON.
+# The event desc says what just happened (actor names + the picked action);
+# this narration is the gated second surface asking surrounding NPCs to
+# react. No template variables (the D8/sec.137 binding rule); ASCII.
+
+eventCriteria:
+  eventType: "sdb_molagbal_mode_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    Something has just been done to someone nearby, described by the cue
+    above. Those who witnessed it take it in their own way -- fear,
+    fascination, a dark joke, a warning glance, or looking away -- each true
+    to who they are and where they stand. The most affected feel compelled
+    to speak.
+
+    What the cue described is the whole of what happened.
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

@@ -1,0 +1,31 @@
+name: "gsanim_sanguine_mode_narr"
+description: "Sanguine Mode pose narration (MCM-gated optional second surface; register entry 37 DRAFT)"
+
+#  5.1 (user-ruled at the dogfood; the 134f Follow-up Prompt pattern
+# applied to the Sanguine Mode pose execution). This yaml matches the gated
+# gsanim_sanguine_mode_narr event type ONLY: SkyrimNet_AnimationsGS.
+# _MuseFireSuccess emits it when (and only when) the GS Poses MCM "Sanguine
+# Mode Narration" toggle (StorageUtil GSAnim.SanguineModeNarr, DEFAULT OFF)
+# is ON. The event desc says what just happened (actor + pose); this
+# narration is the gated second surface asking surrounding NPCs to react.
+# No template variables (the D8/sec.137 binding rule); ASCII.
+
+eventCriteria:
+  eventType: "gsanim_sanguine_mode_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    Someone nearby has just slipped into a pose, described by the cue above.
+    Those who notice take it in their own way -- a look of appreciation, a
+    raised eyebrow, a comment, or pretending not to see -- each true to who
+    they are and where they stand. The most affected feel compelled to
+    speak.
+
+    What the cue described is the whole of what happened.
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

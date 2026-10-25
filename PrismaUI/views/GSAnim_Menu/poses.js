@@ -33,7 +33,7 @@ window.GS_POSES = {
       {"e":"GS79","n":79,"d":"joyful, touching hips"},{"e":"GS95","n":95,"d":"hip + funny hands"},{"e":"GS125","n":125,"d":"funny dance"},{"e":"GS132","n":132,"d":"cool, not only sexy"},
       {"e":"GS133","n":133,"d":"cool, not only sexy"},{"e":"GS154","n":154,"d":"valiant, girly"},{"e":"GS209","n":209,"d":"funny, useful"}
     ]},
-    { "id":"dance_sexy", "name":"Dancing — sexy", "poses":[
+    { "id":"dance_sexy", "name":"Dancing - sexy", "poses":[
       {"e":"GS9","n":9,"d":"twerking, looking back"},{"e":"GS10","n":10,"d":"sensual, semi-shy"},{"e":"GS12","n":12,"d":"sensual hips, hands up"},{"e":"GS13","n":13,"d":"provocative"},
       {"e":"GS14","n":14,"d":"sexy, in circles, bent"},{"e":"GS15","n":15,"d":"distracted, hips moving"},{"e":"GS23","n":23,"d":"tik-tok hips"},{"e":"GS29","n":29,"d":"hip dance, sensual slow"},
       {"e":"GS44","n":44,"d":"slow twerking, seducing"},{"e":"GS52","n":52,"d":"man, lewd suggestion"},{"e":"GS61","n":61,"d":"slow hips, hand on chin"},{"e":"GS83","n":83,"d":"heating up"},
@@ -42,13 +42,13 @@ window.GS_POSES = {
     { "id":"explicit", "name":"Explicit suggestion", "poses":[
       {"e":"GS53","n":53,"d":"sex gesture"},{"e":"GS54","n":54,"d":"cowgirl suggestion"},{"e":"GS167","n":167,"d":"suggesting blowjob/handjob"},{"e":"GS168","n":168,"d":"suggesting blowjob"}
     ]},
-    { "id":"ground_sexy", "name":"Ground — sexy", "poses":[
+    { "id":"ground_sexy", "name":"Ground - sexy", "poses":[
       {"e":"GS253","n":253,"d":"all fours, suggestive"},{"e":"GS257","n":257,"d":"laying, legs up, sexy"},{"e":"GS261","n":261,"d":"on stomach, looking back, sexy"},
       {"e":"GS267","n":267,"d":"all fours, suggesting"},{"e":"GS271","n":271,"d":"waiting, sexy, thinking"},{"e":"GS275","n":275,"d":"on stomach, sexy"},
       {"e":"GS282","n":282,"d":"seated, sexy"},{"e":"GS285","n":285,"d":"sexy, suggesting"},{"e":"GS305","n":305,"d":"twerking on ground"},
       {"e":"GS306","n":306,"d":"twerking on ground"},{"e":"GS311","n":311,"d":"all fours, provocative"},{"e":"GS316","n":316,"d":"all fours, provocative"}
     ]},
-    { "id":"ground_idle", "name":"Ground — idle / spent", "poses":[
+    { "id":"ground_idle", "name":"Ground - idle / spent", "poses":[
       {"e":"GS128","n":128,"d":"squatting, looking at ground"},{"e":"GS256","n":256,"d":"sitting, playful"},{"e":"GS270","n":270,"d":"recovering, exhausted"},
       {"e":"GS276","n":276,"d":"on stomach, bored"},{"e":"GS278","n":278,"d":"on stomach, moving legs, bored"},{"e":"GS286","n":286,"d":"seated, exhausted"},
       {"e":"GS287","n":287,"d":"exhausted, trauma"},{"e":"GS289","n":289,"d":"on stomach, bored"},{"e":"GS295","n":295,"d":"kneeled"},
@@ -79,14 +79,14 @@ window.GS_POSES = {
     ]},
     { "id":"idle", "name":"Idle / Waiting", "poses":[
       {"e":"GS131","n":131,"d":"support / friendship gesture"},{"e":"GS135","n":135,"d":"shy, nervous, contained"},{"e":"GS147","n":147,"d":"hands behind, slightly sexy"},
-      {"e":"GS177","n":177,"d":"arms crossed, suggesting"},{"e":"GS196","n":196,"d":"victory pose (≤5s)"},{"e":"GS624","n":624,"d":"idle"},
+      {"e":"GS177","n":177,"d":"arms crossed, suggesting"},{"e":"GS196","n":196,"d":"victory pose (<=5s)"},{"e":"GS624","n":624,"d":"idle"},
       {"e":"GS628","n":628,"d":"idle"},{"e":"GS629","n":629,"d":"fist battle prep"},{"e":"GS632","n":632,"d":"mad, arms crossed"},{"e":"GS639","n":639,"d":"shy waiting"}
     ]},
     { "id":"situational", "name":"Situational (needs prop)", "poses":[
-      {"e":"GS290","n":290,"d":"on furniture (table/barrel) — needs actor on top"},{"e":"GS291","n":291,"d":"on furniture — needs actor on top"},{"e":"GS292","n":292,"d":"on furniture — needs actor on top"},
-      {"e":"GS293","n":293,"d":"on furniture — needs actor on top"},{"e":"GS294","n":294,"d":"on furniture — needs actor on top"},{"e":"GS298","n":298,"d":"on furniture — needs actor on top"},
-      {"e":"GS299","n":299,"d":"on furniture — needs actor on top"},{"e":"GS348","n":348,"d":"wall leg stretch 180° — needs wall on right"},{"e":"GS349","n":349,"d":"wall leg stretch, knee bent — needs wall"},
-      {"e":"GS677","n":677,"d":"wall squats — needs wall"},{"e":"GS704","n":704,"d":"rinsing from water — needs shallow water"}
+      {"e":"GS290","n":290,"d":"on furniture (table/barrel) - needs actor on top"},{"e":"GS291","n":291,"d":"on furniture - needs actor on top"},{"e":"GS292","n":292,"d":"on furniture - needs actor on top"},
+      {"e":"GS293","n":293,"d":"on furniture - needs actor on top"},{"e":"GS294","n":294,"d":"on furniture - needs actor on top"},{"e":"GS298","n":298,"d":"on furniture - needs actor on top"},
+      {"e":"GS299","n":299,"d":"on furniture - needs actor on top"},{"e":"GS348","n":348,"d":"wall leg stretch 180 deg - needs wall on right"},{"e":"GS349","n":349,"d":"wall leg stretch, knee bent - needs wall"},
+      {"e":"GS677","n":677,"d":"wall squats - needs wall"},{"e":"GS704","n":704,"d":"rinsing from water - needs shallow water"}
     ]}
   ]
 };

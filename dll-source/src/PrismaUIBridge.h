@@ -23,6 +23,12 @@ public:
     static void CreateSlaveTatsView() noexcept;
     // Updates the get-up-key "charging toward 3s" bar. pct in [0,1]; negative hides it.
     static void SetGetUpCharge(float pct) noexcept;
+
+    //  Feature B: pushes the ambient mode-button ON/OFF highlight state to the
+    // SNBaka_Menu footer (Papyrus arbitrates the SNBaka.MephalaMode/MolagBalMode flags;
+    // this relays them to JS - the SetGetUpCharge invoke pattern, on the menu view).
+    // Called at panel open and after every toggle.
+    static void SetModeStates(bool mephala, bool molagBal) noexcept;
     static bool IsMenuOpen() noexcept;
     static void CancelMenu() noexcept;
     static void ShowInteractMenu(RE::Actor* caster, RE::Actor* target) noexcept;

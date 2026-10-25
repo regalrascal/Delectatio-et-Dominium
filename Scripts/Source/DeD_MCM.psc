@@ -172,6 +172,14 @@ Int _panicOID = -1
 Int _lapSitOID = -1
 Int _playerTargetOID = -1
 Int _femaleOnlyOID = -1
+;  (baka-daemon.md  SS-B/SS-D): the ambient daemon controls.
+;  (user ruling: Prisma ONLY): _mephalaOID/_molagBalOID RETIRE -
+; the MCM toggles are GONE; the Prisma footer buttons (numeric 900/901)
+; are the only mode surface. _ambientSexOID = the three-level target-sex
+; dropdown (ruling (c), the SS-C fold).
+Int _mephalaOID = -1
+Int _molagBalOID = -1
+Int _ambientSexOID = -1
 Int _execGateOID = -1      ;  Task 1: ported from the DEAD v7 script ( built it there by
                       ; mistake — SkyrimNet_BakaIntegration_MCM is the neutered pre- quest;
                       ; THIS quest is the live MCM). Levels: 0 Unlimited / 1 Companions ask /
@@ -227,8 +235,72 @@ Int _slaveryDistOID = -1
 Int _tiedHoursOID = -1
 ;  detection + inflation triggers (own pages since : Cum Effects / Fill Her Up)
 Int _cumDetectOID = -1
-Int _slProxyOID = -1
+Int _decalOID = -1     ; : Decal Source Selection dropdown (retires the _slProxyOID toggle)
 Int _fhuAwareOID = -1
+; : Follow-up Prompt on the Fill Her Up page (the  pattern
+; applied to FHU; label/tooltip DRAFT per the user's exchange shape -- "a
+; similar format to the cum detection prompt + optional direct narration
+; trigger", register-cited, entry 33) -- the MCM gate for the optional
+; inflation-cue direct narration (motherboard property bFHUInflateNarration,
+; default OFF; the gated sdb_fhu_inflate_narr event type + its yaml carry the
+; register entry-33 guidance DRAFT).
+Int _fhuNarrOID = -1
+; : FHU ambient bystander cues on the Fill Her Up page (the planner's
+; 30%/60% expose bands, the cum-ambient pattern applied to FHU; the 153/134f
+; Follow-up Prompt pattern for the narration second surface): the
+; "Ambient Narration" toggle (motherboard bFHUAmbientNarration, DEFAULT OFF;
+; gated sdb_fhu_ambient_narr event type + its yaml carry the register
+; entry-34 guidance DRAFT) + the two band-floor sliders (percents of FHU
+; maxInflation; planner defaults 30/60; label/tooltip DRAFTs, register
+; entry 34 -- the C5 ruling: planner values = defaults, MCM = the user valve).
+Int _fhuAmbNarrOID = -1
+Int _fhuNoticeOID = -1
+Int _fhuHeavyOID = -1
+;  4.4: the FHU ambient cadence slider (key SNBaka.FHUAmbientCadence,
+; default 60s = the  historic cadence; label = register DRAFT).
+Int _fhuAmbCadOID = -1
+;  5.1/5.2 (user-ruled at the dogfood): the Baka-side mode-narration
+; toggles + cadence sliders on the Baka Interactions page (Ambient Modes
+; section). Narration toggles = motherboard properties bMephalaModeNarration
+; / bMolagBalModeNarration (DEFAULT OFF; the gated second surface for daemon
+; mode-action executions, 134f pattern; labels/tooltips = register entry 37
+; DRAFTs). Cadence sliders = StorageUtil keys SNBaka.MephalaCadence /
+; SNBaka.MolagBalCadence (15s-240s; defaults 45/15, read live at every arm +
+; tick -- no re-arm needed).
+Int _mephNarrOID  = -1
+Int _molagNarrOID = -1
+Int _mephCadOID   = -1
+Int _molagCadOID  = -1
+;  5.1/5.2/5.3: the GS Poses page build-out -- Sanguine + Sheogorath
+; mode-narration toggles (DEFAULT OFF, StorageUtil GSAnim.SanguineModeNarr /
+; GSAnim.SheogorathModeNarr), the Sanguine + Sheogorath cadence sliders
+; (GSAnim.NudgeInterval of record 137f / GSAnim.T3Interval, 15s-240s), and
+; the three per-route pose-narration toggles (DEFAULT ON, current behavior
+; preserved; TITLES USER-AUTHORED per the 137f rider, register-cited:
+; "Sanguine Pose Narration" / "Emergent Pose Narration" / "Player Initiated
+; Pose Narration"; tooltips = register entry 37 DRAFTs with the lean
+; "narration cue" resolution).
+Int _sangNarrOID      = -1
+Int _sheoNarrOID      = -1
+Int _sangCadOID       = -1
+Int _sheoCadOID       = -1
+Int _poseNarrSangOID  = -1
+Int _poseNarrEmOID    = -1
+Int _poseNarrPlOID    = -1
+
+; : More Cum (register 24, ruled at  but mis-built into the RETIRED
+; v7 script -- the  wrong-script root cause) is finally built HERE, in the live
+; script. Default OFF (user ruling, ; motherboard property bMoreCumEnabled
+; flipped to False in the same rev).
+Int _moreCumOID = -1
+; : Follow-up Prompt (user-ruled dogfood 2026-10-21, name + tooltip
+; verbatim) -- the MCM gate for the optional ambient-cue direct narration
+; (motherboard property bCumFollowUpNarration, default OFF; the gated
+; sdb_cum_ambient_narr event type + its yaml carry the register entry-22 text).
+Int _cumFollowUpOID = -1
+;  4.4: the cum ambient cadence slider (key SNBaka.CumAmbientCadence,
+; default 60s = the  historic cadence; the accept re-arms the rule live).
+Int _cumAmbCadOID = -1
 ;  "Downed State (Acheron Bridge)" settings (own "Acheron" page since ) — consolidated from the
 ; bridge's own MCM. Settings stay in StorageUtil (player-keyed, same SNAcheron.* keys and
 ; defaults as the bridge MCM — no CK property link, no data migration; the bridge quest
@@ -256,6 +328,12 @@ Int _stPickOID
 Int _stDefaultColorOID
 Int _stRemoveOnReleaseOID
 Int _stObserveOID
+;  — ambient exposure pass surfaces (the daemon-tick consumer of
+; ResolveVisibility; the  Observe toggle is FOLDED to it as master
+; gate). Register entry 35 DRAFTs (labels/tooltips at the user's pen).
+Int _stAmbientPctOID     ; "Ambient Exposure Chance" (SNBaka.ST.AmbientPct, default 35)
+Int _stAmbientNarrOID    ; "Tattoo Ambient Narration" (SNBaka.ST.AmbientNarr, DEFAULT OFF)
+Int _stAmbFloorOID       ;  4.4: "Tattoo Ambient Cue Interval" (SNBaka.ST.AmbientFloor, DEFAULT 600s)
 ;  Phase B — GS Poses top-level page: the gender policy mode selector
 ; (GSAnim.GenderPolicy StorageUtil int on None; 0 = female-only default).
 Int _gsGenderPolicyOID = -1
@@ -347,7 +425,76 @@ Int Function GetVersion()
     ; page body under section headers. Page COUNT is unchanged (7/6), but
     ; the page BODY structure changed, so every existing save crosses this
     ; bump once and rebuilds (the four-saga rule; v2 lesson standing).
-    Return 10
+    ; : TENTH canonical bump (v10 -> v11) - the More Cum toggle joins
+    ; the Cum Effects page (register 24, ruled; mis-built into the retired
+    ; v7 script at ,  root cause) and every Cum-page option
+    ; gains a plain-language description row. New option on an existing
+    ; page + visible body change: every existing save crosses this bump
+    ; once and rebuilds. No data migration (motherboard property only,
+    ; default flipped to OFF by user ruling).
+    ; : ELEVENTH canonical bump (v11 -> v12) - THE MCM REDESIGN
+    ; (user-ruled R2): "Cum Cues" renamed to "Cum Cues Module Toggle"; the
+    ; "SexLab Climax Proxy Share" toggle RETIRED (replaced by the
+    ; "Decal Source Selection" cycling menu option, presence-gated); the
+    ;  static subtext rows REMOVED in favor of info-text tooltips.
+    ; Visible body change on an existing page: every existing save crosses
+    ; this bump once and rebuilds (the four-saga rule; v2 lesson standing).
+    ; KEY MIGRATION (flagged, default-fresh per the user's OCum-default
+    ; ruling): bSLProxyEnabled is NOT migrated to iDecalSource -- the
+    ; dropdown starts at 0/OCum on every save.
+    ; : TWELFTH canonical bump (v12 -> v13) - THE BAKA-DAEMON SESSION:
+    ; the Ambient Modes section (Mephala Mode / Molag Bal Mode toggles) joins
+    ; the Baka Interactions page; "NPCs May Target You" (the  central
+    ; player-target policy, entry-30a DRAFT label) replaces "Player Can Be
+    ; Target"; "Ambient Target Policy" (the three-level target-sex dropdown,
+    ; ruling (c)) replaces "Target Sex"; the fold-in rows ("Player Can Be
+    ; Spanked", "Allow Male Targets", "Victim Sex Allowed") are REMOVED (the
+    ; motherboard properties stay declared). Visible body change on existing
+    ; pages: every existing save crosses this bump once and rebuilds (the
+    ; four-saga rule; v2 lesson standing).
+    ; : FOURTEENTH canonical bump (v14 -> v15) - the Follow-up Prompt
+    ; toggle joins the Fill Her Up page (the 134f Follow-up Prompt pattern
+    ; applied to FHU; label + tooltip are register entry-33 DRAFTs at the
+    ; user's pen). New option on an existing page + visible body change:
+    ; every existing save crosses this bump once and rebuilds (the four-saga
+    ; rule; v2 lesson standing). No data migration (motherboard property
+    ; only, default OFF).
+    ; : FIFTEENTH canonical bump (v15 -> v16) - the FHU ambient
+    ; bystander surfaces join the Fill Her Up page (the "Ambient Narration"
+    ; toggle + the Noticeable/Heavy band sliders; labels + tooltips are
+    ; register entry-34 DRAFTs at the user's pen). New options on an existing
+    ; page + visible body change: every existing save crosses this bump once
+    ; and rebuilds (the four-saga rule; v2 lesson standing). No data
+    ; migration (motherboard properties only; narration defaults OFF, bands
+    ; default to the planner values 30/60).
+    ; : SEVENTEENTH canonical bump (v16 -> v17) - THE POLISH SESSION
+    ; (dogfood fixes + build-out): (3.2b) the FHU awareness toggle RETITLED
+    ; "Module Toggle - Fill Her Up Awareness" with its three-row subtext
+    ; retired to a SetInfoText tooltip (user-provided verbatim); (3.2c) the
+    ; duplicate "Bedroom drama for SkyrimNet" tagline REMOVED from the Baka
+    ; Interactions page; (5.1) the Mephala/Molag Bal Mode Narration toggles +
+    ; (5.2) the Mephala/Molag Bal cadence sliders join the Baka Interactions
+    ; page; (5.1/5.2/5.3) the GS Poses page gains the Sanguine/Sheogorath
+    ; narration toggles + cadence sliders + the three USER-AUTHORED pose-
+    ; narration toggles. Visible body change on existing pages: every existing
+    ; save crosses this bump once and rebuilds (the four-saga rule; v2 lesson
+    ; standing). No data migration (new keys all default to their historic
+    ; behavior; narration toggles default OFF, pose-narration toggles default
+    ; ON).
+    ; : EIGHTEENTH canonical bump (v17 -> v18) - the ambient cadence
+    ; sliders (one per module page, the 159 slider pattern; labels = register
+    ; DRAFTs at the user's pen; defaults unchanged): Fill Her Up page gains
+    ; the FHU Ambient Cue Interval slider (key SNBaka.FHUAmbientCadence,
+    ; default 60s, read live at every pass -- no re-arm needed); Cum Effects
+    ; page gains the Cum Ambient Cue Interval slider (key
+    ; SNBaka.CumAmbientCadence, default 60s; the accept re-arms the DeDService
+    ; ambient timer rule live); SlaveTats page gains the Tattoo Ambient Cue
+    ; Interval slider (existing key SNBaka.ST.AmbientFloor, default 600s,
+    ; already read live by AmbientExposurePass). Visible body change on three
+    ; existing pages: every existing save crosses this bump once and rebuilds
+    ; (the four-saga rule; v2 lesson standing). No data migration (all keys
+    ; default to their historic behavior).
+    Return 18
 EndFunction
 
 Event OnVersionUpdate(Int aVersion)
@@ -388,8 +535,39 @@ Event OnVersionUpdate(Int aVersion)
     ; the one page body; the Pages rebuild below reports the unchanged
     ; 7/6-page shape (v2 lesson, standing).
     StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v10", 1)
+    ;  v11 (More Cum + Cum-page descriptions): canary marker - pages
+    ; rebuilt FIRST (the v2 lesson, standing). Marker SNBaka.MCMDeD.v11; the
+    ; retired v7 script's SNBaka.MCMv8 marker () is NOT re-run here:
+    ; that marker belonged to the wrong-lineage receipt () and is history.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v11", 1)
+    ;  v12 (the MCM redesign): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v12.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v12", 1)
+    ;  v13 (baka-daemon session): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v13.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v13", 1)
+    ;  v14 (dogfood fix pass): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v14. The Mephala/Molag
+    ; Bal MCM toggles are REMOVED (user ruling: Prisma panel ONLY); the target-
+    ; sex dropdown + NPCs May Target You stay (settings, not mode controls).
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v14", 1)
+    ;  v15 (FHU Follow-up Prompt): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v15.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v15", 1)
+    ;  v16 (FHU ambient bystander cues): canary marker - pages rebuilt
+    ; FIRST (the v2 lesson, standing). Marker SNBaka.MCMDeD.v16.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v16", 1)
+    ;  v17 (the polish session): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v17. FHU awareness
+    ; retitle + tooltip; Baka tagline removal; the Baka page mode-narration +
+    ; cadence rows; the GS Poses page build-out (narration toggles, cadence
+    ; sliders, the three user-authored pose-narration toggles).
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v17", 1)
+    ;  v18 (ambient cadence sliders): canary marker - pages rebuilt FIRST
+    ; (the v2 lesson, standing). Marker SNBaka.MCMDeD.v18.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v18", 1)
     _BuildPages()
-    Debug.Trace("[SNBaka] MCM canary: v10 OnVersionUpdate (REV-109c restructure: Baka Interactions stacked sections, presence-gated pages: " + Pages.Length + ", Main=" + Main + ")")
+    Debug.Trace("[SNBaka] MCM canary: v18 OnVersionUpdate (REV-161: FHU/Cum/Tattoo ambient cadence sliders; pages: " + Pages.Length + ", Main=" + Main + ")")
 EndEvent
 
 ; ============================================================================
@@ -516,13 +694,40 @@ Event OnPageReset(String page)
         ; gate (Pages[] build); the Lap Sitting toggle keeps its own grey-out.
         SetCursorFillMode(TOP_TO_BOTTOM)
         AddHeaderOption("Baka Interactions")
-        AddTextOption("Bedroom drama for SkyrimNet", "", OPTION_FLAG_DISABLED)
+        ;  3.2(c) (user-ruled): the duplicate "Bedroom drama for SkyrimNet"
+        ; tagline REMOVED here (it stays on the first page's Delectatio et
+        ; Dominium header pair, its home of record); AddEmptyOption kept so the
+        ; row layout is unchanged.
         AddEmptyOption()
         ; ---- General (the former "Baka - General" body, moved verbatim) ----
         AddHeaderOption("General")
-        _playerTargetOID   = AddToggleOption("Player Can Be Target",  Main.bPlayerCanBeTarget)
-        _femaleOnlyOID     = AddMenuOption("Target Sex",   _targetSexName(Main.iTargetSex))
+        ; : the  fold-ins surface here. "NPCs May Target You" =
+        ; the central player-target policy (SNBaka.PlayerTargetPolicy, player-
+        ; keyed, default OFF) -- label/tooltip = pending-approvals entry 30a
+        ; DRAFT, register-cited. "Ambient Target Policy" = the three-level
+        ; target-sex dropdown (ruling (c)); the retired "Player Can Be Target" /
+        ; "Target Sex" / "Allow Male Targets" / "Victim Sex Allowed" rows fold
+        ; under these two (properties stay declared for save-member compatibility).
+        _playerTargetOID   = AddToggleOption("NPCs May Target You", _PlayerTargetPolicyOn())
+        _ambientSexOID     = AddMenuOption("Ambient Target Policy", _targetSexLevelName(Main._TargetSexLevel()))
         _animatedTearsOID  = AddToggleOption("Animated Tears",        Main.bAnimatedTearsEnabled)
+        AddEmptyOption()
+        ; ---- Ambient Modes () -> : the two mode TOGGLES are
+        ; REMOVED (user ruling: the Prisma footer buttons are the ONLY mode
+        ; surface); the target-sex dropdown + player-target policy above STAY
+        ; (settings, not mode controls). The mode FLAGS themselves live on
+        ; StorageUtil and are untouched - existing saves keep their modes.
+        ;  5.1/5.2 (user-ruled at the dogfood): the mode-NARRATION
+        ; toggles + the mode cadence sliders join here (settings, not mode
+        ; controls -- the mode on/off surface stays Prisma-only). Labels +
+        ; tooltips are register entry 37 DRAFTs (134f naming pattern); the
+        ; cadence keys are read live at every arm + tick (no re-arm needed).
+        AddEmptyOption()
+        AddHeaderOption("Ambient Modes")
+        _mephNarrOID  = AddToggleOption("Mephala Mode Narration",  Main.bMephalaModeNarration)
+        _molagNarrOID = AddToggleOption("Molag Bal Mode Narration", Main.bMolagBalModeNarration)
+        _mephCadOID   = AddSliderOption("Mephala Tick Interval",  StorageUtil.GetFloatValue(None, "SNBaka.MephalaCadence", 45.0), "{0}s")
+        _molagCadOID  = AddSliderOption("Molag Bal Tick Interval", StorageUtil.GetFloatValue(None, "SNBaka.MolagBalCadence", 15.0), "{0}s")
         AddEmptyOption()
         AddHeaderOption("Capture")
         ; OFF removes the Sell-to-Slavery action entirely (not offered to the LLM). Detection first:
@@ -576,8 +781,11 @@ Event OnPageReset(String page)
         AddHeaderOption("Spank")
         AddEmptyOption()
         AddHeaderOption("Behaviour")
-        _spankPlayerOID    = AddToggleOption("Player Can Be Spanked",  Main.bPlayerCanBeSpanked)
-        _spankMaleOID      = AddToggleOption("Allow Male Targets",     Main.bSpankMaleTargets)
+        ;  fold-in: "Player Can Be Spanked" (retired at  -- the
+        ; central player-target policy owns it, surfaced as "NPCs May Target
+        ; You" in General) and "Allow Male Targets" (folds under the Ambient
+        ; Target Policy dropdown, SS-C) are REMOVED as MCM rows; the motherboard
+        ; properties stay declared for save-member/VMAD compatibility.
         _spankFurnitureOID = AddToggleOption("Furniture Reactions",    Main.bSpankFurnitureTriggers)
         AddEmptyOption()
         AddHeaderOption("Tattoo Marks")
@@ -601,7 +809,9 @@ Event OnPageReset(String page)
         _llmGateOID           = AddToggleOption("LLM Decides Escalations",   Main.bLLMGateEscalation)
         _notifyOID            = AddToggleOption("Show Corner Notifications", Main.bShowNotifications)
         ; : "Enable Debug Logging" moved to the Settings page (framework-level).
-        _creatureVictimSexOID = AddMenuOption("Victim Sex Allowed",  _victimSexName(Main.iCreatureVictimSex))
+        ;  fold-in: "Victim Sex Allowed" (iCreatureVictimSex) folds under the
+        ; Ambient Target Policy dropdown (SS-C: same level mapping) -- row REMOVED;
+        ; the property stays declared for save-member compatibility.
         _creatureBackendOID   = AddMenuOption("Creature Framework",  _backendName(Main.iCreatureBackend))
         _creatureSuccessOID   = AddSliderOption("NPC Success Chance", Main.iCreatureSuccessPct as Float, "{0}%")
         _creatureHitChanceOID = AddSliderOption("Chance to Struggle on Hit", Main.iCreatureHitEngageChance as Float, "{0}%")
@@ -623,29 +833,96 @@ Event OnPageReset(String page)
     ElseIf page == "Cum Effects" && Main
         ; : promoted from the dissolved Plugins page (one integration,
         ; one page).  detection toggles, presence-gated as before.
+        ; : More Cum (register 24) finally built HERE (the live MCM)
+        ; instead of the retired v7 script ( wrong-script root cause);
+        ; default OFF (user ruling). Also : every option gains a
+        ; plain-language description (user ruling: the names were too vague).
+        ; SkyUI has no tooltips, so each description is a disabled
+        ; AddTextOption static row directly under its toggle.
         SetCursorFillMode(TOP_TO_BOTTOM)
         AddHeaderOption("Cum Detection (OCum / SexLab)")
         If Main._OCumInstalled()
-            _cumDetectOID = AddToggleOption("Cum Cues (OCum + SexLab climax proxy)", Main.bCumDetectionEnabled)
+            ;  (R2, user-ruled 2026-10-21, names verbatim): the Cum-page
+            ; redesign -- "Cum Cues Module Toggle" (renamed from "Cum Cues (OCum +
+            ; SexLab climax proxy)"); the "SexLab Climax Proxy Share" toggle is
+            ; RETIRED and replaced by the "Decal Source Selection" dropdown (a
+            ; cycling menu option over the supported decal sources,
+            ; presence-gated: absent sources are not offered); "More Cum" keeps
+            ; its name. Descriptions are TOOLTIPS (SetInfoText on highlight, the
+            ;  "SkyUI has no tooltips" finding superseded -- the info-text
+            ; surface the script already uses everywhere else), NOT subtext rows:
+            ; the  static AddTextOption description rows are REMOVED per
+            ; the user's ruling ("remove subtext description once tooltip
+            ; replacement is made").
+            _cumDetectOID = AddToggleOption("Cum Cues Module Toggle", Main.bCumDetectionEnabled)
             If Main.bCumDetectionEnabled
-                _slProxyOID = AddToggleOption("SexLab Climax Proxy Share", Main.bSLProxyEnabled)
+                _decalOID = AddMenuOption("Decal Source Selection", _decalSourceLabel())
             Else
-                _slProxyOID = AddToggleOption("SexLab Climax Proxy Share", Main.bSLProxyEnabled, OPTION_FLAG_DISABLED)
+                _decalOID = AddMenuOption("Decal Source Selection", _decalSourceLabel(), OPTION_FLAG_DISABLED)
+            EndIf
+            If Main.bCumDetectionEnabled
+                _moreCumOID = AddToggleOption("More Cum", Main.bMoreCumEnabled)
+                ; : Follow-up Prompt -- same gating posture as More Cum
+                ; (user-ruled name verbatim; tooltip text is the user's verbatim
+                ; ruling, delivered as SetInfoText on highlight per  R2).
+                _cumFollowUpOID = AddToggleOption("Follow-up Prompt", Main.bCumFollowUpNarration)
+                ;  4.4: the ambient cadence slider (label = register DRAFT;
+                ; key SNBaka.CumAmbientCadence, default 60s = the historic cadence).
+                _cumAmbCadOID = AddSliderOption("Ambient Cue Interval", StorageUtil.GetFloatValue(None, "SNBaka.CumAmbientCadence", 60.0), "{0}s")
+            Else
+                _moreCumOID = AddToggleOption("More Cum", Main.bMoreCumEnabled, OPTION_FLAG_DISABLED)
+                _cumFollowUpOID = AddToggleOption("Follow-up Prompt", Main.bCumFollowUpNarration, OPTION_FLAG_DISABLED)
+                _cumAmbCadOID = AddSliderOption("Ambient Cue Interval", StorageUtil.GetFloatValue(None, "SNBaka.CumAmbientCadence", 60.0), "{0}s", OPTION_FLAG_DISABLED)
             EndIf
         Else
             _cumDetectOID = AddToggleOption("Cum Cues (OCum not installed)", False, OPTION_FLAG_DISABLED)
-            _slProxyOID   = -1
+            _decalOID     = -1
+            _moreCumOID   = -1
+            _cumFollowUpOID = -1
+            _cumAmbCadOID   = -1
         EndIf
     ElseIf page == "Fill Her Up" && Main
         ; : promoted from the dissolved Plugins page (one integration,
         ; one page). Presence-greyed at page level when the mod is absent.
+        ; : description row added (user ruling: vague names).
         SetCursorFillMode(TOP_TO_BOTTOM)
         AddHeaderOption("FHU Inflation Awareness")
         If Main._FHUInstalled()
-            _fhuAwareOID = AddToggleOption("Inflation Level Cues (Fill Her Up)", Main.bFHUInflationEnabled)
+            ;  3.2(b) (USER-PROVIDED verbatim): title "Inflation Level
+            ; Cues (Fill Her Up)" -> "Module Toggle - Fill Her Up Awareness";
+            ; the three-row subtext RETIRED in favor of the tooltip delivered
+            ; as SetInfoText on highlight (the SetInfoText pattern, the
+            ;  R2 precedent): "Enable/disable cues and reactions for
+            ; Fill Her Up Baka" (user-quoted).
+            _fhuAwareOID = AddToggleOption("Module Toggle - Fill Her Up Awareness", Main.bFHUInflationEnabled)
+            ; : Follow-up Prompt -- same gating posture as the Cum
+            ; Effects page's 134f toggle (greyed when the cue module is off;
+            ; label DRAFT per the exchange shape, tooltip on highlight).
+            If Main.bFHUInflationEnabled
+                _fhuNarrOID = AddToggleOption("Follow-up Prompt", Main.bFHUInflateNarration)
+            Else
+                _fhuNarrOID = AddToggleOption("Follow-up Prompt", Main.bFHUInflateNarration, OPTION_FLAG_DISABLED)
+            EndIf
+            ; : the ambient bystander surfaces -- same gating posture as
+            ; the Follow-up Prompt toggle (greyed when the cue module is off;
+            ; labels/tooltips = register entry-34 DRAFTs, the user's pen).
+            Int iAmbFlags = OPTION_FLAG_DISABLED * ((!Main.bFHUInflationEnabled) as Int)
+            _fhuAmbNarrOID = AddToggleOption("Ambient Narration", Main.bFHUAmbientNarration, iAmbFlags)
+            _fhuNoticeOID = AddSliderOption("Noticeable Band", Main.iFHUAmbientNoticeBand as Float, "{0}%", iAmbFlags)
+            _fhuHeavyOID = AddSliderOption("Heavy Band", Main.iFHUAmbientHeavyBand as Float, "{0}%", iAmbFlags)
+            ;  4.4: the ambient cadence slider (label = register DRAFT;
+            ; key SNBaka.FHUAmbientCadence, default 60s = the  historic
+            ; cadence, read live at every pass -- no re-arm needed).
+            _fhuAmbCadOID = AddSliderOption("Ambient Cue Interval", StorageUtil.GetFloatValue(None, "SNBaka.FHUAmbientCadence", 60.0), "{0}s", iAmbFlags)
         Else
-            _fhuAwareOID = AddToggleOption("Inflation Level Cues (not installed)", False, OPTION_FLAG_DISABLED)
+            _fhuAwareOID = AddToggleOption("Module Toggle - Fill Her Up Awareness (not installed)", False, OPTION_FLAG_DISABLED)
+            _fhuNarrOID = -1
+            _fhuAmbNarrOID = -1
+            _fhuNoticeOID = -1
+            _fhuHeavyOID = -1
+            _fhuAmbCadOID = -1
         EndIf
+
     ElseIf page == "Acheron"
         ;  restructure: the Downed State bridge promoted from a Plugins section to
         ; its own page (one integration, one page). Absent state is page-level: every
@@ -708,6 +985,12 @@ Event OnPageReset(String page)
             _stDefaultColorOID   = AddTextOption("Default Mark Color",     _ST_ColorLabel(StorageUtil.GetIntValue(_stP, "SNBaka.ST.DefaultColor", 0)))
             _stRemoveOnReleaseOID = AddToggleOption("Remove Marks On Release", StorageUtil.GetIntValue(_stP, "SNBaka.ST.RemoveOnRelease", 1) == 1)
             _stObserveOID         = AddToggleOption("Ambient Observation Cues", StorageUtil.GetIntValue(_stP, "SNBaka.ST.Observe", 1) == 1)
+            _stAmbientPctOID      = AddSliderOption("Ambient Exposure Chance", StorageUtil.GetIntValue(_stP, "SNBaka.ST.AmbientPct", 35) as Float, "{0}%")
+            _stAmbientNarrOID     = AddToggleOption("Tattoo Ambient Narration", StorageUtil.GetIntValue(_stP, "SNBaka.ST.AmbientNarr", 0) == 1)
+            ;  4.4: the ambient interval slider (label = register DRAFT;
+            ; existing key SNBaka.ST.AmbientFloor, default 600s, already read
+            ; live by AmbientExposurePass -- no module change needed).
+            _stAmbFloorOID        = AddSliderOption("Ambient Cue Interval", StorageUtil.GetFloatValue(_stP, "SNBaka.ST.AmbientFloor", 600.0), "{0}s")
         Else
             _stEnabledOID = AddToggleOption("Module Enabled (not installed)", False, OPTION_FLAG_DISABLED)
             _stSpankOID   = -1
@@ -719,16 +1002,36 @@ Event OnPageReset(String page)
             _stDefaultColorOID    = -1
             _stRemoveOnReleaseOID = -1
             _stObserveOID         = -1
+            _stAmbientPctOID      = -1
+            _stAmbientNarrOID     = -1
+            _stAmbFloorOID        = -1
         EndIf
     ElseIf page == "GS Poses"
         ;  Phase B: the gender policy home (posing-gender.md ). One menu
         ; option, three modes; the GS script reads the key on every gate (no nudge
         ; needed — every check is a fresh StorageUtil read). Mode names mirror the
         ; policy vocabulary of record.
+        ;  5.1/5.2/5.3 (user-ruled at the dogfood): the page build-out --
+        ; the Sanguine + Sheogorath mode-narration toggles (DEFAULT OFF) and
+        ; cadence sliders (15s-240s, writing the arbiters' live cadence keys),
+        ; plus the three per-route pose-narration toggles (TITLES USER-AUTHORED
+        ; per the 137f rider, register-cite; DEFAULT ON -- current behavior
+        ; preserved). Tooltips = register entry 37 DRAFTs ("narration cue" lean).
         SetCursorFillMode(TOP_TO_BOTTOM)
         AddHeaderOption("GSPoses - Pose Gender Policy")
         _gsIntroOID = AddTextOption("Who may be posed, by body:", "", OPTION_FLAG_DISABLED)
         _gsGenderPolicyOID = AddMenuOption("Pose Gender Policy", _gsGenderPolicyName(StorageUtil.GetIntValue(None, "GSAnim.GenderPolicy", 0)))
+        AddEmptyOption()
+        AddHeaderOption("Pose Narration")
+        _poseNarrSangOID = AddToggleOption("Sanguine Pose Narration", StorageUtil.GetIntValue(None, "GSAnim.PoseNarrSanguine", 1) == 1)
+        _poseNarrEmOID   = AddToggleOption("Emergent Pose Narration", StorageUtil.GetIntValue(None, "GSAnim.PoseNarrEmergent", 1) == 1)
+        _poseNarrPlOID   = AddToggleOption("Player Initiated Pose Narration", StorageUtil.GetIntValue(None, "GSAnim.PoseNarrPlayer", 1) == 1)
+        AddEmptyOption()
+        AddHeaderOption("Mode Narration & Cadence")
+        _sangNarrOID = AddToggleOption("Sanguine Mode Narration", StorageUtil.GetIntValue(None, "GSAnim.SanguineModeNarr", 0) == 1)
+        _sheoNarrOID = AddToggleOption("Sheogorath Mode Narration", StorageUtil.GetIntValue(None, "GSAnim.SheogorathModeNarr", 0) == 1)
+        _sangCadOID  = AddSliderOption("Sanguine Tick Interval", StorageUtil.GetFloatValue(None, "GSAnim.NudgeInterval", 30.0), "{0}s")
+        _sheoCadOID  = AddSliderOption("Sheogorath Tick Interval", StorageUtil.GetFloatValue(None, "GSAnim.T3Interval", 15.0), "{0}s")
     EndIf
 EndEvent
 
@@ -751,20 +1054,79 @@ Event OnOptionSelect(Int option)
     ElseIf option == _cumDetectOID
         Main.bCumDetectionEnabled = !Main.bCumDetectionEnabled
         SetToggleOptionValue(_cumDetectOID, Main.bCumDetectionEnabled)
-        SetOptionFlags(_slProxyOID, OPTION_FLAG_DISABLED * ((!Main.bCumDetectionEnabled) as Int))
+        SetOptionFlags(_decalOID, OPTION_FLAG_DISABLED * ((!Main.bCumDetectionEnabled) as Int))
+        SetOptionFlags(_moreCumOID, OPTION_FLAG_DISABLED * ((!Main.bCumDetectionEnabled) as Int))
+        SetOptionFlags(_cumFollowUpOID, OPTION_FLAG_DISABLED * ((!Main.bCumDetectionEnabled) as Int))
         If Main.bCumDetectionEnabled
             Main.Setup()
             Debug.Notification("Cum cues enabled.")
         Else
             Debug.Notification("Cum cues disabled.")
         EndIf
-    ElseIf option == _slProxyOID
-        Main.bSLProxyEnabled = !Main.bSLProxyEnabled
-        SetToggleOptionValue(_slProxyOID, Main.bSLProxyEnabled)
+    ElseIf option == _moreCumOID
+        ;  (register 24, ruled at ; built into the live MCM here
+        ; -- the  wrong-script fix). Default is OFF (motherboard property
+        ; flipped with this rev); the extras router (SNBaka_CumDetectionModule
+        ; L302) reads the property live, no re-arm needed.
+        Main.bMoreCumEnabled = !Main.bMoreCumEnabled
+        SetToggleOptionValue(_moreCumOID, Main.bMoreCumEnabled)
+        If Main.bMoreCumEnabled
+            Debug.Notification("More Cum enabled: finishes will apply extra decals on additional body parts.")
+        Else
+            Debug.Notification("More Cum disabled.")
+        EndIf
+    ElseIf option == _cumFollowUpOID
+        ;  (user-ruled 2026-10-21): optional direct narration for the
+        ; ambient cum cue. Read live at every ambient tick -- no re-arm needed;
+        ; OFF removes the narration line entirely (cue stays, per the 
+        ; cue-only anatomy verdict which is this property's default).
+        Main.bCumFollowUpNarration = !Main.bCumFollowUpNarration
+        SetToggleOptionValue(_cumFollowUpOID, Main.bCumFollowUpNarration)
+        If Main.bCumFollowUpNarration
+            Debug.Notification("Follow-up Prompt enabled: ambient cum cues also produce a direct narration line.")
+        Else
+            Debug.Notification("Follow-up Prompt disabled.")
+        EndIf
     ElseIf option == _fhuAwareOID
         Main.bFHUInflationEnabled = !Main.bFHUInflationEnabled
         SetToggleOptionValue(_fhuAwareOID, Main.bFHUInflationEnabled)
+        ; : keep the Follow-up Prompt toggle's flag in step with the
+        ; cue module toggle (the 134f SetOptionFlags posture).
+        SetOptionFlags(_fhuNarrOID, OPTION_FLAG_DISABLED * ((!Main.bFHUInflationEnabled) as Int))
+        ; : the ambient surfaces grey in step with the cue module toggle
+        ; (the 134f SetOptionFlags posture, extended to the narr toggle + both
+        ; band sliders).
+        Int iAmbFlags = OPTION_FLAG_DISABLED * ((!Main.bFHUInflationEnabled) as Int)
+        SetOptionFlags(_fhuAmbNarrOID, iAmbFlags)
+        SetOptionFlags(_fhuNoticeOID, iAmbFlags)
+        SetOptionFlags(_fhuHeavyOID, iAmbFlags)
         Main.Setup()   ; re-arms or disarms the level poll right now
+    ElseIf option == _fhuNarrOID
+        ;  (user-ruled 2026-10-24, the 134f Follow-up Prompt pattern
+        ; applied to FHU): optional direct narration for the inflation cue.
+        ; Read live at every inflate fire -- no re-arm needed; OFF removes the
+        ; narration event entirely (the cue stays, per the 134f cue-only
+        ; anatomy verdict which is this property's default).
+        Main.bFHUInflateNarration = !Main.bFHUInflateNarration
+        SetToggleOptionValue(_fhuNarrOID, Main.bFHUInflateNarration)
+        If Main.bFHUInflateNarration
+            Debug.Notification("Follow-up Prompt enabled: inflation cues also produce a direct narration line.")
+        Else
+            Debug.Notification("Follow-up Prompt disabled.")
+        EndIf
+    ElseIf option == _fhuAmbNarrOID
+        ;  (the 153/134f pattern, applied to the AMBIENT bystander cue):
+        ; optional direct narration, read live at every ambient fire -- no
+        ; re-arm needed; OFF removes the narration event entirely (the
+        ; ambient cue stays, per the 134d cue-only anatomy verdict which is
+        ; this property's default). Notification text = register entry-34 DRAFT.
+        Main.bFHUAmbientNarration = !Main.bFHUAmbientNarration
+        SetToggleOptionValue(_fhuAmbNarrOID, Main.bFHUAmbientNarration)
+        If Main.bFHUAmbientNarration
+            Debug.Notification("Ambient Narration enabled: ambient bystander cues also produce a direct narration line.")
+        Else
+            Debug.Notification("Ambient Narration disabled.")
+        EndIf
     ElseIf option == _achEnabledOID
         ;  bridge master switch — same SNAcheron.Enabled key the bridge MCM wrote; the
         ; bridge quest re-reads it on its next tick. Nudges the motherboard lifecycle surface
@@ -842,6 +1204,8 @@ Event OnOptionSelect(Int option)
         _ST_Toggle("SNBaka.ST.RemoveOnRelease", _stRemoveOnReleaseOID, 1)
     ElseIf option == _stObserveOID
         _ST_Toggle("SNBaka.ST.Observe", _stObserveOID, 1)
+    ElseIf option == _stAmbientNarrOID
+        _ST_Toggle("SNBaka.ST.AmbientNarr", _stAmbientNarrOID, 0)
     ElseIf option == _animatedTearsOID
         Main.bAnimatedTearsEnabled = !Main.bAnimatedTearsEnabled
         SetToggleOptionValue(_animatedTearsOID, Main.bAnimatedTearsEnabled)
@@ -850,8 +1214,52 @@ Event OnOptionSelect(Int option)
             Main.TearSpell = Game.GetFormFromFile(0x000802, "EmoTears4NPCs.esp") as Spell
         EndIf
     ElseIf option == _playerTargetOID
-        Main.bPlayerCanBeTarget = !Main.bPlayerCanBeTarget
-        SetToggleOptionValue(_playerTargetOID, Main.bPlayerCanBeTarget)
+        ; : the central player-target policy (SNBaka.PlayerTargetPolicy,
+        ; player-keyed, default OFF; the  bPlayerCanBeSpanked/bPlayerCanBeTarget
+        ; fold-ins). The motherboard gates read it live on every consult.
+        Actor pol = Game.GetPlayer()
+        Int v = 1 - StorageUtil.GetIntValue(pol, "SNBaka.PlayerTargetPolicy", 0)
+        StorageUtil.SetIntValue(pol, "SNBaka.PlayerTargetPolicy", v)
+        SetToggleOptionValue(_playerTargetOID, v == 1)
+    ; : _mephalaOID/_molagBalOID handlers REMOVED (user ruling:
+    ; Prisma panel is the only mode surface -- the motherboard toggles live
+    ; in SkyrimNet_BakaIntegration, unchanged). Their OID members retire as
+    ; never-bound (-1) no-ops.
+    ;  5.1: the mode-NARRATION toggles (settings, not mode controls;
+    ; register entry 37 DRAFT labels). Motherboard properties, read at fire
+    ; time -- no re-arm needed.
+    ElseIf option == _mephNarrOID
+        Main.bMephalaModeNarration = !Main.bMephalaModeNarration
+        SetToggleOptionValue(_mephNarrOID, Main.bMephalaModeNarration)
+        If Main.bMephalaModeNarration
+            Debug.Notification("Mephala Mode Narration enabled: mode actions also produce a narration cue.")
+        Else
+            Debug.Notification("Mephala Mode Narration disabled.")
+        EndIf
+    ElseIf option == _molagNarrOID
+        Main.bMolagBalModeNarration = !Main.bMolagBalModeNarration
+        SetToggleOptionValue(_molagNarrOID, Main.bMolagBalModeNarration)
+        If Main.bMolagBalModeNarration
+            Debug.Notification("Molag Bal Mode Narration enabled: mode actions also produce a narration cue.")
+        Else
+            Debug.Notification("Molag Bal Mode Narration disabled.")
+        EndIf
+    ;  5.1/5.3: the GS-side StorageUtil-keyed toggles (the _ST_Toggle
+    ; helper pattern, None-keyed GSAnim.* keys).
+    ElseIf option == _sangNarrOID
+        _GS_Toggle("GSAnim.SanguineModeNarr", _sangNarrOID, 0)
+        Debug.Notification("Sanguine Mode Narration " + _OnOff(StorageUtil.GetIntValue(None, "GSAnim.SanguineModeNarr", 0)) + ".")
+    ElseIf option == _sheoNarrOID
+        _GS_Toggle("GSAnim.SheogorathModeNarr", _sheoNarrOID, 0)
+        Debug.Notification("Sheogorath Mode Narration " + _OnOff(StorageUtil.GetIntValue(None, "GSAnim.SheogorathModeNarr", 0)) + ".")
+    ;  5.3: the three per-route pose-narration toggles (TITLES
+    ; USER-AUTHORED, 137f rider; DEFAULT ON -- current behavior preserved).
+    ElseIf option == _poseNarrSangOID
+        _GS_Toggle("GSAnim.PoseNarrSanguine", _poseNarrSangOID, 1)
+    ElseIf option == _poseNarrEmOID
+        _GS_Toggle("GSAnim.PoseNarrEmergent", _poseNarrEmOID, 1)
+    ElseIf option == _poseNarrPlOID
+        _GS_Toggle("GSAnim.PoseNarrPlayer", _poseNarrPlOID, 1)
     ElseIf option == _sellSlaveryOID
         Main.bSellToSlavery = !Main.bSellToSlavery
         SetToggleOptionValue(_sellSlaveryOID, Main.bSellToSlavery)
@@ -875,12 +1283,8 @@ Event OnOptionSelect(Int option)
     ElseIf option == _resistEnabledOID
         Main.bResistEnabled = !Main.bResistEnabled
         SetToggleOptionValue(_resistEnabledOID, Main.bResistEnabled)
-    ElseIf option == _spankPlayerOID
-        Main.bPlayerCanBeSpanked = !Main.bPlayerCanBeSpanked
-        SetToggleOptionValue(_spankPlayerOID, Main.bPlayerCanBeSpanked)
-    ElseIf option == _spankMaleOID
-        Main.bSpankMaleTargets = !Main.bSpankMaleTargets
-        SetToggleOptionValue(_spankMaleOID, Main.bSpankMaleTargets)
+    ; : the _spankPlayerOID/_spankMaleOID legs are RETIRED with their rows
+    ; ( policy + the SS-C fold); nothing else touches those properties.
     ElseIf option == _spankFurnitureOID
         Main.bSpankFurnitureTriggers = !Main.bSpankFurnitureTriggers
         SetToggleOptionValue(_spankFurnitureOID, Main.bSpankFurnitureTriggers)
@@ -934,8 +1338,178 @@ Event OnOptionKeyMapChange(Int option, Int keyCode, String conflictControl, Stri
     EndIf
 EndEvent
 
+; ============================================================================
+;  (R2, user-ruled 2026-10-21): THE DECAL SOURCE DROPDOWN.
+; The "SexLab Climax Proxy Share" boolean toggle is RETIRED; this cycling menu
+; option lists the supported cum decal sources, PRESENCE-GATED (absent sources
+; are not offered): 0=OCum (default, user-ruled), 1=SexLab, 2=P+, 3=SLACS 2 + SCO.
+; The user's label texts verbatim. The module's routing maps to the selection
+; (SNBaka_CumDetectionModule._SelectedDecalLane -- the boolean's "ask OCum to
+; decal SL scenes" logic is selection 0's behavior, remapped; the old toggle's
+; DETECTION gate bSLProxyEnabled stays dormant on the motherboard, save-persisted).
+; ============================================================================
+Bool Function _decalSourceAvailable(Int i)
+    If i == 0
+        Return Main && Main._OCumInstalled()
+    ElseIf i == 1
+        Return SkyrimNet_BakaSL.Installed()
+    ElseIf i == 2
+        Return SkyrimNet_BakaSL._PplusDetected() == 1
+    ElseIf i == 3
+        Return Game.IsPluginInstalled("SLACS_2_Plus_SCO.esp")
+    EndIf
+    Return False
+EndFunction
+
+String Function _decalSourceName(Int i)
+    If i == 1
+        Return "SexLab"
+    ElseIf i == 2
+        Return "P+"
+    ElseIf i == 3
+        Return "SLACS 2 + SCO"
+    EndIf
+    Return "OCum"
+EndFunction
+
+; The available list (presence-gated): parallel value/name arrays; the
+; ACCEPTED menu index maps back through the value array.
+String[] Function _decalSourceNames()
+    String[] a = new String[4]
+    Int n = 0
+    Int i = 0
+    While i < 4
+        If _decalSourceAvailable(i)
+            a[n] = _decalSourceName(i)
+            n += 1
+        EndIf
+        i += 1
+    EndWhile
+    ; : Papyrus array sizes must be compile-time constants (no
+    ; runtime-resize helper on the import path) -- the trim uses
+    ; constant-size branches.
+    Return _TrimDecalNames(a, n)
+EndFunction
+
+String[] Function _TrimDecalNames(String[] a, Int n)
+    If n <= 0
+        String[] z = new String[1]
+        z[0] = ""
+        Return z
+    ElseIf n == 1
+        String[] o1 = new String[1]
+        o1[0] = a[0]
+        Return o1
+    ElseIf n == 2
+        String[] o2 = new String[2]
+        o2[0] = a[0]
+        o2[1] = a[1]
+        Return o2
+    ElseIf n == 3
+        String[] o3 = new String[3]
+        o3[0] = a[0]
+        o3[1] = a[1]
+        o3[2] = a[2]
+        Return o3
+    EndIf
+    String[] o4 = new String[4]
+    o4[0] = a[0]
+    o4[1] = a[1]
+    o4[2] = a[2]
+    o4[3] = a[3]
+    Return o4
+EndFunction
+
+Int[] Function _decalSourceValues()
+    Int[] a = new Int[4]
+    Int n = 0
+    Int i = 0
+    While i < 4
+        If _decalSourceAvailable(i)
+            a[n] = i
+            n += 1
+        EndIf
+        i += 1
+    EndWhile
+    ; : same constant-size rule -- branch trim (the caller guards
+    ; on vals.Length).
+    Return _TrimDecalValues(a, n)
+EndFunction
+
+Int[] Function _TrimDecalValues(Int[] a, Int n)
+    If n <= 0
+        Int[] z = new Int[1]
+        z[0] = 0
+        Return z
+    ElseIf n == 1
+        Int[] o1 = new Int[1]
+        o1[0] = a[0]
+        Return o1
+    ElseIf n == 2
+        Int[] o2 = new Int[2]
+        o2[0] = a[0]
+        o2[1] = a[1]
+        Return o2
+    ElseIf n == 3
+        Int[] o3 = new Int[3]
+        o3[0] = a[0]
+        o3[1] = a[1]
+        o3[2] = a[2]
+        Return o3
+    EndIf
+    Int[] o4 = new Int[4]
+    o4[0] = a[0]
+    o4[1] = a[1]
+    o4[2] = a[2]
+    o4[3] = a[3]
+    Return o4
+EndFunction
+
+; The CURRENT value's display label: the selection verbatim when the source
+; is present; the FIRST AVAILABLE source otherwise (a stale/present-absent
+; selection degrades on display -- named, and the module's lane resolution
+; performs the same degradation at drive time).
+String Function _decalSourceLabel()
+    Int sel = 0
+    If Main
+        sel = Main.iDecalSource
+    EndIf
+    If _decalSourceAvailable(sel)
+        Return _decalSourceName(sel)
+    EndIf
+    Int[] vals = _decalSourceValues()
+    If vals.Length > 0
+        Return _decalSourceName(vals[0])
+    EndIf
+    Return _decalSourceName(sel)
+EndFunction
+
+Int Function _decalSourceMenuIndex(Int source)
+    Int[] vals = _decalSourceValues()
+    Int i = 0
+    While i < vals.Length
+        If vals[i] == source
+            Return i
+        EndIf
+        i += 1
+    EndWhile
+    Return 0
+EndFunction
+
 Event OnOptionMenuOpen(Int option)
-    If option == _sexBackendOID
+    If option == _decalOID
+        ; : the Decal Source Selection dropdown -- available sources
+        ; only (presence-gated); start at the current selection's position;
+        ; default = the first available source (0/OCum when present,
+        ; user-ruled).
+        SetMenuDialogOptions(_decalSourceNames())
+        Int sel = 0
+        If Main
+            sel = Main.iDecalSource
+        EndIf
+        SetMenuDialogStartIndex(_decalSourceMenuIndex(sel))
+        SetMenuDialogDefaultIndex(0)
+    ElseIf option == _sexBackendOID
         SetMenuDialogOptions(_backendNames())
         SetMenuDialogStartIndex(Main.iSexBackend)
         SetMenuDialogDefaultIndex(0)
@@ -943,13 +1517,11 @@ Event OnOptionMenuOpen(Int option)
         SetMenuDialogOptions(_backendNames())
         SetMenuDialogStartIndex(Main.iCreatureBackend)
         SetMenuDialogDefaultIndex(0)
-    ElseIf option == _creatureVictimSexOID
-        SetMenuDialogOptions(_victimSexNames())
-        SetMenuDialogStartIndex(Main.iCreatureVictimSex)
-        SetMenuDialogDefaultIndex(0)
-    ElseIf option == _femaleOnlyOID
-        SetMenuDialogOptions(_targetSexNames())
-        SetMenuDialogStartIndex(Main.iTargetSex)
+    ; : the _creatureVictimSexOID/_femaleOnlyOID legs are RETIRED with
+    ; their rows (the SS-C fold); the _ambientSexOID dropdown replaces them.
+    ElseIf option == _ambientSexOID
+        SetMenuDialogOptions(_targetSexLevelNames())
+        SetMenuDialogStartIndex(Main._TargetSexLevel() - 1)
         SetMenuDialogDefaultIndex(0)
     ElseIf option == _gsGenderPolicyOID
         SetMenuDialogOptions(_gsGenderPolicyNames())
@@ -963,18 +1535,35 @@ Event OnOptionMenuOpen(Int option)
 EndEvent
 
 Event OnOptionMenuAccept(Int option, Int index)
-    If option == _sexBackendOID
+    If option == _decalOID
+        ; : map the accepted menu index back through the available-
+        ; values array (absent sources were never offered, so the index is
+        ; always in range); write the motherboard property (save-persisted,
+        ; default-fresh -- no old-toggle migration); the module's routing
+        ; reads it live (no re-arm needed).
+        Int[] vals = _decalSourceValues()
+        If index >= 0 && index < vals.Length
+            Main.iDecalSource = vals[index]
+            SetMenuOptionValue(_decalOID, _decalSourceName(Main.iDecalSource))
+            Debug.Notification("Decal source set - " + _decalSourceName(Main.iDecalSource))
+        EndIf
+    ElseIf option == _sexBackendOID
         Main.iSexBackend = index
         SetMenuOptionValue(_sexBackendOID, _backendName(index))
     ElseIf option == _creatureBackendOID
         Main.iCreatureBackend = index
         SetMenuOptionValue(_creatureBackendOID, _backendName(index))
-    ElseIf option == _creatureVictimSexOID
-        Main.iCreatureVictimSex = index
-        SetMenuOptionValue(_creatureVictimSexOID, _victimSexName(index))
-    ElseIf option == _femaleOnlyOID
-        Main.iTargetSex = index
-        SetMenuOptionValue(_femaleOnlyOID, _targetSexName(index))
+    ; : the _creatureVictimSexOID/_femaleOnlyOID legs are RETIRED with
+    ; their rows (the SS-C fold); the _ambientSexOID dropdown replaces them.
+    ElseIf option == _ambientSexOID
+        ; Ruling (c), the SS-C level mapping. Labels USER-AUTHORED, register-
+        ; cited. The motherboard gates read the level live on every consult.
+        If index < 0 || index > 2
+            index = 0
+        EndIf
+        StorageUtil.SetIntValue(None, "SNBaka.TargetSexLevel", index + 1)
+        SetMenuOptionValue(_ambientSexOID, _targetSexLevelName(index + 1))
+        Debug.Notification("Ambient target policy set - " + _targetSexLevelName(index + 1))
     ElseIf option == _gsGenderPolicyOID
         ;  Phase B: write GSAnim.GenderPolicy (StorageUtil int on None, the
         ; GS script's own key style; save-persisted, no migration — 0 is shipped
@@ -1027,6 +1616,37 @@ Function _SetExecGateLevel(Int i)
         p = Game.GetPlayer()
     EndIf
     StorageUtil.SetIntValue(p, "SNBaka.ExecuteGateLevel", i)
+EndFunction
+
+; ============================================================================
+; : the ambient-target-policy dropdown labels (ruling (c); labels
+; USER-AUTHORED, register-cited: baka-daemon.md  SS-C map verbatim) and
+; the 30a policy read for the toggle's displayed state.
+; ============================================================================
+String[] Function _targetSexLevelNames()
+    String[] a = new String[3]
+    a[0] = "Only female targets"
+    a[1] = "Male and female targets, male aggressors"
+    a[2] = "Anything goes"
+    Return a
+EndFunction
+
+String Function _targetSexLevelName(Int iLevel)
+    If iLevel == 2
+        Return "Male and female targets, male aggressors"
+    ElseIf iLevel == 3
+        Return "Anything goes"
+    EndIf
+    Return "Only female targets"
+EndFunction
+
+; Entry-30a DRAFT label read: the central player-target policy's live state.
+Bool Function _PlayerTargetPolicyOn()
+    Actor p = Game.GetPlayer()
+    If !p
+        Return False
+    EndIf
+    Return StorageUtil.GetIntValue(p, "SNBaka.PlayerTargetPolicy", 0) == 1
 EndFunction
 
 String[] Function _targetSexNames()
@@ -1124,6 +1744,67 @@ Event OnOptionSliderOpen(Int option)
         SetSliderDialogDefaultValue(30.0)
         SetSliderDialogRange(0.0, 120.0)
         SetSliderDialogInterval(5.0)
+    ElseIf option == _stAmbientPctOID
+        ; : user-ruled default 35 -- the chance each daemon-tick
+        ; ambient exposure pass fires a visible-tattoo reaction cue.
+        SetSliderDialogStartValue(StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.AmbientPct", 35) as Float)
+        SetSliderDialogDefaultValue(35.0)
+        SetSliderDialogRange(0.0, 100.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _fhuNoticeOID
+        ; : planner default 30 -- the percent-of-max floor for ambient
+        ; bystander reactions (curious stares / suggestive comments).
+        SetSliderDialogStartValue(Main.iFHUAmbientNoticeBand as Float)
+        SetSliderDialogDefaultValue(30.0)
+        SetSliderDialogRange(5.0, 95.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _fhuHeavyOID
+        ; : planner default 60 -- the percent-of-max escalation floor
+        ; (scandalized whispers).
+        SetSliderDialogStartValue(Main.iFHUAmbientHeavyBand as Float)
+        SetSliderDialogDefaultValue(60.0)
+        SetSliderDialogRange(10.0, 100.0)
+        SetSliderDialogInterval(5.0)
+    ;  5.2: the four mode-cadence sliders (user-ruled range 15s-240s;
+    ; defaults = each arbiter's historic cadence).
+    ElseIf option == _mephCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "SNBaka.MephalaCadence", 45.0))
+        SetSliderDialogDefaultValue(45.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _molagCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "SNBaka.MolagBalCadence", 15.0))
+        SetSliderDialogDefaultValue(15.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _sangCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "GSAnim.NudgeInterval", 30.0))
+        SetSliderDialogDefaultValue(30.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _sheoCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "GSAnim.T3Interval", 15.0))
+        SetSliderDialogDefaultValue(15.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ;  4.4: the three ambient cadence sliders (15s-240s for the two
+    ; 60s-cadence modules; 60s-1800s for the tattoo observation floor; defaults
+    ; = each module's historic cadence -- defaults unchanged).
+    ElseIf option == _fhuAmbCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "SNBaka.FHUAmbientCadence", 60.0))
+        SetSliderDialogDefaultValue(60.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _cumAmbCadOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(None, "SNBaka.CumAmbientCadence", 60.0))
+        SetSliderDialogDefaultValue(60.0)
+        SetSliderDialogRange(15.0, 240.0)
+        SetSliderDialogInterval(5.0)
+    ElseIf option == _stAmbFloorOID
+        SetSliderDialogStartValue(StorageUtil.GetFloatValue(Game.GetPlayer(), "SNBaka.ST.AmbientFloor", 600.0))
+        SetSliderDialogDefaultValue(600.0)
+        SetSliderDialogRange(60.0, 1800.0)
+        SetSliderDialogInterval(30.0)
     ElseIf option == _resistDifficultyOID
         SetSliderDialogStartValue(Main.fResistDifficulty)
         SetSliderDialogDefaultValue(70.0)
@@ -1251,6 +1932,50 @@ Event OnOptionSliderAccept(Int option, Float value)
     ElseIf option == _cooldownOID
         Main.fNPCGlobalCooldown = value
         SetSliderOptionValue(_cooldownOID, value, "{0}s")
+    ElseIf option == _fhuNoticeOID
+        ; : read live at every poll tick -- no re-arm needed.
+        Main.iFHUAmbientNoticeBand = value as Int
+        SetSliderOptionValue(_fhuNoticeOID, value, "{0}%")
+    ElseIf option == _stAmbientPctOID
+        ; : read live at every daemon tick -- no re-arm needed.
+        StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.ST.AmbientPct", value as Int)
+        SetSliderOptionValue(_stAmbientPctOID, value, "{0}%")
+    ElseIf option == _fhuHeavyOID
+        Main.iFHUAmbientHeavyBand = value as Int
+        SetSliderOptionValue(_fhuHeavyOID, value, "{0}%")
+    ;  5.2: the cadence keys are read live at every daemon arm/tick and
+    ; every muse/T3 gate (no re-arm needed).
+    ElseIf option == _mephCadOID
+        StorageUtil.SetFloatValue(None, "SNBaka.MephalaCadence", value)
+        SetSliderOptionValue(_mephCadOID, value, "{0}s")
+    ElseIf option == _molagCadOID
+        StorageUtil.SetFloatValue(None, "SNBaka.MolagBalCadence", value)
+        SetSliderOptionValue(_molagCadOID, value, "{0}s")
+    ElseIf option == _sangCadOID
+        StorageUtil.SetFloatValue(None, "GSAnim.NudgeInterval", value)
+        SetSliderOptionValue(_sangCadOID, value, "{0}s")
+    ElseIf option == _sheoCadOID
+        StorageUtil.SetFloatValue(None, "GSAnim.T3Interval", value)
+        SetSliderOptionValue(_sheoCadOID, value, "{0}s")
+    ;  4.4: the three ambient cadence writes. FHU + Tattoo keys are
+    ; read live at every pass (no re-arm needed); the Cum rule is re-armed
+    ; live (RemoveTimerRule + AddTimerRule with the new cadence, the same
+    ; key-deduped idempotent shape the module's own re-arm uses) -- guarded
+    ; so an absent/off module never gets spuriously armed from the MCM.
+    ElseIf option == _fhuAmbCadOID
+        StorageUtil.SetFloatValue(None, "SNBaka.FHUAmbientCadence", value)
+        SetSliderOptionValue(_fhuAmbCadOID, value, "{0}s")
+    ElseIf option == _cumAmbCadOID
+        StorageUtil.SetFloatValue(None, "SNBaka.CumAmbientCadence", value)
+        If Main && Main._OCumInstalled() && Main.bCumDetectionEnabled
+            DeDService.RemoveTimerRule("cum", "ambient")
+            DeDService.AddTimerRule("cum", "ambient", value, 1, None, "cum.present", 600.0, "sdb_cum_ambient_due")
+            Debug.Trace("[SNBaka] MCM: cum ambient rule re-armed at " + value + "s cadence (REV-161 4.4)")
+        EndIf
+        SetSliderOptionValue(_cumAmbCadOID, value, "{0}s")
+    ElseIf option == _stAmbFloorOID
+        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNBaka.ST.AmbientFloor", value)
+        SetSliderOptionValue(_stAmbFloorOID, value, "{0}s")
     ElseIf option == _resistDifficultyOID
         Main.fResistDifficulty = value
         SetSliderOptionValue(_resistDifficultyOID, value, "{0}%")
@@ -1322,14 +2047,78 @@ Event OnOptionSliderAccept(Int option, Float value)
 EndEvent
 
 Event OnOptionHighlight(Int option)
-    If option == _enabledOID
+    ;  (R2, user-ruled 2026-10-21, texts VERBATIM): the Cum-page
+    ; descriptions are now TOOLTIPS (SetInfoText, shown on highlight), not
+    ; subtext rows (the  static rows are removed per the ruling).
+    If option == _cumDetectOID
+        SetInfoText("Enable/disable the SkyrimNet cum detection cues created by this module.")
+    ElseIf option == _decalOID
+        SetInfoText("Pick the cum decal source for this module to apply and track.")
+    ElseIf option == _moreCumOID
+        SetInfoText("Adds additional location friendly cum decals on orgasm events.")
+    ElseIf option == _cumFollowUpOID
+        ; : the user's tooltip text, verbatim.
+        SetInfoText("Additional direct narration for cum application events")
+    ElseIf option == _fhuNarrOID
+        ; : tooltip DRAFT per the user's exchange shape ("a similar
+        ; format to the cum detection prompt + optional direct narration
+        ; trigger") -- register entry 33, the user's pen.
+        SetInfoText("Additional direct narration for inflation cues")
+    ElseIf option == _fhuAmbNarrOID
+        ; : tooltip DRAFT (register entry 34, the user's pen).
+        SetInfoText("Additional direct narration for ambient bystander cues")
+    ElseIf option == _fhuNoticeOID
+        ; : tooltip DRAFT (register entry 34, the user's pen).
+        SetInfoText("Bystander reactions start once inflation passes this percent of Fill Her Up's maximum (default 30%).")
+    ElseIf option == _fhuHeavyOID
+        ; : tooltip DRAFT (register entry 34, the user's pen).
+        SetInfoText("Reactions escalate to scandalized whispers above this percent (default 60%).")
+    ElseIf option == _fhuAwareOID
+        ;  3.2(b) (USER-PROVIDED verbatim): the retired three-row subtext
+        ; delivered as the tooltip on highlight (SetInfoText pattern).
+        SetInfoText("Enable/disable cues and reactions for Fill Her Up Baka")
+    ;  5.1/5.2/5.3: the new mode-narration + cadence + pose-narration
+    ; tooltip DRAFTS (register entry 37, the user's pen; the 134f naming
+    ; pattern; the pose-narration tooltips use the lean "narration cue"
+    ; resolution of the user's {{prompt/trigger}} placeholders).
+    ElseIf option == _mephNarrOID
+        SetInfoText("Additional direct narration when Mephala Mode actions fire, asking nearby characters to react")
+    ElseIf option == _molagNarrOID
+        SetInfoText("Additional direct narration when Molag Bal Mode actions fire, asking nearby characters to react")
+    ElseIf option == _mephCadOID
+        SetInfoText("Seconds between Mephala Mode action opportunities (default 45s).")
+    ElseIf option == _molagCadOID
+        SetInfoText("Seconds between Molag Bal Mode action opportunities (default 15s).")
+    ElseIf option == _sangNarrOID
+        SetInfoText("Additional direct narration when Sanguine Mode poses fire, asking nearby characters to react")
+    ElseIf option == _sheoNarrOID
+        SetInfoText("Additional direct narration when Sheogorath Mode poses fire, asking nearby characters to react")
+    ElseIf option == _sangCadOID
+        SetInfoText("Seconds between Sanguine Mode pose opportunities (default 30s).")
+    ElseIf option == _sheoCadOID
+        SetInfoText("Seconds between Sheogorath Mode pose opportunities (default 15s).")
+    ElseIf option == _poseNarrSangOID
+        SetInfoText("Send the narration cue when Sanguine Mode poses an NPC (default on).")
+    ElseIf option == _poseNarrEmOID
+        SetInfoText("Send the narration cue when autonomous or emergent forces pose an NPC (default on).")
+    ElseIf option == _poseNarrPlOID
+        SetInfoText("Send the narration cue when you pose an NPC or gesture for them to stop (default on).")
+    ElseIf option == _enabledOID
         SetInfoText("Master switch for all Baka motion interactions.")
     ElseIf option == _animatedTearsOID
         SetInfoText("Apply animated 3D tears to female victims during aggressive scenes. Requires Emotional Tears Effect SE (EmoTears4NPCs.esp). Has no effect if that mod is not installed.")
     ElseIf option == _playerTargetOID
-        SetInfoText("Allow NPCs to initiate Baka animations on the player.")
-    ElseIf option == _femaleOnlyOID
-        SetInfoText("Which target sex ALL actions allow: Both, Female only, or Male only. Note: breast/intimate actions always require female targets regardless.")
+        ;  4.4 (register entry 30a CLOSED at this build): the user's
+        ; 2026-10-24 edit pass REMOVED the saves-migration sentence ("Existing
+        ; saves started with their old spank-target setting." - Cline's draft,
+        ; never the user's; shipped at  while the entry was open). The
+        ; remaining tooltip text is the WORDING OF RECORD (PROJECT_STATE
+        ; 170.1 correction; this line is the 30a source-debt payment).
+        SetInfoText("When on, NPCs and creatures may choose you as the target of their autonomous actions (the Baka module's single central gate; your own initiations are never blocked). When off, nothing targets you unless you start it.")
+    ElseIf option == _ambientSexOID
+        SetInfoText("The three-level target-sex policy for NPC-initiated actions and the ambient modes: only female targets; male and female targets with male aggressors; or anything goes. Anatomically-specific actions always require female bodies regardless. Existing saves started from their old Target Sex setting.")
+    ; : the _mephalaOID/_molagBalOID info texts REMOVED with their
+    ; toggles (Prisma-only ruling; unbound OIDs never reach this handler).
     ElseIf option == _cooldownOID
         SetInfoText("Minimum real-time seconds between NPC-initiated actions. Default 30s.")
     ElseIf option == _execGateOID
@@ -1358,10 +2147,8 @@ Event OnOptionHighlight(Int option)
         SetInfoText("FALLBACK ONLY (used when Acheron is not installed): seconds the attacker has to escalate after a QTE defeat. With Acheron, the downed state is owned by the Acheron bridge instead.")
     ElseIf option == _escalationDifficultyOID
         SetInfoText("Difficulty of the second QTE (choke hold) in the fallback defeat window. Same scale as Escape Difficulty.")
-    ElseIf option == _spankPlayerOID
-        SetInfoText("Allow the player character to be spanked by NPCs.")
-    ElseIf option == _spankMaleOID
-        SetInfoText("Allow male actors to be spanked. Off by default - moans and marks are female-only, so male spank is just the impact sound.")
+    ; : the _spankPlayerOID/_spankMaleOID highlight legs are RETIRED with
+    ; their rows ( policy + the SS-C fold).
     ElseIf option == _spankFurnitureOID
         SetInfoText("Enable special reactions when the target is using furniture (alchemy lab, forge, etc).")
     ElseIf option == _spankTatIntensityOID
@@ -1398,8 +2185,8 @@ Event OnOptionHighlight(Int option)
         SetInfoText("Show this mod's top-left corner messages ('X collapses...', 'What will you do to...', etc.). Turn OFF for a clean HUD - narration, dialogue and log traces are unaffected.")
     ElseIf option == _debugLogOID
         SetInfoText("Write this mod's detailed traces to the Papyrus log. Keep ON while testing/reporting issues (the log is how problems get diagnosed); turn OFF for less script-engine load during normal play.")
-    ElseIf option == _creatureVictimSexOID
-        SetInfoText("Which victim sex creatures may target: Both, Female only, or Male only.")
+    ; : the _creatureVictimSexOID highlight leg is RETIRED with its row
+    ; (the SS-C fold under Ambient Target Policy).
     ElseIf option == _creatureBackendOID
         SetInfoText("Which framework plays creature sex scenes (Auto / SexLab / OStim).")
     ElseIf option == _creatureSuccessOID
@@ -1451,7 +2238,17 @@ Event OnOptionHighlight(Int option)
     ElseIf option == _stRemoveOnReleaseOID
         SetInfoText("Strip the module's degradation marks when a captive is genuinely released (the Release action). Only marks THIS module applied - Baka's own spank heat marks are untouched. Default ON.")
     ElseIf option == _stObserveOID
-        SetInfoText("Periodic ambient cue (~every 4 game hours) that a marked actor still wears their degradation marks, so nearby personas can notice and react without polling. Only fires when module-applied marks exist. Default ON.")
+        ; : re-pointed to the daemon-tick ambient exposure pass (the
+        ; v1 ~4h heartbeat pass is retired). Register entry 35 DRAFT.
+        SetInfoText("Master gate for ambient tattoo reaction cues: while a Baka daemon mode is on, every daemon tick rolls a chance for nearby personas to notice any VISIBLE tattoo - covered marks are not reacted to, marks applied by any means are. Default ON.")
+    ElseIf option == _stAmbientPctOID
+        ; . Register entry 35 DRAFT.
+        SetInfoText("Chance each daemon-tick ambient pass fires a visible-tattoo reaction cue when someone nearby has an exposed mark (default 35%). Failing rolls are silent.")
+    ElseIf option == _stAmbientNarrOID
+        ; : the Follow-up Prompt pattern (134f/153/154) applied to the
+        ; tattoo ambient cue - the gated second surface. DEFAULT OFF. Register
+        ; entry 35 DRAFT.
+        SetInfoText("Additional direct narration for ambient tattoo reaction cues (a second prompt surface on top of the mandatory cue). Default OFF.")
     ElseIf option == _qteKeysOID
         ;  length audit (class (b) split): the WASD / d-pad detail moved
         ; here from the (over-length) value string.
@@ -1514,4 +2311,20 @@ Function _ST_Toggle(String asKey, Int aiOID, Int aiDefault)
     Int v = 1 - StorageUtil.GetIntValue(p, asKey, aiDefault)
     StorageUtil.SetIntValue(p, asKey, v)
     SetToggleOptionValue(aiOID, v == 1)
+EndFunction
+
+;  5.1/5.3: GS toggle helper — flips a None-keyed GSAnim.* int between
+; 1 and 0 (the _ST_Toggle pattern, None-keyed).
+Function _GS_Toggle(String asKey, Int aiOID, Int aiDefault)
+    Int v = 1 - StorageUtil.GetIntValue(None, asKey, aiDefault)
+    StorageUtil.SetIntValue(None, asKey, v)
+    SetToggleOptionValue(aiOID, v == 1)
+EndFunction
+
+; : "enabled"/"disabled" for the GS narration notifications.
+String Function _OnOff(Int aiV)
+    If aiV == 1
+        Return "enabled"
+    EndIf
+    Return "disabled"
 EndFunction

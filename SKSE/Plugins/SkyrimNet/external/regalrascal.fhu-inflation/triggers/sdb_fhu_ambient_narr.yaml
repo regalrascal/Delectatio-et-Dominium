@@ -1,0 +1,40 @@
+name: "sdb_fhu_ambient_narr"
+description: "Ambient Narration (MCM-gated, REV-154): optional direct narration for the FHU ambient bystander cue (DRAFT - rev-154, sec.7 approval pending)"
+
+#  (2026-10-24, the planner's deferred expose pass -- the cum-ambient
+# pattern applied to FHU): the direct narration is a SEPARATE, OPTIONAL
+# surface from the mandatory ambient bystander cue. This yaml matches the
+# gated sdb_fhu_ambient_narr event type ONLY --
+# SNBaka_FHUInflationModule._AmbientFire emits that event immediately after
+# the sdb_fhu_ambient cue (once per 60s cadence while an actor sits at/above
+# the noticeable band) when (and only when) the Fill Her Up MCM "Ambient
+# Narration" toggle (motherboard property bFHUAmbientNarration, default OFF)
+# is ON. The ambient cue (what bystanders see -- the band x source desc
+# composed in-script: curious stares / suggestive comments at the noticeable
+# band, scandalized whispers at the heavy band) rides the trigger bus with
+# NO cue yaml (the sdb_cum_ambient /  restore shape); this narration
+# surface (how to respond) is the gated second surface. The guidance text is
+# a sec.7 DRAFT (, register entry 34, the user's pen), adapted from
+# the approved entry-22/33 narration families to the ambient-bystander
+# register. No template variables per the D8/sec.137 binding rule
+# (RegisterEvent carries no extraData; documented-variable table only) --
+# plain text throughout.
+
+eventCriteria:
+  eventType: "sdb_fhu_ambient_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    A nearby character is visibly inflated, their belly swollen well past
+    what a normal belly looks like. Those who notice take the sight in
+    their own way -- curious stares, low suggestive comments, scandalized
+    whispers, concern, or embarrassment -- each true to who they are and
+    to what they are looking at. The most affected feel compelled to
+    speak.
+
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

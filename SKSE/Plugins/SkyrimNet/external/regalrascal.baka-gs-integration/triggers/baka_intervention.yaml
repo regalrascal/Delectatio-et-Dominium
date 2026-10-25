@@ -10,19 +10,15 @@ response:
     {{ originator }} has just stepped in and forced the scene involving {{ target }} to end.
     The animation has stopped. Everyone freezes for a beat.
 
-    Generate the immediate social fallout in one or two short beats:
-    - What does {{ originator }} say or do in this moment of intervention?
-      Are they authoritative and cold? Angry? Quietly firm? Disgusted?
-    - How does the initiator of the stopped scene react?
-      Defiant and dangerous? Shrinking back? Calculating their next move?
-    - How does the victim react to being freed?
-      Relief, shock, dissociation, immediate tears, silent gratitude?
+    The fallout unfolds in the open. {{ originator }}'s manner in the moment of
+    intervention -- authoritative and cold, angry, quietly firm, disgusted. The
+    stopped initiator's -- defiant and dangerous, shrinking back, calculating
+    their next move. {{ target }}'s, freed -- relief, shock, dissociation, immediate
+    tears, silent gratitude. Each follows its owner: a guard reads differently
+    than a companion, a cowardly bandit differently than a proud warlord.
 
-    Match each character's personality. A guard reacts differently than a companion.
-    A cowardly bandit reacts differently than a proud warlord.
-
-    Do NOT resolve further consequences here — that is for follow-up dialogue.
-    This is the raw moment: intervention complete, scene over, everyone responding.
+    This is the raw moment: intervention complete, scene over, everyone
+    responding. Further consequences wait for the follow-up dialogue.
 
 audience: "nearby_npcs"
 

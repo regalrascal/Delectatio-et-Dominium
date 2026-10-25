@@ -228,3 +228,29 @@ Actor[] Function SLThreadPositions(Int tid) Global
     EndIf
     Return tc.Positions
 EndFunction
+
+; [ Strip] Downed-menu "Strip" (baka-module.md  +  rulings
+; (iii)/(i)(a)): SexLab StripActor is the PRIMARY undress (tracked re-equip
+; context, worn-slot aware, animate), UnstripActor the restore re-equip. Both
+; signatures are signature-true to the installed P+ source (sslActorLibrary.psc
+; L125 / L144); the compile stubs (tools/compile/local/sslActorLibrary.psc in
+; BOTH stub trees) were extended to match. SexLab absent -> None / no-op, and the
+; caller takes the vanilla per-slot fallback (presence-gated, honest degradation).
+Form[] Function StripActor(Actor akActor, Bool abAnimate) Global
+    SexLabFramework sl = _SL()
+    If !sl
+        Return None
+    EndIf
+    ; VictimRef = akActor: the downed target IS the strip victim, so SexLab's
+    ; GetStripForms picks the victim strip set (aggressor set would respect
+    ; "keep underwear" style config on the wrong side).
+    Return sl.ActorLib.StripActor(akActor, akActor, abAnimate, False)
+EndFunction
+
+Function UnstripActor(Actor akActor, Form[] akStripped) Global
+    SexLabFramework sl = _SL()
+    If !sl || !akStripped
+        Return
+    EndIf
+    sl.ActorLib.UnstripActor(akActor, akStripped, False)
+EndFunction

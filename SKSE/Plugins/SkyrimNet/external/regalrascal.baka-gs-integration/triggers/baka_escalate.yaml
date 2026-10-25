@@ -9,9 +9,10 @@ response:
   content: |
     {{ originator }} makes their decision — and moves in.
 
-    One sharp beat: the moment of decision crystallised into action. What does
-    {{ target }} do when they see it coming? What does {{ originator }}'s body
-    language convey? Match personalities exactly. One sentence maximum.
+    The moment of decision crystallizes into action: {{ originator }}'s intent is
+    legible in every line of the approach, and {{ target }}'s body answers before
+    the mind does -- flinching, bracing, going still, or defiant. One sharp
+    sentence of the moment, shaped by who these two are.
 
 audience: "nearby_npcs"
 

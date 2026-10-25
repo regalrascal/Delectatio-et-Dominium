@@ -3,7 +3,7 @@
   "type": "bundle",
   "title": "SkyrimNet Acheron Integration",
   "tagline": "Downed-state bridge between Acheron defeats and SkyrimNet/Baka.",
-  "description": "Connects Acheron's defeat-and-hold system to SkyrimNet: delegated downs route through Acheron.DefeatActor, downed NPCs emit cues and reminders, creature hand-off and auto get-up are configurable, and Acheron-side rescue events feed back into SkyrimNet triggers. Folded into the unified Delectatio et Dominium build; this layer carries the two framework-side triggers (acheron_downed, acheron_recovered).",
+  "description": "Connects Acheron's defeat-and-hold system to SkyrimNet: delegated downs route through Acheron.DefeatActor, downed NPCs emit cues and reminders, creature hand-off and auto get-up are configurable, and Acheron-side rescue events feed back into SkyrimNet triggers. Folded into the unified Delectatio et Dominium build; this layer carries the two framework-side triggers (acheron_downed, acheron_recovered) whose narration was invisible to the content library until REV-104.",
   "author": "around906",
   "tags": ["nsfw", "downed", "acheron"],
   "nsfw": true,

@@ -122,8 +122,8 @@
       <span class="footer-count" id="count"></span>
       <span style="display:inline-flex;gap:8px">
         <button class="btn btn-stop" onclick="stopPose()" title="End the targeted NPC's pose">Stop Pose</button>
-        <button class="btn btn-stop" id="btn-overdrive" onclick="toggleOverdrive()" title="Overdrive Mode: ambience cues + auto-pose floor, ~5 min, combat-pausable — press again to end">Overdrive Mode</button>
-        <button class="btn btn-stop" id="btn-muse" onclick="toggleMuse()" title="Muse: direct-fire pose daemon — every ~30s considers one nearby NPC, picks a pose from the 19-pose vocabulary via LLM, fires it directly; press again to quiet">Muse</button>
+        <button class="btn btn-stop" id="btn-overdrive" onclick="toggleOverdrive()" title="Sheogorath Mode: ambience cues + auto-pose floor, ~5 min, combat-pausable — press again to end">Sheogorath Mode</button>
+        <button class="btn btn-stop" id="btn-muse" onclick="toggleMuse()" title="Sanguine Mode: direct-fire pose daemon — every ~30s considers one nearby NPC, picks a pose from the 19-pose vocabulary via LLM, fires it directly; press again to quiet">Sanguine Mode</button>
         <button class="btn btn-cancel" onclick="cancel()">Cancel</button>
       </span>
     </div>
@@ -213,13 +213,13 @@ function cancel()    { _close(); _send(''); }
 // state, so it always sends the sentinel and Papyrus arbitrates (notify vs. stop).
 function stopPose()  { _close(); _send('STOP_POSE'); }
 
-// ── Phase 4: Performance Mode (overdrive) ──────────────────────────────────
+// ── Phase 4: Sheogorath Mode (internal id: overdrive) ───────────────────────
 // Blind send, exactly the STOP_POSE pattern: the view never blocks on pipe state and
 // Papyrus arbitrates (flag flip, cooldown zero/restore, expiry, combat pause).
 //  label fix (Option B, user-approved 2026-09-15): the label is IN-MEMORY,
 // per-open optimistic only — plain at every gsanim_open(), flipped only by a press of
 // THIS menu. The old localStorage mirror is GONE: it outlived the per-save StorageUtil
-// flag (and overdrive's ~5-min auto-expiry), so at open it could show the opposite of
+// flag (and Sheogorath Mode's ~5-min auto-expiry), so at open it could show the opposite of
 // the real state and every subsequent press then did the reverse of what the label
 // said (live-observed 2026-09-15: fresh load showed ON, one press flipped the label
 // OFF while Papyrus fired the ON "Muse stirring" line). The Papyrus notification is
@@ -228,7 +228,7 @@ function stopPose()  { _close(); _send('STOP_POSE'); }
 let g_odOn = false;
 function odApply() {
   const b = document.getElementById('btn-overdrive');
-  if (b) b.textContent = g_odOn ? 'Overdrive Mode: ON' : 'Overdrive Mode';
+  if (b) b.textContent = g_odOn ? 'Sheogorath Mode: ON' : 'Sheogorath Mode';
 }
 function toggleOverdrive() {
   g_odOn = !g_odOn;
@@ -237,17 +237,17 @@ function toggleOverdrive() {
   _send('OVERDRIVE_TOGGLE');
 }
 
-// ── Phase 4 amendment: Muse toggle (pulled forward from the 4b rider list) ──
+// ── Phase 4 amendment: Sanguine Mode toggle (internal id: muse; pulled forward from the 4b rider list) ──
 // Blind send, Papyrus arbitrates the GSAnim.Muse flag.  label fix (Option B):
-// in-memory per-open label, same rationale as Performance Mode above — the localStorage
+// in-memory per-open label, same rationale as Sheogorath Mode above — the localStorage
 // mirror (gsanim_muse) is GONE; the old "desync self-heals on next open" claim was
 // never true (an open just re-displayed the stale mirror; once out of parity, every
 // press inverted both layers permanently). Defaults OFF for attribution isolation;
-// if overdrive is also ON, Papyrus's arbiter preempts muse — it just waits.
+// if Sheogorath Mode is also ON, Papyrus's arbiter preempts Sanguine Mode — it just waits.
 let g_museOn = false;
 function museApply() {
   const b = document.getElementById('btn-muse');
-  if (b) b.textContent = g_museOn ? 'Muse: ON' : 'Muse';
+  if (b) b.textContent = g_museOn ? 'Sanguine Mode: ON' : 'Sanguine Mode';
 }
 function toggleMuse() {
   g_museOn = !g_museOn;
@@ -289,6 +289,7 @@ applyScale();
 // ── Browser preview (inert inside Skyrim/PrismaUI) ────────────────────────
 (function preview() {
   if (typeof window.gsanim_chose === 'function') return;   // in-game
+  if (location.href.indexOf('file:///views/') === 0) return;   // [REV-161 fix 2.2] in-game PrismaUI (bridge injects after page-load)
   const label = document.createElement('div');
   label.style.cssText = 'position:fixed;top:10px;left:12px;color:rgba(196,162,72,.55);font-size:11px;'
     + 'letter-spacing:.1em;font-family:monospace;pointer-events:none;z-index:9999';

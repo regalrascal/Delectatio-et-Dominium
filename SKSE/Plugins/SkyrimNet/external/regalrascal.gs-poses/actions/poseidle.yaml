@@ -2,14 +2,16 @@ name: PoseIdle
 description: |
   YOU (a female NPC) settle into casual body language — a hip against the wall, arms loose,
   the easy stance of someone with nowhere to be.
-  FEMALE CHARACTERS ONLY. You hold the pose until you choose to stop (use StopPosing) — it also
+  You hold the pose until you choose to stop (use StopPosing) — it also
   ends on its own if a fight starts or after a while.
 
   WHEN there's nothing pressing: idling in camp or at a fork in the road, listening while
   someone else holds the conversation, a natural pause in travel, a moment of quiet thought.
   Pairs naturally with a line of dialogue — the offhand comment, the patient "take your time."
 
-  DO NOT USE: in combat, in danger, or during a sex scene.
+  THE POOL THIS ACTION DRAWS FROM: the friendship gesture, shy and nervous containment, hands behind the back, arms crossed and suggesting, the victory pose, and shy waiting. (REV-161 4.3 moves enrichment - register batch DRAFT.)
+  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
+  begins in one.
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseIdle_Execute

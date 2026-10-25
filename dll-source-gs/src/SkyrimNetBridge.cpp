@@ -56,16 +56,33 @@ void SkyrimNetBridge::Init() {
     // pack;  ruling (b): ported faithfully; em-dashes rendered "  -  " per the
     //  DLL ASCII sweep). No visibility gate: the YAML def had none (member actions
     // carry their own eligibility rules) - a != nullptr is the API header's canonical no-op.
+    //  (Task 3, itemization audit): the member list extended from the 8
+    // glossed names to the full 27-member enumeration (matches the Baka DLL's
+    // owning def verbatim; every callable pose visible by name).
+    //  (Issue #2, the description-misroute class): "for no one in particular"
+    // REPELLED audience-driven dances - a "dance for me" request misrouted to
+    // SNBaka_Display (whose members make the TARGET perform). Rewritten: posing on
+    // your own OR on request - they watch, you dance (PoseDance, PoseDanceSexy).
+    // Kept in lockstep with the Baka DLL's owning def (dll-source/src).
     RegisterOne("SNGS_Pose",
-        "Pose, dance, stretch, show off  -  express a mood through your body, on your own, for no one in "
-        "particular: a SOLO held pose or gesture, no target, no physical contact (unlike SNBaka_Display, "
-        "which is a brief beat performed FOR someone else). Use when the moment invites it: music playing "
+        "Pose, dance, stretch, show off  -  express a mood through your body, on your own OR because "
+        "someone asked to watch: they watch, you dance (PoseDance, PoseDanceSexy for dancing, twerking, "
+        "or any lewd hip/backside show performed for a watcher). A held pose or performance by YOU, "
+        "no physical contact (unlike SNBaka_Display, where the TARGET performs the display for you). "
+        "Use when the moment invites it: music playing "
         "and you feel like dancing, celebrating a win, flirting or being teased, freshly complimented, "
         "dared, flushed with wine, relaxing or bored, praying or meditating, pleading or surrendering to "
         "someone of higher status, training, stretching, or simply striking an attitude as you speak  -  "
         "a pose pairs naturally with a line of dialogue. Held until you stop it, combat starts, or it "
         "times out on its own. Skip it entirely in combat, danger, or mid-scene  -  nothing inside is "
-        "available then.",
+        "available then. THIS NAME IS A CATEGORY, NOT A CALLABLE ACTION: never emit SNGS_Pose itself  -  "
+        "always call the specific member action that fits the moment (PoseDanceSexy for dancing, "
+        "twerking or any lewd hip/backside show, PoseSeduce to lure, PosePresent to offer, "
+        "PoseGroundSexy for floor poses, PoseStretch, PoseWorkout, PoseSubmission, PosePlead, and "
+        "the rest by name: PoseAroused, PoseAutograph, PoseBraceArm, PoseCrouch, PoseDance, "
+        "PoseDogeza, PoseDrink, PoseDrool, PoseFood, PoseGroundIdle, PoseHandOnChin, "
+        "PoseHandOnFace, PoseIdle, PoseKneel, PoseMeditate, PosePickpocket, PoseScratchHead, "
+        "PoseSelfTouch, PoseSleep). The member's own description says who may use it and when.",
         [](RE::Actor* a) { return a != nullptr; });
     SKSE::log::info("[SNAnimGS] REV-103: SNGS_Pose registered by GS fallback (GS-only install).");
 }
