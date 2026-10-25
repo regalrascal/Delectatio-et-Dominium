@@ -85,7 +85,7 @@ Always installed regardless of this checkbox; the module options below are the r
 							</typeDescriptor>
 						</plugin>
 						<plugin name="Baka Interactions">
-							<description>The interaction core: flirt, harass, escalate, capture, spank - affectionate, forced, and sexual actions through the Interact power, with resistance, struggle, and slavery. A Muse-style daemon (Mephala / Molag Bal modes) lets dominant NPCs escalate on their own initiative. Every emergent NSFW moment in DeD starts here.</description>
+							<description>The interaction core: flirt, harass, escalate, capture, spank - affectionate, forced, and sexual actions through the Interact power, with resistance, struggle, and slavery. A background daemon (Mephala / Molag Bal modes) lets dominant NPCs escalate on their own initiative. Every emergent NSFW moment in DeD starts here.</description>
 							<files>
 								<file source="SkyrimNet_BakaIntegration.esp" destination="SkyrimNet_BakaIntegration.esp"/>
 							</files>
@@ -94,7 +94,7 @@ Always installed regardless of this checkbox; the module options below are the r
 							</typeDescriptor>
 						</plugin>
 						<plugin name="GS Poses">
-							<description>Solo posing, made ambient: a PrismaUI pose grid for you or any targeted NPC, plus the Muse daemon that puts idle NPCs into mood-fitting poses - the LLM picks both the pose and the exact move from live scene context. Overdrive Mode raises the intensity when you want a livelier room.</description>
+							<description>Solo posing, made ambient: a PrismaUI pose grid for you or any targeted NPC, plus Sanguine Mode, the background daemon that puts idle NPCs into mood-fitting poses - the LLM picks both the pose and the exact move from live scene context. Sheogorath Mode raises the intensity when you want a livelier room.</description>
 							<files>
 								<file source="SkyrimNet_AnimationsGS.esp" destination="SkyrimNet_AnimationsGS.esp"/>
 								<file source="SKSE/Plugins/SNAnimGS_UI.dll" destination="SKSE/Plugins/SNAnimGS_UI.dll"/>

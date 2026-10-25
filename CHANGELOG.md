@@ -5,11 +5,11 @@
 The full feature arc since v0.1.0: every module shipped, polished, and
 dogfood-tested.
 
-- **The background-daemon era (Baka Interactions).** A Muse-style daemon for the
+- **The background-daemon era (Baka Interactions).** A background daemon (Mephala / Molag Bal modes) for the
   interaction core: Mephala and Molag Bal modes let dominant NPCs escalate on their
   own initiative, on cadences you set in the MCM (tick-interval sliders, 15–240 s),
-  with seeded in-character thoughts — the same pattern as the pose Muse.
-- **GS Poses: one-pass pose picking.** The Muse consideration prompt now reads a live
+  with seeded in-character thoughts — the same pattern as the pose daemon (Sanguine Mode).
+- **GS Poses: one-pass pose picking.** The Sanguine Mode consideration prompt now reads a live
   pose catalog (per-category move lists with content descriptions) and answers with
   both the pose and the exact move in one pass. The old separate pose-picker decision
   step is retired. New Sanguine / Sheogorath narration modes (toggles + tick-interval
