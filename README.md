@@ -4,8 +4,10 @@
   <img src="Delectatio_et_Dominium_Cover.jpg" alt="Delectatio et Dominium" width="480">
 </p>
 
-**Bedroom drama for SkyrimNet.** DeD v0.3.0-alpha — the first full release: every module
-shipped, polished, and dogfood-tested.
+**Bedroom drama for SkyrimNet.** DeD v0.3.0-alpha — the first release to carry every
+module, in an honest alpha state: tested in-house where possible, and now looking to the
+community for help testing the features, giving feedback, and sharing logs to help
+diagnose issues.
 
 Delectatio et Dominium (DeD) is a **modular SkyrimNet integration mod for a number of
 classic community adult mods and effects**. It aims to immerse you in those mods through
@@ -220,6 +222,17 @@ Configuration lives in one **Delectatio et Dominium** MCM, split into pages: **S
 
 ## Honest-state notes
 
+**This is an alpha — and it says so in the version number on purpose.** Everything here
+has been built and tested in-house to the extent one person can, but we're not going to
+pretend that's the same as battle-tested by a community. Expect rough edges, bugs, and
+unbalanced moments. What would help most is you:
+
+- **Test the features** — every module, every lane, and the combinations between them.
+- **Give feedback** — what breaks, what feels wrong, what feels missing, what feels great.
+- **Share your logs** — when something misbehaves, the SkyrimNet log (and the DeD
+  diagnostics in it) is what makes diagnosis possible; a report with a log attached is
+  worth ten without.
+
 **EXPERIMENTAL — the Execute action.** The execute-on-downed-victim lane (Baka
 Interactions) ships **experimental**: it is heavily guarded (eligibility rules, downed
 state checks, a configurable ask-first gate) and labeled in-game as
@@ -284,11 +297,12 @@ framework this whole mod exists inside.
 
 ## Roadmap
 
-This is **v0.3.0-alpha — the first full release.** Every module above is shipped,
-polished, and dogfood-tested: the background-daemon era (the Baka Mephala / Molag Bal
-modes, the Sanguine / Sheogorath pose system), the Cum / FHU / SlaveTats v2 systems with their
-ambient narration layers, the independence audit, and the full story-voice pass are all
-in. Version numbers will increment as milestones ship — plans include further mod
+This is **v0.3.0-alpha** — the first release to carry every module: the background-daemon
+era (the Baka Mephala / Molag Bal modes, the Sanguine / Sheogorath pose system), the Cum /
+FHU / SlaveTats v2 systems with their ambient narration layers, the independence audit,
+and the full story-voice pass are all in. It ships in an honest alpha state — community
+testing, feedback, and shared logs are what the `-alpha` suffix is really asking for.
+Version numbers will increment as milestones ship and harden — plans include further mod
 integrations and deeper scene-aware reactions. The v0.1.0 polish-and-expansion pass this
 README once promised is done.
 

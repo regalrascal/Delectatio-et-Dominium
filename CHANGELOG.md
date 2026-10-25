@@ -1,9 +1,8 @@
 # Changelog
 
-## v0.3.0-alpha — the first full release
+## v0.3.0-alpha — the first full release (alpha state)
 
-The full feature arc since v0.1.0: every module shipped, polished, and
-dogfood-tested.
+The full feature arc since v0.1.0: every module shipped — in an honest alpha state: tested in-house where possible, and looking to the community for testing, feedback, and shared logs to help diagnose issues.
 
 - **The background-daemon era (Baka Interactions).** A background daemon (Mephala / Molag Bal modes) for the
   interaction core: Mephala and Molag Bal modes let dominant NPCs escalate on their
