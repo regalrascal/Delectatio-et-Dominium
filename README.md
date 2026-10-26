@@ -84,7 +84,7 @@ what applied it, and narrates the aftermath.
 
 ### Fill Her Up (v2) — inflation with a voice
 
-[Fill Her Up — Baka Edition](https://www.loverslab.com/](https://www.loverslab.com/files/file/14920-fill-her-up-baka-edition/) inflation, fully narrated, read
+[Fill Her Up — Baka Edition](https://www.loverslab.com/files/file/14920-fill-her-up-baka-edition/) inflation, fully narrated, read
 live from FHU's own per-actor state.
 
 - **Level-up swelling and level-down release** — every band change narrated as it
@@ -108,7 +108,7 @@ them.
 
 ### Acheron Bridge — losing a fight becomes a scene
 
-Downed-consequence SkyrimNet triggers bridged to [Acheron](https://www.loverslab.com/)'s
+Downed-consequence SkyrimNet triggers bridged to [Acheron](https://www.nexusmods.com/skyrimspecialedition/mods/108159)'s
 consequence system — a defeat is the start of a story, not a game over.
 
 - **The downed handoff** — DeD's downed cues feed Acheron's consequence system.
@@ -136,7 +136,7 @@ breaks in any combination — run one module, run them all, or run none.
 - [SKSE64](https://skse.silverlock.org/) matching your runtime
 - [SkyrimNet](https://goncalo22.github.io/SkyrimNet-GamePlugin/) (the LLM framework this mod integrates with — required; Beta 25 / 0.25.x or later)
 - [SkyUI / MCM](https://www.nexusmods.com/skyrimspecialedition/mods/12604) — the configuration menu
-- [PapyrusUtil](https://www.nexusmods.com/skyrimspecialedition/mods/13044) — settings storage
+- [PapyrusUtil](https://www.nexusmods.com/skyrimspecialedition/mods/13048) — settings storage
 - [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/134660) — the interaction, pose, and tattoo menus
 - [Baka Motion Data Pack](https://www.loverslab.com/files/file/26992-baka-motion-data-pack/) — the paired interaction animations; run **Pandora / FNIS / Nemesis** after installing
 - **A safety line, not a requirement:** no module action of any kind ever targets an
@@ -150,15 +150,16 @@ users is welcome.
 
 ### Adult animation framework (at least one)
 
-- [SexLab Framework](https://www.loverslab.com/files/file/5911-sexlab-framework-se/) and/or **OSex / OStim** — at least one is needed for paired scenes to start (both are supported simultaneously; the MCM picks Auto). Without one, escalation simply won't start a scene — nothing breaks.
+- [SexLab Framework](https://www.loverslab.com/files/file/20058-sexlab-se-sex-animation-framework-v166d-08292026/) and/or **OSex / OStim** — at least one is needed for paired scenes to start (both are supported simultaneously; the MCM picks Auto). Without one, escalation simply won't start a scene — nothing breaks.
 
 ### Per-module (only for the modules you install)
 
-- [GSPoses by Gunslicer](https://www.loverslab.com/files/file/28221-gsposes/) — the GS solo-pose animations (GS Poses)
-- [Fill Her Up — Baka Edition](https://www.loverslab.com/) — inflation (FHU)
-- [SlaveTats](https://www.loverslab.com/) (includes JContainers) — degradation tattoos (SlaveTats)
-- [Acheron](https://www.loverslab.com/) — the downed-consequence bridge (Acheron Bridge)
-- [OCum](https://www.loverslab.com/) — applied-cum events (Cum; the SexLab end-of-scene proxy also works without OCum)
+- [GSPoses by Gunslicer](https://www.patreon.com/Gunslicer/posts/pose-mod-02-06-159933025?utm_campaign=postshare_fan&utm_content=android_share) — the GS solo-pose animations (GS Poses)
+- [Fill Her Up — Baka Edition](https://www.loverslab.com/files/file/14920-fill-her-up-baka-edition/) — inflation (FHU)
+- [SlaveTats](https://www.loverslab.com/files/file/619-slavetats/) (includes JContainers) — degradation tattoos (SlaveTats) - Tattoo Packs can be found on the modpage
+- [SlaveTats NG](https://www.loverslab.com/files/file/35989-slavetatsng/) - For faster tattoo application - Must install base SlaveTats too
+- [Acheron](https://www.nexusmods.com/skyrimspecialedition/mods/108159) — the downed-consequence bridge (Acheron Bridge)
+- [OCum](https://www.nexusmods.com/skyrimspecialedition/mods/77506) — applied-cum events (Cum; the SexLab end-of-scene proxy also works without OCum)
 
 Each module is inert without its prerequisite — it greys out in the MCM and does nothing
 rather than breaking.
@@ -170,13 +171,13 @@ rather than breaking.
 - [Dynamic Feminine Female Modesty Animations OAR](https://www.nexusmods.com/skyrimspecialedition/mods/104374) — cover-self reaction (no animations are bundled for this)
 - [Additional Expressions Project](https://www.nexusmods.com/skyrimspecialedition/mods/72337) — facial-expression morph values (the values are baked in; the mod itself isn't required at runtime)
 - [EmoTears4NPCs / EmoTears](https://www.nexusmods.com/skyrimspecialedition/mods/122296) — animated tears
-- [SeverActions – SkyrimNet Action Pack](https://www.loverslab.com/files/file/34312-severactions-skyrimnet-action-pack/) — enriches the LLM's downed/capture options; DeD's downed cues invite these outcomes
+- [SeverActions – SkyrimNet Action Pack](https://github.com/Severause/SeverActions) — enriches the LLM's downed/capture options; DeD's downed cues invite these outcomes
 
 ### Flavor (optional, each degrades gracefully if absent)
 
 - [OCreatures Revived](https://www.loverslab.com/files/file/49059-ocreatures-revived/) — for creature escalation to produce a scene (you also need creature animation packs covering the creature types)
-- [Simple Slavery Plus Plus (SS++)](https://www.loverslab.com/files/file/13674-simple-slavery-plus-plus/) — required for the `SellToSlavery` action (defeated **player** only)
-- [Follower Slavery Mod (FSM)](https://www.loverslab.com/files/file/30956-follower-slavery-mod-/) — required for the `EnslaveFollower` action (OFF by default)
+- [Simple Slavery Plus Plus (SS++)](https://www.loverslab.com/files/file/13531-simple-slavery-plus-plus/) — required for the `SellToSlavery` action (defeated **player** only)
+- [Follower Slavery Mod (FSM)](https://www.loverslab.com/files/file/23032-follower-slavery-mod-fsm-14122025/) — required for the `EnslaveFollower` action (OFF by default)
 
 ## Installation
 
@@ -239,11 +240,6 @@ state checks, a configurable ask-first gate) and labeled in-game as
 *"Execute action: experimental — community feedback welcome."* It can be disabled
 entirely in the MCM.
 
-**The pose picker is retired.** Pose picking now happens in one pass: the Sanguine Mode
-consideration prompt reads the live pose catalog (per-category move lists with content
-descriptions) and answers with both the pose and the exact move. The old separate
-pose-picker decision step no longer exists — there is nothing to configure.
-
 **OStim self-drive (FHU).** OStim scenes drive their own inflation fills via the built-in
 climax driver; no SexLab bridge is required for OStim users.
 
@@ -261,19 +257,17 @@ started as a consolidation and re-release of that work: released with his permis
 (2026-10-07 / 2026-10-12) — credited here first and prominently, per the record. This
 project would not exist without his mods and his generosity.
 
-Delectatio et Dominium is a full re-release of the project under its own name: the
-upcoming version is a different beast from when Around906 put the project down, with
-restructured content packs, a new MCM, and new modules — but the lineage is his.
+Delectatio et Dominium is a full re-release of the project under its own name: it has grown
+from when Around906 put the project down, with restructured content packs, a new MCM, 
+and new modules — but the lineage is his.
 
 **Oldcustard** — community contributor: bug hunting and Execute contributions — the
 creature-struggle fix batch from his PR #2 (six of seven fixes folded, plus the Execute
 mention phrasing on the downed cue), folded with his consent.
 
-The source mods DeD integrates: [Gunslicer](https://www.loverslab.com/)'s pose
-animation pack (GS Poses) and [Acheron](https://www.loverslab.com/) (the downed-consequence
-system).
+The source mods DeD integrates: Gunslicer and Baka
 
-And above all, the [SkyrimNet](https://github.com/goncalo22/SkyrimNet) project — the LLM
+And above all, Min and the [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) project — the LLM
 framework this whole mod exists inside.
 
 ## Disclaimer
