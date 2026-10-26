@@ -160,6 +160,7 @@ users is welcome.
 - [SlaveTats NG](https://www.loverslab.com/files/file/35989-slavetatsng/) - For faster tattoo application - Must install base SlaveTats too
 - [Acheron](https://www.nexusmods.com/skyrimspecialedition/mods/108159) — the downed-consequence bridge (Acheron Bridge)
 - [OCum](https://www.nexusmods.com/skyrimspecialedition/mods/77506) — applied-cum events (Cum; the SexLab end-of-scene proxy also works without OCum)
+- [SLACS 2 + SCO (Cum Overlays](https://www.loverslab.com/files/file/44957-slacs-2-sco-cum-overlays/) - An additional supported cum overlay decal
 
 Each module is inert without its prerequisite — it greys out in the MCM and does nothing
 rather than breaking.
