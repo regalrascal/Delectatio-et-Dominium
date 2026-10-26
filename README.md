@@ -84,7 +84,7 @@ what applied it, and narrates the aftermath.
 
 ### Fill Her Up (v2) — inflation with a voice
 
-[Fill Her Up — Baka Edition](https://www.loverslab.com/) inflation, fully narrated, read
+[Fill Her Up — Baka Edition](https://www.loverslab.com/](https://www.loverslab.com/files/file/14920-fill-her-up-baka-edition/) inflation, fully narrated, read
 live from FHU's own per-actor state.
 
 - **Level-up swelling and level-down release** — every band change narrated as it
