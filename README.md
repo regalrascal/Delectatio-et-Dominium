@@ -4,10 +4,14 @@
   <img src="Delectatio_et_Dominium_Cover.jpg" alt="Delectatio et Dominium" width="480">
 </p>
 
-**Bedroom drama for SkyrimNet.** DeD v0.3.0-alpha — the first release to carry every
-module, in an honest alpha state: tested in-house where possible, and now looking to the
-community for help testing the features, giving feedback, and sharing logs to help
-diagnose issues.
+**Bedroom drama for SkyrimNet.** DeD v0.4.0 — the community-hardened release: every
+module in; the ambient daedric modes given their biggest upgrade yet (their own
+personalities, live subject-and-target pools, and reaction lanes that carry each moment
+through scene narration, nearby thoughts, and words aimed at you); the pose-action
+misbinding fixed; a community performance fold; the downed-state reliability patch; and
+a full author's-pen pass over the interaction text — still in an honest alpha state:
+tested in-house where possible, and looking to the community for help testing the
+features, giving feedback, and sharing logs to help diagnose issues.
 
 Delectatio et Dominium (DeD) is a **modular SkyrimNet integration mod for a number of
 classic community adult mods and effects**. It aims to immerse you in those mods through
@@ -45,13 +49,23 @@ here.
 - **Paired actions through the Interact power** — affectionate, forced, and sexual actions
   targeted at any NPC, a downed victim, a hostile creature, or yourself.
 - **Escalation with resistance** — a resist / struggle / submit / call-for-help chain the
-  model plays out in context.
+  model plays out in context. The downed-victim menus (Escalate / Opportunity) carry
+  the full option set, including Execute and ApplyTattoo.
 - **Capture, tie-up, and slavery** — defeated NPCs can be bound, enslaved, or sold; the
   LLM narrates their state and reactions.
 - **Creature escalation** — hostile creatures can be drawn into the same lanes (with your
   installed creature animation packs).
 - **The background daemon** — Mephala and Molag Bal modes let dominant NPCs escalate on
-  their own initiative, on cadence sliders you set.
+  their own initiative, on cadence sliders you set. Every decision is two-stage — the
+  model weighs the room first, then picks subject, target, and act together with a
+  one-line motive — and each mode decides in its own voice: Mephala's bold acts in shy
+  ways, Molag Bal's want-is-desire.
+- **Live subject & target pools** — the daemon casts its subjects and targets from live
+  pools (recent picks stay sticky, conversation partners get priority, proximity
+  matters), with a Narrative / Random selection-method choice per mode in the MCM.
+- **Reaction lanes** — each daemon moment can land as in-scene narration, as the
+  thoughts of nearby NPCs, as words aimed at you, or as your own thoughts — each lane
+  on its own MCM toggle.
 - **Execute gate (experimental)** — how the Execute action may be used: unlimited,
   companions ask, or always ask.
 
@@ -64,10 +78,16 @@ the model decided they would.
   NPC.
 - **Sanguine Mode** — the background daemon that puts nearby NPCs into mood-fitting poses,
   on a cadence slider you set. Every pick is one consideration pass: the LLM reads the
-  live scene and picks both the pose and the exact move.
-- **Sheogorath Mode** — raises the ambient intensity when you want a livelier room.
-- **Pose narration** — optional pose narration routes, plus per-mode narration toggles
-  (default off).
+  live scene and picks both the pose and the exact move — in Sanguine's own permissive,
+  wine-warmed voice, casting from the same live subject pools the Baka modes use.
+- **Sheogorath Mode** — raises the ambient intensity when you want a livelier room, with
+  the same live-pool selection and a voice all its own.
+- **Reaction lanes** — pose moments land through the same per-lane routes (scene
+  narration, nearby thoughts, words aimed at you, your own thoughts), each on its own
+  MCM toggle.
+- **In-story pose cues** — every pose cue is penned as prose: a solo line when no one is
+  watching, a with-an-audience line when someone is, and stop lines that read
+  naturally ("…no longer holds the pose").
 - **Pose gender policy** — female-only / curated / all-poses dropdown.
 
 ### Cum (v2) — applied cum, fully narrated
@@ -114,6 +134,10 @@ consequence system — a defeat is the start of a story, not a game over.
 - **The downed handoff** — DeD's downed cues feed Acheron's consequence system.
 - **Capped cadence** — consequence cues land one at the down moment, a couple in the
   following minute, then go quiet.
+- **Downed-state reliability** — a downed NPC who isn't part of an active escalation now
+  gets up on their own about a minute after the fight ends; Help Up is always available
+  as the release valve; and if Acheron prematurely rescues someone twice, the third
+  rescue is accepted — no more tug-of-war over one body.
 - **Downed State MCM page** — configure the lane.
 
 ### DeD Service — the quiet machinery
@@ -160,7 +184,7 @@ users is welcome.
 - [SlaveTats NG](https://www.loverslab.com/files/file/35989-slavetatsng/) - For faster tattoo application - Must install base SlaveTats too
 - [Acheron](https://www.nexusmods.com/skyrimspecialedition/mods/108159) — the downed-consequence bridge (Acheron Bridge)
 - [OCum](https://www.nexusmods.com/skyrimspecialedition/mods/77506) — applied-cum events (Cum; the SexLab end-of-scene proxy also works without OCum)
-- [SLACS 2 + SCO (Cum Overlays](https://www.loverslab.com/files/file/44957-slacs-2-sco-cum-overlays/) - An additional supported cum overlay decal
+- **SLACS 2 + SCO (Cum Overlays)** — an additional supported cum overlay decal source (Cum; optional — the MCM Decal Source dropdown picks it only when present)
 
 Each module is inert without its prerequisite — it greys out in the MCM and does nothing
 rather than breaking.
@@ -171,10 +195,11 @@ rather than breaking.
 - [Flash Games – Struggling QTE](https://www.nexusmods.com/skyrimspecialedition/mods/121909) — blocking-based QTE for grab/choke holds
 - [Dynamic Feminine Female Modesty Animations OAR](https://www.nexusmods.com/skyrimspecialedition/mods/104374) — cover-self reaction (no animations are bundled for this)
 - [Additional Expressions Project](https://www.nexusmods.com/skyrimspecialedition/mods/72337) — facial-expression morph values (the values are baked in; the mod itself isn't required at runtime)
-- [EmoTears4NPCs / EmoTears](https://www.nexusmods.com/skyrimspecialedition/mods/122296) — animated tears
 - [SeverActions – SkyrimNet Action Pack](https://github.com/Severause/SeverActions) — enriches the LLM's downed/capture options; DeD's downed cues invite these outcomes
 
 ### Flavor (optional, each degrades gracefully if absent)
+
+- [EmoTears4NPCs / EmoTears](https://www.nexusmods.com/skyrimspecialedition/mods/122296) — animated tears; fully optional as of REV-178d: Baka no longer lists it as a master, tears appear only when it is present, and the hidden load-order constraint is gone
 
 - [OCreatures Revived](https://www.loverslab.com/files/file/49059-ocreatures-revived/) — for creature escalation to produce a scene (you also need creature animation packs covering the creature types)
 - [Simple Slavery Plus Plus (SS++)](https://www.loverslab.com/files/file/13531-simple-slavery-plus-plus/) — required for the `SellToSlavery` action (defeated **player** only)
@@ -213,8 +238,10 @@ Configuration lives in one **Delectatio et Dominium** MCM, split into pages: **S
   narration fires (15–240 s / 60–1800 s)
 - **Daemon cadence sliders** — Mephala / Molag Bal tick intervals, Sanguine / Sheogorath
   tick intervals (15–240 s)
-- **Mode-narration toggles** — Sanguine / Sheogorath mode narration (default off), pose
-  narration routes on the GS Poses page
+- **Mode reaction lanes** — per-mode toggles for each lane: scene narration,
+  nearby-NPC thoughts, words aimed at the player, and the player's own thoughts
+  (Baka Interactions and GS Poses pages)
+- **Selection Method** — Narrative or Random subject selection, per mode
 - **Pose gender policy** — female-only / curated / all-poses dropdown
 - **Decal source selection** dropdown (Cum)
 - **Execute gate** — how the Execute action may be used (unlimited / companions ask /
@@ -248,6 +275,33 @@ climax driver; no SexLab bridge is required for OStim users.
 world setting prompt to give the people of Skyrim a background of being very expressive
 and liking to dance when they experience strong feelings — characters will pose far more
 readily when the world itself tells them it's in their nature.
+
+## Troubleshooting — everyone is down
+
+The downed-state system is built so that a down is a *scene*, not a corpse state — but if a
+fight ever leaves everyone on the floor and you're not sure how to get people up, here is
+every release valve, in the order to try them:
+
+1. **The panic button.** The MCM (Settings page) has a **Panic Reset** — it force-clears
+   every stuck down/hold state on every tracked actor and restores your controls. If
+   anything ever feels truly stuck, this is the fire alarm; it is always safe to press.
+2. **The get-up key (you).** Hold your **Get-Up key** (default **comma**) for 3 seconds
+   while downed to attempt a struggle. Win the QTE and you're on your feet; the
+   auto-get-up timer never applies to the player, but this key always does.
+3. **A standing NPC helps someone up.** If any NPC is still on their feet, they can
+   **Help Up** a downed character — you'll see it offered through the interaction menu or
+   the model may just do it when asked in conversation.
+4. **You help someone up.** You (standing) can also pick **Help Up** on a downed
+   follower yourself through the interaction/action menu — helping up is deliberately
+   always available to a standing helper, no matter what holds the target.
+5. **Console: `ach ra`.** As a last resort, open the console, click a downed actor, and
+   run `ach ra` (Acheron's rescue). Rescuing a held actor twice in one down cycle accepts
+   the recovery — DeD will not keep re-downing someone Acheron insists on freeing.
+
+And the timer itself: once a fight is **over**, a downed NPC who isn't being interacted
+with gets up on their own within about a minute of the last witnessed moment, even if
+you're standing right there — the old "stand nearby and they stay down forever" stall is
+gone.
 
 ## Credits
 
@@ -292,14 +346,17 @@ framework this whole mod exists inside.
 
 ## Roadmap
 
-This is **v0.3.0-alpha** — the first release to carry every module: the background-daemon
-era (the Baka Mephala / Molag Bal modes, the Sanguine / Sheogorath pose system), the Cum /
-FHU / SlaveTats v2 systems with their ambient narration layers, the independence audit,
-and the full story-voice pass are all in. It ships in an honest alpha state — community
-testing, feedback, and shared logs are what the `-alpha` suffix is really asking for.
+This is **v0.4.0** — the community-hardened release: everything v0.3.0-alpha carried (the
+background-daemon era — the Baka Mephala / Molag Bal modes, the Sanguine / Sheogorath pose
+system — the Cum / FHU / SlaveTats v2 systems with their ambient narration layers, the
+independence audit, the full story-voice pass), plus the daedric-modes overhaul
+(per-mode voices, two-stage decisions with a one-line motive, live subject/target pools
+with a selection method, and four-lane reaction routes), the downed-state reliability
+patch, the pose-action misbinding fix, a community performance fold, and a full
+author's-pen pass over the interaction text. It ships in an honest
+alpha state — community testing, feedback, and shared logs are what harden it next.
 Version numbers will increment as milestones ship and harden — plans include further mod
-integrations and deeper scene-aware reactions. The v0.1.0 polish-and-expansion pass this
-README once promised is done.
+integrations and deeper scene-aware reactions.
 
 ## License
 
