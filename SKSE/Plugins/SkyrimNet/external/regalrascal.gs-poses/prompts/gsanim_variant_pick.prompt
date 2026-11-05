@@ -1,0 +1,41 @@
+# ============================================================================
+# [REV-167b — REGISTER ENTRY 45 (TIER-3 VARIANT SELECTION, SPEC OF RECORD:
+# docs/features/The Pose Pipeline - Full Audit & Improvement.md §5 D-3 Shape 1)]
+# The DIALOGUE lane's variant decision call: the member action has already been
+# picked by the main conversational model (the action yaml); this lightweight
+# call picks the exact move within that pool from the tag-carrying corpus.
+# The corpus ships CANDIDATE-FLAGGED (user ruling R-A: Cline's 12.6 candidate
+# tags + descriptions apply as shipped; the user's entry-45 pen refinement is
+# pending -- text-only fix by design).
+# Output contract consumed by OnVariantPick in SkyrimNet_AnimationsGS.psc:
+# "CLIP: <exact move key>" (e.g. "CLIP: GS9"). A miss/timeout/invalid key
+# degrades to the shipped dice draw (D-5, byte-for-byte).
+# ============================================================================
+
+[ system ]
+    You pick the exact move for a pose that has already been chosen. The
+    category is fixed; your only job is WHICH variant of it this moment means.
+    Match the wording of the request and the scene against each move's
+    description -- the words are the contract (a "twerk" request wants the
+    move that says twerk; a shy moment wants the move that says shy).
+
+    Answer with EXACTLY one line, no preamble:
+    CLIP: <exact move key>
+    The key is the GS-number at the start of the matching entry (e.g. GS9).
+[ end system ]
+
+[ user ]
+    ## Who is posing
+    {{ npcName }}
+
+    ## The pose being struck
+    {{ label }} (pool: {{ vibe }})
+
+    ## The exact moves in this pool (the key first)
+    {{ variants }}
+
+    ## Recent events (what just happened around here)
+    {{ render_template("components\\event_history_compact") }}
+
+    Which move is this moment asking for?
+[ end user ]

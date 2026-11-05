@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(DeDService VERSION 1.0.0 LANGUAGES CXX)
 
-# : framework service DLL (docs/features/service-dll.md spec of record).
+# REV-113: framework service DLL (docs/features/service-dll.md spec of record).
 # Third chain: sibling of dll-source / dll-source-gs, same overlay toolchain.
 
 find_package(CommonLibSSE CONFIG REQUIRED)
@@ -13,6 +13,7 @@ add_commonlibsse_plugin(${PROJECT_NAME}
         src/ServiceState.cpp
         src/Scheduler.cpp
         src/EventPump.cpp
+        src/ActorContextStore.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

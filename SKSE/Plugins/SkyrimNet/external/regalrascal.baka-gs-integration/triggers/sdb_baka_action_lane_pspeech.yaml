@@ -1,0 +1,23 @@
+name: "sdb_baka_action_lane_pspeech"
+description: "Baka action neutral player-speech lane (REV-174f Leg 4; player_dialogue, player-bound event; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174f Leg 4 -- BAKA NEUTRAL FANNED SET] Same mold as
+# sdb_baka_action_lane_narr.yaml (neutral intro, script-composed desc,
+# SNBaka.Action.Lane_* gates, daemon-fire suppression). Only response type
+# and scope differ. No template variables (D8/sec.137); ASCII. DRAFT.
+
+eventCriteria:
+  eventType: "sdb_baka_action_lane_pspeech"
+
+response:
+  type: "player_dialogue"
+  content: |
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "player"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

@@ -1,0 +1,29 @@
+name: "gsanim_pose_player"
+description: "Player-initiated pose narration cue (REV-174f Leg 3; route 3: crosshair/grid picks, directed poses, player stop gestures; gate GSAnim.PoseNarrPlayer; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174f -- GS POSE-PAIR, fanned-lane mold] The route-3 pose cue (same mold
+# as gsanim_pose_emergent.yaml; see that file). Desc is script-composed at the
+# emission site per fire ("<Actor> just <solo variant>." / the stop-gesture
+# wording). Content = the NEUTRAL intro (NO daedric allusion) closing with the
+# user's solicitation shape. Supersedes the retired gsanim_npc_pose.
+# [REV-174g 2026-11-01] interrupt: true; content = the templated desc (the flat cue-reference sentence, Tier-1 live-probed) + the immutable closing sentence. ASCII. Register DRAFT at the user's pen.
+# ROUTE DISCIPLINE: never fired for mode-initiated poses; mode-ACTIVE state
+# does not suppress a genuine route-3 fire.
+
+eventCriteria:
+  eventType: "gsanim_pose_player"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ event_data }}
+    What the cue described is the whole of what happened.
+
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

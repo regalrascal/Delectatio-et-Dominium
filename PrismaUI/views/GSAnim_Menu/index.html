@@ -145,7 +145,7 @@ window.gsanim_open = function() {
   _selectCat(g_activeCat || (CATS[0] && CATS[0].id));
   document.getElementById('filter').value = ''; g_filter = '';
   applyScale();
-  //  label fix (Option B): per-open optimistic labels start plain every open —
+  // Rev-15 label fix (Option B): per-open optimistic labels start plain every open —
   // the view cannot see the StorageUtil flags, so it never claims persisted state.
   g_odOn = false; g_museOn = false;
   odApply();
@@ -216,7 +216,7 @@ function stopPose()  { _close(); _send('STOP_POSE'); }
 // ── Phase 4: Sheogorath Mode (internal id: overdrive) ───────────────────────
 // Blind send, exactly the STOP_POSE pattern: the view never blocks on pipe state and
 // Papyrus arbitrates (flag flip, cooldown zero/restore, expiry, combat pause).
-//  label fix (Option B, user-approved 2026-09-15): the label is IN-MEMORY,
+// Rev-15 label fix (Option B, user-approved 2026-09-15): the label is IN-MEMORY,
 // per-open optimistic only — plain at every gsanim_open(), flipped only by a press of
 // THIS menu. The old localStorage mirror is GONE: it outlived the per-save StorageUtil
 // flag (and Sheogorath Mode's ~5-min auto-expiry), so at open it could show the opposite of
@@ -238,7 +238,7 @@ function toggleOverdrive() {
 }
 
 // ── Phase 4 amendment: Sanguine Mode toggle (internal id: muse; pulled forward from the 4b rider list) ──
-// Blind send, Papyrus arbitrates the GSAnim.Muse flag.  label fix (Option B):
+// Blind send, Papyrus arbitrates the GSAnim.Muse flag. Rev-15 label fix (Option B):
 // in-memory per-open label, same rationale as Sheogorath Mode above — the localStorage
 // mirror (gsanim_muse) is GONE; the old "desync self-heals on next open" claim was
 // never true (an open just re-displayed the stale mirror; once out of parity, every

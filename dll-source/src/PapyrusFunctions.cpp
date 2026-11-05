@@ -123,18 +123,18 @@ static void SNBakaUI_SetGetUpCharge(RE::StaticFunctionTag*, float afPct) {
     PrismaUIBridge::SetGetUpCharge(afPct);
 }
 
-//  Feature B: push the ambient mode-button ON/OFF highlight state to the open
+// REV-147 Feature B: push the ambient mode-button ON/OFF highlight state to the open
 // SNBaka_Menu footer (Papyrus -> bridge -> JS payload; Papyrus owns the flags).
 static void SNBakaUI_SetModeStates(RE::StaticFunctionTag*, bool abMephala, bool abMolagBal) {
     PrismaUIBridge::SetModeStates(abMephala, abMolagBal);
 }
 
-// : SlaveTats set-picker entry point (SNSlaveTats_Menu view, modal).
+// REV-72: SlaveTats set-picker entry point (SNSlaveTats_Menu view, modal).
 static void SNBakaUI_ShowSlaveTatsMenu(RE::StaticFunctionTag*, RE::BSFixedString json) {
     PrismaUIBridge::ShowSlaveTatsMenu(json.c_str() ? json.c_str() : "{}");
 }
 
-// : Execute-gate accept/decline popup entry point (SNBaka_ExecuteConfirm view, modal).
+// REV-92: Execute-gate accept/decline popup entry point (SNBaka_ExecuteConfirm view, modal).
 static void SNBakaUI_ShowExecuteConfirm(RE::StaticFunctionTag*,
                                         RE::Actor* akInitiator, RE::Actor* akTarget) {
     PrismaUIBridge::ShowExecuteConfirm(akInitiator, akTarget);

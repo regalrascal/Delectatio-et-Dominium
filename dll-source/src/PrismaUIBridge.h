@@ -19,12 +19,12 @@ public:
     // above) -- same pattern as Ostim_interactions' OII_Hud. Currently just the get-up-key charge bar,
     // but any future passive HUD element belongs here, not on s_view.
     static void CreateHudView() noexcept;
-    // : dedicated SlaveTats set-picker view (modal, like s_view's wizards).
+    // REV-72: dedicated SlaveTats set-picker view (modal, like s_view's wizards).
     static void CreateSlaveTatsView() noexcept;
     // Updates the get-up-key "charging toward 3s" bar. pct in [0,1]; negative hides it.
     static void SetGetUpCharge(float pct) noexcept;
 
-    //  Feature B: pushes the ambient mode-button ON/OFF highlight state to the
+    // REV-147 Feature B: pushes the ambient mode-button ON/OFF highlight state to the
     // SNBaka_Menu footer (Papyrus arbitrates the SNBaka.MephalaMode/MolagBalMode flags;
     // this relays them to JS - the SetGetUpCharge invoke pattern, on the menu view).
     // Called at panel open and after every toggle.
@@ -48,12 +48,12 @@ public:
     // pick comes back to Papyrus _DispatchMidCombatAction(choice, caster, target).
     static void ShowMidCombatMenu(RE::Actor* caster, RE::Actor* target) noexcept;
 
-    //  SlaveTats degradation-set picker (SNSlaveTats_Menu view). The player's pick comes
+    // REV-72 SlaveTats degradation-set picker (SNSlaveTats_Menu view). The player's pick comes
     // back as a "slot;section;name" spec string (or "cancel") and is dispatched to Papyrus
     // SkyrimNet_BakaIntegration._ST_MenuChoice with the three parsed strings.
     static void ShowSlaveTatsMenu(const std::string& json) noexcept;
 
-    //  Execute-gate accept/decline popup (SNBaka_ExecuteConfirm view, ST-menu precedent).
+    // REV-92 Execute-gate accept/decline popup (SNBaka_ExecuteConfirm view, ST-menu precedent).
     // Papyrus waits (world paused by Focus) for the pick; the answer comes back as
     // SNBaka_MenuChoice strArg="execconfirm": 0 = accept, -1 = decline (also the DLL-side
     // 20s auto-close / cancel token  -  Papyrus owns the authoritative 30s timeout + moot poll).
@@ -82,7 +82,7 @@ public:
 private:
     static void OnJSChoice(const char* value) noexcept;
 
-    // : creates the SNBaka_ExecuteConfirm view (idempotent, like CreateSlaveTatsView).
+    // REV-92: creates the SNBaka_ExecuteConfirm view (idempotent, like CreateSlaveTatsView).
     static void CreateExecuteConfirmView() noexcept;
 
     enum class MenuMode { None, Interact, SexSpank, Encounter, Downed, MidCombat, SlaveTats, ExecuteConfirm };

@@ -1,10 +1,7 @@
 name: MarkPlayer
 description: |
-  [REV-156 DRAFT - pending-approvals register entry 35; wording at the user's pen]
   An NPC who wants to humiliate the player, or mark ownership of them, applies a
-  tattoo to the player's skin. The NPC decides where the mark goes, which specific
-  tattoo it is, and its color, based on their own arousal, mood, and character -
-  drawn from the tattoo packs available. The mark is applied to the player's skin.
+  tattoo to the player's skin.
 
   WHEN A CHARACTER WOULD DO THIS:
   - A dominant, possessive or sadistic character claiming ownership of the player
@@ -12,8 +9,8 @@ description: |
   - A cultist or slaver branding their new property
 
   Only when the character genuinely has the power or standing to do this to the
-  player. Never on children.
-
+  player. 
+  
   CONSEQUENCES:
   - The chosen tattoo appears on the player's skin and stays until removed
   - Anyone who sees it can react to the specific mark
@@ -28,13 +25,13 @@ parameterMapping:
     description: The NPC applying the mark to the player.
   - type: dynamic
     name: asSection
-    description: The tattoo pack section to draw the mark from.
+    description: Suggested tattoo pack section (non-binding hint to the scene director).
   - type: dynamic
     name: asName
-    description: The specific tattoo name within that section.
+    description: Suggested tattoo name within that section (non-binding hint).
   - type: dynamic
     name: asColor
-    description: "Hex color for the mark, e.g. 8b1a1a (optional - pack default if omitted)."
+    description: "Ignored on this path - the mark is always inked black."
 
 enabled: true
 defaultPriority: 2

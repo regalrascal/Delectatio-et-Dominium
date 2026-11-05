@@ -1,0 +1,28 @@
+name: "gsanim_pose_general"
+description: "General pose narration cue (REV-174g fact-cue floor: unconditional on every pose fire, outside all route/lane gates; templated desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174g 2026-11-01 -- FACT-CUE FLOOR + GENERAL CUE, R-YAML-SHAPE] Fires on
+# EVERY pose emission (all 5 sites, every route incl. mode route 1) BEFORE the
+# gated pair cue; UNGATED by design (probability 1, zero cooldown, priority 5)
+# -- the polite narration floor that guarantees a rendered narration on every
+# pose fire regardless of lane arbitration. Content = the templated desc
+# (the flat cue-reference sentence -- Tier-1, live-probed 2026-11-01, engine
+# custom-event schema field of record) + the user's immutable closing sentence.
+# interrupt: FALSE -- the polite floor never jumps the queue; the fanned lane
+# yamls carry interrupt: true. ASCII. Register DRAFT at the user's pen.
+
+eventCriteria:
+  eventType: "gsanim_pose_general"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 0
+priority: 5
+interrupt: false

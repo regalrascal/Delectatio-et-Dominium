@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
-	<!-- Authored  Phase C (2026-10-02); structure verified against two
+	<!-- Authored REV-68 Phase C (2026-10-02); structure verified against two
 	     known-working local FOMODs (SeverActions 3.9.14, IntelEngine 3.5.0.1)
-	     same session - canonical qconsulting schema URL.  (2026-10-13):
+	     same session - canonical qconsulting schema URL. REV-107b (2026-10-13):
 	     DeD_Framework.esp added to the required set (silent-wizard-drop fix).
-	      (2026-10-13): v2 REAL MODULE TOGGLES - the required set is now
+	     REV-108 (2026-10-13): v2 REAL MODULE TOGGLES - the required set is now
 	     the FRAMEWORK only; every module is a real file toggle below. File-set
-	     basis: era doc module map ( 1.1) productized per the S1-S4
-	     unlock (/104/105/106/107). Scripts/ ships in full in the
+	     basis: era doc module map (REV-88 1.1) productized per the S1-S4
+	     unlock (REV-103/104/105/106/107). Scripts/ ships in full in the
 	     framework (the Papyrus script core is one link-time island - the MCM
 	     and the motherboard reference every module script by name, so scripts
 	     are always installed; module options toggle files only: esp, DLL,
 	     content layer, assets). moduleImage syntax verified against 133 real
 	     FOMODs in the local downloads set (e.g. Additional Clockwork 3.0.5).
-	     Player-facing titles per the  section-7 rider; technical paths
+	     Player-facing titles per the REV-68 section-7 rider; technical paths
 	     (folder names, manifest id regalrascal.baka-gs-integration) are legacy
 	     Beta 25 load-bearing. -->
 	<moduleName>Delectatio et Dominium (0.3.0-alpha)</moduleName>
@@ -27,7 +27,7 @@
 		<folder source="Scripts" destination="Scripts"/>
 		<file source="SKSE/Plugins/SNBaka_Offsets.ini" destination="SKSE/Plugins/SNBaka_Offsets.ini"/>
 		<file source="SKSE/Plugins/SkyrimNet_BakaIntegration.dll" destination="SKSE/Plugins/SkyrimNet_BakaIntegration.dll"/>
-		<!--  (2026-10-15): the framework service DLL joins the required set (central
+		<!-- REV-113b (2026-10-15): the framework service DLL joins the required set (central
 		     state store + cosave serialization + single tick scheduler + event pump; the
 		     cum-v2 backing store). Its companion psc/pex ride the Scripts folder below (the
 		     script core ships in full). -->
@@ -53,7 +53,7 @@
 			     Optional/NotUsable - census-verified (4436/1942/40/388 uses);
 			     "Warning"/"Error" type names appear in ZERO of 264 real FOMODs and
 			     are therefore NOT used (omitted over guess).
-			      (2026-10-13) FIXES: (1) group type SelectAll was the
+			     REV-108b (2026-10-13) FIXES: (1) group type SelectAll was the
 			     unclickable-toggles bug root cause (SelectAll = all options must
 			     be selected = checkboxes locked; corpus census: SelectAll
 			     co-occurs with Required plugins ONLY, 10/10; every deselectable
@@ -105,12 +105,12 @@ Always installed regardless of this checkbox; the module options below are the r
 							<typeDescriptor>
 								<type name="Recommended"/>
 							</typeDescriptor>
-						</plugin><!--  F-1 (S181 finding, delete-over-restore ruled): the Cum
+						</plugin><!-- REV-159 F-1 (S181 finding, delete-over-restore ruled): the Cum
      Detection group is DELETED. Its only file target
      (the cum-detection package folder, consolidated into the shared pack)
      was consolidated into regalrascal.baka-gs-integration at
-      (commit fb36b40) and the folder exists in no dist since
-     [] - the group installed nothing and its description no
+     REV-134d (commit fb36b40) and the folder exists in no dist since
+     [REV-134c] - the group installed nothing and its description no
      longer matched reality in either direction. A stub group would
      re-split the R1 grouping (delete-over-restore). The cum module
      itself is framework-carried (Scripts + the shared pack); its

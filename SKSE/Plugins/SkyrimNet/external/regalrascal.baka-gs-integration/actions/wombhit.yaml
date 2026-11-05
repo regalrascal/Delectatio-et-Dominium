@@ -1,4 +1,10 @@
-﻿name: WombHit
+﻿# REV-167 R-5 (binding, mode-scope): WombHit is MOLAG'S ALONE. It is ABSENT from
+# Mephala's pool entirely (never offered, never picked, any toggle state) and
+# exists in Molag only under band rules (Banded ON + ladder risen to band 3) or
+# the ungated full-pool default. Both consumers of the action-name respect the
+# filter (prompt options render + dispatch recheck) -- spec of record:
+# docs/features/Ambient Modes - Unified Selection Architecture.md 3.3.
+name: WombHit
 description: |
   The initiator strikes the target in the lower abdomen with a deliberate, repeated blow.
   This is a violent, targeted physical attack on a specific vulnerable area — not combat,

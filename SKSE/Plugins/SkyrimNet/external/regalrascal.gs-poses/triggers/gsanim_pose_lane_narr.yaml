@@ -1,0 +1,30 @@
+name: "gsanim_pose_lane_narr"
+description: "GS pose narration reaction lane (REV-178b Leg 2.3 -- the 174f Baka action-lane shape mirrored GS-side; emergent + player-initiated pose fires only -- mode route 1 keeps the mode-branded lanes; intro-only content, script-composed desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. DRAFT at the user's pen.
+
+# [REV-178b Leg 2.3 -- GS POSE REACTION LANES, R-YAML-SHAPE] Content = the
+# NEUTRAL intro ONLY (no daedric allusion -- the sdb_baka_action_lane_* mirror),
+# written to flow into the script-composed desc sentence that fires in the
+# SAME event. Content is IDENTICAL across this set's FOUR lanes; only response
+# type and scope differ. Arbitration identical to the mode lanes (the A37
+# one-lane no-repeat rotation -- pose routes carry no LLM REACT, so rotation
+# is the sole picker; a narr-class pick suppresses the general cue and the
+# pose-pair cue per the 178a Leg 6 supersede). Gated by the NEW mode-agnostic
+# keys GSAnim.PoseLane_* (MCM "Reaction Lanes" section, GS Poses page; labels
+# DRAFT; defaults mirror A15: narr/pspeech/pthought ON, thought OFF).
+# FIRE-PATH GATING: these NEVER fire for mode route-1 poses (mode fires keep
+# the mode-branded lanes -- no double fan-out on any single fire).
+eventCriteria:
+  eventType: "gsanim_pose_lane_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

@@ -76,8 +76,8 @@
   </div>
 </div>
 <script>
-//  SNSlaveTats_Menu — SlaveTats degradation-set picker.
-//  — two modes over the same view:
+// REV-72 SNSlaveTats_Menu — SlaveTats degradation-set picker.
+// REV-74 — two modes over the same view:
 //   "slots"  (MCM entry): pick stored sets for the spank/defeat/escalation event slots.
 //   "picker" (downed-menu Apply Tattoo, service tattoo.picker): pick applies IMMEDIATELY
 //            to the bound actor; the mode banner names them. Slot rows are hidden in
@@ -146,7 +146,7 @@ function _render() {
     const t = document.createElement('div');
     t.className = 'tile';
     t.style.gridColumn = '1 / -1';
-    //  counted, honest empty state ( UX lie fixed): distinguish
+    // REV-79 counted, honest empty state (§80 UX lie fixed): distinguish
     // NOTHING discovered from DISCOVERED-BUT-DROPPED using the payload's
     // disc/emit counts (added in BuildMenuJSON this rev).
     const disc = (typeof data.disc === 'number') ? data.disc : -1;
@@ -186,7 +186,7 @@ function _renderNames(section) {
   _renderColors();
 }
 
-//  — color swatch row (rider 1 picker upgrades). Rides the 3-string pipe inside
+// REV-74 — color swatch row (rider 1 picker upgrades). Rides the 3-string pipe inside
 // the name field: chosen swatch hex appended as "|<hex>" by _pickName. 'Default' = pack
 // default color (no subfield). Swatch set is fixed (SlaveTats packs are recolorable to
 // any 0xRRGGBB; these cover the common degradation-mark palette).
@@ -235,7 +235,7 @@ function _pickSection(name) {
 
 function _pickName(section, name) {
   if (!g_slot) return;
-  // : chosen color rides as a "|hex" subfield on the name (pack default = no
+  // REV-74: chosen color rides as a "|hex" subfield on the name (pack default = no
   // subfield). Papyrus parses it (PickerChoice/SetChoice); location is pack-fixed and
   // display-only (schema verdict — we do not invent location options).
   _sendChoice(g_slot + ';' + section + ';' + name + (g_color ? '|' + g_color : ''));

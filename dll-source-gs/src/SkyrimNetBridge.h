@@ -2,7 +2,7 @@
 
 #include "SkyrimNet_PublicAPI.h"
 
-//  (S1 pack-split): fallback bridge to SkyrimNet's native C++ API, carried from
+// REV-103 (S1 pack-split): fallback bridge to SkyrimNet's native C++ API, carried from
 // the Baka DLL (dll-source/src/SkyrimNetBridge.{h,cpp} + include/SkyrimNet_PublicAPI.h -
 // the header ships here because this DLL never bridged SkyrimNet's C++ API before).
 // Semantics differ from the Baka side by design (P2 single-owner pattern): this DLL

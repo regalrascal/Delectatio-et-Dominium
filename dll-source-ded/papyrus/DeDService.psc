@@ -1,6 +1,6 @@
 Scriptname DeDService Hidden
 
-;  -- DeDService Papyrus surface (spec of record:
+; REV-113 -- DeDService Papyrus surface (spec of record:
 ; docs/features/service-dll.md section 1). All functions are GLOBAL on this
 ; one script; the DLL binds the natives. Modules never hold service state.
 ; Keys in the access API are the fully-qualified dotted form ("cum.present").
@@ -33,3 +33,11 @@ bool function AddTimerRule(string asModuleID, string asRuleID, float afCadenceSe
 
 ; ---- 1.4 event pump ----
 bool function PushEvent(string asEventName, Form akSender, int aiNumArg, float afFloatArg, string asStrArg, Form akFormArg) global native
+
+; ---- 1.5 actor context (REV-170 Leg 3; in-memory, per-fact TTL, Papyrus-driven resolve) ----
+; asFactClass: "vitals"(60s) / "summary"(1800s) / "relationships"(1800s) / "background"(1800s, unfetched at launch) / "uuidForm"(no TTL)
+; Returns {"value":...,"source":...,"freshAt":...} on HIT, "" on MISS (resolve then SetActorContext; on render failure ArmActorContextCooldown).
+string function GetActorContext(Actor akOwner, string asFactClass) global native
+bool function SetActorContext(Actor akOwner, string asFactClass, string asValue, string asSource) global native
+bool function InvalidateActorContext(Actor akOwner) global native
+function ArmActorContextCooldown(Actor akOwner, string asFactClass) global native

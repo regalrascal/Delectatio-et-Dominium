@@ -15,7 +15,7 @@ response:
 audience: "nearby_npcs"
 
 enabled: true
-# NOTE (lock-race fix, docs/LOCKRACE_FIX_DESIGN.md ): probability MUST stay 1.0.
+# NOTE (lock-race fix, docs/LOCKRACE_FIX_DESIGN.md §5): probability MUST stay 1.0.
 # A probabilistic gate on the failure cue would reintroduce the silent drop in the
 # notification path — the bug being fixed, wearing a different hat. The
 # retry-window-expiry condition is this cue's only gate.

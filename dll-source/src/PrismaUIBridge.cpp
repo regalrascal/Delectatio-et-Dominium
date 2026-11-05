@@ -317,7 +317,7 @@ void PrismaUIBridge::CreateHudView() noexcept {
     SKSE::log::info("SNBaka_Hud view created.");
 }
 
-// : dedicated SlaveTats set-picker view. Modal like s_view's wizards (created hidden,
+// REV-72: dedicated SlaveTats set-picker view. Modal like s_view's wizards (created hidden,
 // Show+Focus happen per open in ShowSlaveTatsView). Same "snbaka_chose" listener name  - 
 // PrismaUI dispatches listeners per-view, so only the focused view's pick reaches OnJSChoice.
 void PrismaUIBridge::CreateSlaveTatsView() noexcept {
@@ -333,7 +333,7 @@ void PrismaUIBridge::CreateSlaveTatsView() noexcept {
     SKSE::log::info("SNSlaveTats_Menu view created and JS listener registered.");
 }
 
-// : Execute-gate accept/decline view  -  same pattern as the ST picker (dedicated view,
+// REV-92: Execute-gate accept/decline view  -  same pattern as the ST picker (dedicated view,
 // modal, hidden until shown per open, "snbaka_chose" listener).
 void PrismaUIBridge::CreateExecuteConfirmView() noexcept {
     if (!s_prisma) return;
@@ -369,7 +369,7 @@ void PrismaUIBridge::SetGetUpCharge(float pct) noexcept {
     s_prisma->Invoke(s_hudView, script.c_str());
 }
 
-//  Feature B: pushes the ambient mode-button ON/OFF highlight to the open
+// REV-147 Feature B: pushes the ambient mode-button ON/OFF highlight to the open
 // SNBaka_Menu footer. Papyrus arbitrates the SNBaka.MephalaMode / SNBaka.MolagBalMode
 // flags and calls this at panel open and after every toggle; the DLL relays to JS via
 // the proven Invoke/payload pattern (the SetGetUpCharge shape, on the MENU view).
@@ -446,9 +446,9 @@ void PrismaUIBridge::ShowInteractMenu(RE::Actor* caster, RE::Actor* target) noex
         if (resolved && resolved != player) {
             target = resolved;
         } else {
-            //  Feature A (user ruling: a power press with no target OPENS the
+            // REV-147 Feature A (user ruling: a power press with no target OPENS the
             // panel - all target-actions greyed + a "no target selected" overlay; the
-            // two ambient-mode buttons stay LIVE). The  abort becomes the
+            // two ambient-mode buttons stay LIVE). The REV-61 abort becomes the
             // null-target panel-open path: render the view with an empty name payload
             // (the only target-context field the JS reads is the targetName string of
             // snbaka_open_interact, already null-guarded `targetName || ''`). 0 FormID
@@ -465,7 +465,7 @@ void PrismaUIBridge::ShowInteractMenu(RE::Actor* caster, RE::Actor* target) noex
 
     // Capture the actors now, by FormID, so the dispatch uses these exact actors
     // regardless of what happens to Papyrus _pending* while the menu is open.
-    // : s_interactTarget == 0 marks the no-target session.
+    // REV-147: s_interactTarget == 0 marks the no-target session.
     s_interactCaster = caster->GetFormID();
     s_interactTarget = target ? target->GetFormID() : 0;
     SKSE::log::info("ShowInteractMenu: caster='{}' (0x{:08X})  target='{}' (0x{:08X})",
@@ -577,7 +577,7 @@ void PrismaUIBridge::ShowMidCombatMenu(RE::Actor* caster, RE::Actor* target) noe
     s_prisma->Focus(s_view, /*pauseGame=*/true, /*disableFocusMenu=*/false);
 }
 
-// : SlaveTats degradation-set picker. Dedicated view (SNSlaveTats_Menu/index.html); the
+// REV-72: SlaveTats degradation-set picker. Dedicated view (SNSlaveTats_Menu/index.html); the
 // pick comes back on the same "snbaka_chose" JS listener, with a "slot;section;name" spec
 // (or "cancel") which OnJSChoice parses and dispatches to _ST_MenuChoice.
 void PrismaUIBridge::ShowSlaveTatsMenu(const std::string& json) noexcept {
@@ -602,7 +602,7 @@ void PrismaUIBridge::ShowSlaveTatsMenu(const std::string& json) noexcept {
     s_prisma->Focus(s_stView, /*pauseGame=*/true, /*disableFocusMenu=*/false);
 }
 
-// : Execute-gate accept/decline popup. Same shape as ShowSlaveTatsView, but the
+// REV-92: Execute-gate accept/decline popup. Same shape as ShowSlaveTatsView, but the
 // payload carries BOTH actor names (initiator + target) and a 20s JS auto-close (the
 // player who walked away gets a deterministic decline rather than a stuck paused menu;
 // Papyrus still owns the authoritative 30s timeout + moot polling). Accept = "0",
@@ -723,8 +723,8 @@ void PrismaUIBridge::OnJSChoice(const char* value) noexcept {
 
     SKSE::log::info("OnJSChoice: value='{}'", value ? value : "(null)");
 
-    //  Feature B: reserved footer mode-button ids ("900"/"901") KEEP THE
-    // PANEL OPEN - no mode exchange, no Unfocus/Hide (the  JS design intent:
+    // REV-147 Feature B: reserved footer mode-button ids ("900"/"901") KEEP THE
+    // PANEL OPEN - no mode exchange, no Unfocus/Hide (the REV-146a JS design intent:
     // "both modes can be toggled in one visit"; until now the bridge still closed the
     // view on every pick, so a toggle also dismissed the panel). The toggle is
     // dispatched to Papyrus _MenuModeButton, which arbitrates and pushes the new
@@ -765,8 +765,8 @@ void PrismaUIBridge::OnJSChoice(const char* value) noexcept {
     }
 
     // Read the mode FIRST so we unfocus the view this pick actually came from
-    // (: the SlaveTats picker lives on its own s_stView, not s_view;
-    //  : the Execute-confirm popup likewise lives on s_execView).
+    // (REV-72: the SlaveTats picker lives on its own s_stView, not s_view;
+    //  REV-92: the Execute-confirm popup likewise lives on s_execView).
     const MenuMode mode = s_mode.exchange(MenuMode::None);
     const PrismaView view = (mode == MenuMode::SlaveTats)      ? s_stView
                           : (mode == MenuMode::ExecuteConfirm) ? s_execView
@@ -883,7 +883,7 @@ void PrismaUIBridge::OnJSChoice(const char* value) noexcept {
                 return;
             }
             if (!tgt) {
-                //  Feature A: no-target session (iTarget == 0 from the null-target
+                // REV-147 Feature A: no-target session (iTarget == 0 from the null-target
                 // panel open). The footer mode ids never reach here (intercepted above,
                 // panel stays open); every target-action choice still dispatches so
                 // Papyrus refuses it with the reason-coded sentinel - defense-in-depth

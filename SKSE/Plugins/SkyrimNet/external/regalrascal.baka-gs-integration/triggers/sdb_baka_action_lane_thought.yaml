@@ -1,0 +1,24 @@
+name: "sdb_baka_action_lane_thought"
+description: "Baka action neutral NPC-thought lane (REV-174f Leg 4; npc_thought, targetScope all_nearby_actors radius 2000; DEFAULT OFF per the A15 mirror; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174f Leg 4 -- BAKA NEUTRAL FANNED SET] Same mold as
+# sdb_baka_action_lane_narr.yaml (neutral intro, script-composed desc,
+# SNBaka.Action.Lane_* gates, daemon-fire suppression). Only response type
+# and scope differ. No template variables (D8/sec.137); ASCII. DRAFT.
+
+eventCriteria:
+  eventType: "sdb_baka_action_lane_thought"
+
+response:
+  type: "npc_thought"
+  content: |
+    {{ event_data }}
+  targetScope: all_nearby_actors
+  nearbyRadius: 2000
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

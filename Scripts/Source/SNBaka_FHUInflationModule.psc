@@ -1,19 +1,19 @@
 Scriptname SNBaka_FHUInflationModule
-;  Task 2: FHU-inflation module (recordless detection class -- module contract
+; REV-96 Task 2: FHU-inflation module (recordless detection class -- module contract
 ; point 3, fomod.md section architecture). Extracted BEHAVIOR-PRESERVING from the
-; /65 detection-triggers section of SkyrimNet_BakaIntegration.psc (the ?64
+; REV-63/65 detection-triggers section of SkyrimNet_BakaIntegration.psc (the ?64
 ; class: signatures and sentinels moved verbatim; only the call shape changed).
-; The FHU HEARTBEAT SELF-HEAL pattern (: the poll arms from Setup() AND the
+; The FHU HEARTBEAT SELF-HEAL pattern (REV-65: the poll arms from Setup() AND the
 ; OnUpdateGameTime heartbeat because the MCM reload chain was stale at save-load) is
 ; PRESERVED IN FULL: the arming points (Setup + heartbeat), the idempotent arming
 ; guard, and the multiplexed real-time tick all remain on the motherboard -- a
 ; recordless script cannot own an OnUpdate chain. This module owns the poll BODY and
 ; the cue logic only.
 ;
-;  (FHU v2 session 1) ADDS, per the  rulings + the mid- user
+; REV-149 (FHU v2 session 1) ADDS, per the REV-136 rulings + the mid-REV-149 user
 ; rulings (hook choice + orifice-aware inflate):
 ;   (a) ENTRY-AROUSAL CAPTURE: HandleSceneStartSL stashes per-actor arousal tier at
-;       SL scene start (HookAnimationStart, user-ruled capture point; the 
+;       SL scene start (HookAnimationStart, user-ruled capture point; the REV-82
 ;       chain via the motherboard's _DaemonArousalTier) + consent context (thread
 ;       IsAggressive / VictimRef), cleared at scene end (HookAnimationEnd). The
 ;       INSTANT inflate cue's arousal branch reads the STASHED tier, never the live
@@ -30,29 +30,29 @@ Scriptname SNBaka_FHUInflationModule
 ;       (pre-check 3.2 verdict: a real race name, not just a race class); canned
 ;       one-liners per creature class keyed to the FHU per-race cum-effect
 ;       FormLists (the enumeration source), generic fallback for the rest.
-;       Template fixed fields USER-QUOTED ( ruling (d)), register-cited;
-;       canned lines are sec.7 DRAFTs (, approval pending).
+;       Template fixed fields USER-QUOTED (REV-136 ruling (d)), register-cited;
+;       canned lines are sec.7 DRAFTs (rev-149, approval pending).
 ;   (e) PER-ORIFICE DEFLATE: sdb_fhu_deflate_vaginal / _anal / _oral fired per the
 ;       three-literal discriminator (which sr.inflater.cum.* float dropped); the
 ;       generic sdb_fhu_deflate is RETIRED with them (retire-and-replace).
-;   NEW (mid- user ruling): the INSTANT inflate cue is ORIFICE-AWARE -- the
+;   NEW (mid-REV-149 user ruling): the INSTANT inflate cue is ORIFICE-AWARE -- the
 ;       wording branches on the dominant cum.* delta at inflate time.
 ;
-;   HONEST PREMISE CORRECTION ( pre-check 3.3, evidence-cited): the v1
+;   HONEST PREMISE CORRECTION (REV-149 pre-check 3.3, evidence-cited): the v1
 ;   PollLevels walked ONLY sr.inflater.amount; the three per-orifice floats were
 ;   never read. This revision EXTENDS the poll with per-orifice caches
 ;   (SNBaka.FHULast.V/.A/.O.<formid>) -- the discriminator is sound, the "v1 poll
 ;   walks them already" premise was false.
 ;
-;   OStim parity (mid- user ruling): the OStim capture listener is NOT
+;   OStim parity (mid-REV-149 user ruling): the OStim capture listener is NOT
 ;   BUILT -- the SL FHU Baka Ostim 0.18 bridge is DISABLED in the active Ultra
 ;   profile (modlist.txt) and the enabled FHU 2.11 Beta has zero OStim
 ;   registrations (SexLab hooks only, sr_inflateQuest L383-385); OStim-driven
 ;   fills do not occur in-profile. STOP-and-report honored; capture is
 ;   SL-scenes-only; absent stash = context-agnostic fallback, sentinel'd.
 ;
-;    (FHU v2 final lane) ADDS: the AMBIENT BYSTANDER REACTION CUE (the
-;   planner's 30%/60% expose bands, the cum-ambient /127/133c/134a/134f
+;   REV-154 (FHU v2 final lane) ADDS: the AMBIENT BYSTANDER REACTION CUE (the
+;   planner's 30%/60% expose bands, the cum-ambient REV-122/127/133c/134a/134f
 ;   pattern applied to FHU; the user's 2026-10-24 shape: prompt-directed cue to
 ;   the reacting actor + MCM-gated direct narration follow-up):
 ;   (a) while an actor's inflation amount sits at/above the NOTICEABLE band
@@ -62,16 +62,16 @@ Scriptname SNBaka_FHUInflationModule
 ;       a per-actor ambient reaction cue fires every 60s real time: ONE
 ;       RegisterEvent("sdb_fhu_ambient", desc, akActor, None) -- the cum-ambient
 ;       entry-19 subjectless/gamemaster shape ("Nearby characters notice ..."),
-;       P2 trigger-bus semantics per the  restore (RegisterEvent IS the
+;       P2 trigger-bus semantics per the REV-134a restore (RegisterEvent IS the
 ;       load-bearing emission; NO cue yaml -- same as sdb_cum_ambient).
 ;   (b) wording branches by BAND (noticeable = curious stares / suggestive
 ;       comments; heavy = scandalized whispers -- the planner rows) and by
 ;       SOURCE (creature-sourced reads the creature class; human-sourced reads
 ;       generic; indeterminate source SKIPS cleanly, sentinel'd). Band + source
-;       wordings are sec.7 DRAFTs (, register entry 34).
+;       wordings are sec.7 DRAFTs (rev-154, register entry 34).
 ;   (c) LIFECYCLE: anchor at first band crossing -- the first ambient fires AT
-;       BAND ENTRY ( first-fire acceleration; the instant cue owns the fresh-inflation
-;       moment; no catch-up per the  rule); keys clear when the amount
+;       BAND ENTRY (REV-164 first-fire acceleration; the instant cue owns the fresh-inflation
+;       moment; no catch-up per the REV-127 rule); keys clear when the amount
 ;       drops below the noticeable band (deflate / the module's clear paths);
 ;       a 7200s-RT failsafe-class lifetime guard exhausts the episode so a
 ;       stuck state cannot fire forever.
@@ -86,17 +86,17 @@ Scriptname SNBaka_FHUInflationModule
 ; bFHUInflationEnabled toggle remains the motherboard's Auto property (read
 ; through akHost). Keys:
 ;   SNBaka.FHULast.<formid>          amount cache (v1, unchanged)
-;   SNBaka.FHULast.V/A/O.<formid>    per-orifice cum caches ()
+;   SNBaka.FHULast.V/A/O.<formid>    per-orifice cum caches (REV-149)
 ;   SNBaka.FHU.EntryTier.<formid>    captured arousal tier 1/2/3 (absent = no capture)
 ;   SNBaka.FHU.EntryContext.<formid> 1 consensual / 2 non-consensual (absent = agnostic)
 ;   SNBaka.FHUCreatureFired.<formid> creature-ambient episode flag
 ;   SNBaka.FHU.AmbNext.<formid>    ambient-expose next-fire RT stamp (0/absent = not anchored)
 ;   SNBaka.FHU.AmbStart.<formid>   ambient-expose episode start RT (lifetime guard)
-;   SNBaka.FHU.AmbDone.<formid>    ambient-expose failsafe-exhausted flag ()
+;   SNBaka.FHU.AmbDone.<formid>    ambient-expose failsafe-exhausted flag (REV-154)
 ;
 ; Logging: every sentinel goes through akHost._Log() -- identical strings, identical
 ; bDebugLog gating (sentinel parity per sec.67; the [SNBaka] tag preserved
-; verbatim). RegisterEvent desc strings are ASCII ( rider) and
+; verbatim). RegisterEvent desc strings are ASCII (REV-146a rider) and
 ; sec.7-DRAFT-flagged.
 
 ; ---- Presence probe (cached; absence cached on the None key once -- the
@@ -128,10 +128,10 @@ EndFunction
 ;   sr.inflater.injector / .analinjector (formlists, per inflated actor) -- who injected
 ;   sr.inflater.Actors (formlist, keyed on the sr_inflateQuest form 0x000D63)
 ; Level changes forward as sdb_fhu_inflate (increase) / per-orifice deflate types
-; (decrease, ). sr.inflater.start is used ONLY as an immediate-poll nudge.
+; (decrease, REV-149). sr.inflater.start is used ONLY as an immediate-poll nudge.
 ;
-; : MOVED BODY of the motherboard's OnFHUStartSignal event (zero-arg handler --
-; sr.inflater.start is a parameterless broadcast; the  4-slot shape is retired).
+; REV-96: MOVED BODY of the motherboard's OnFHUStartSignal event (zero-arg handler --
+; sr.inflater.start is a parameterless broadcast; the rev-63 4-slot shape is retired).
 Function HandleFHUStartSignal(SkyrimNet_BakaIntegration akHost) Global
     If akHost.bEnabled && akHost.bFHUInflationEnabled && Installed()
         akHost._Log("[SNBaka] OnFHUStartSignal: sr.inflater.start received -- immediate level poll")
@@ -139,9 +139,9 @@ Function HandleFHUStartSignal(SkyrimNet_BakaIntegration akHost) Global
     EndIf
 EndFunction
 
-; ----  (a)/(b): ENTRY CAPTURE at SL scene start ----
+; ---- REV-149 (a)/(b): ENTRY CAPTURE at SL scene start ----
 ; Armed on the motherboard as OnSLAnimationStart (HookAnimationStart -- user-ruled
-; capture point mid-: fires once at true scene start; payload 2-push
+; capture point mid-REV-149: fires once at true scene start; payload 2-push
 ; PushInt(thread_id), PushBool(HasPlayer), same shape as the proven HookStageEnd).
 ; Capture-only: this module NEVER drives FHU inflation.
 Function HandleSceneStartSL(SkyrimNet_BakaIntegration akHost, Int aiThreadID) Global
@@ -180,7 +180,7 @@ Function HandleSceneStartSL(SkyrimNet_BakaIntegration akHost, Int aiThreadID) Gl
     EndWhile
 EndFunction
 
-; ----  (a): CAPTURE CLEARED at SL scene end ----
+; ---- REV-149 (a): CAPTURE CLEARED at SL scene end ----
 ; Armed as OnSLAnimationEnd (HookAnimationEnd -- the capture/clear bracket ruling).
 Function HandleSceneEndSL(SkyrimNet_BakaIntegration akHost, Int aiThreadID) Global
     If !(akHost.bEnabled && akHost.bFHUInflationEnabled && Installed())
@@ -206,11 +206,11 @@ Function HandleSceneEndSL(SkyrimNet_BakaIntegration akHost, Int aiThreadID) Glob
     EndWhile
 EndFunction
 
-; : MOVED VERBATIM from the motherboard's _PollFHULevels (called by the
+; REV-96: MOVED VERBATIM from the motherboard's _PollFHULevels (called by the
 ; motherboard's multiplexed OnUpdate tick and the seed pass in its _FHUStartPoll).
-; : body EXTENDED -- per-orifice caches + the creature-ambient pass ride
+; REV-149: body EXTENDED -- per-orifice caches + the creature-ambient pass ride
 ; the same 10s poll (no new timer class; accept-the-mechanic per ruling (c)).
-;  (dogfood 2.1 fix, RELEASE-BLOCKING): the installed FHU Baka Edition
+; REV-159 (dogfood 2.1 fix, RELEASE-BLOCKING): the installed FHU Baka Edition
 ; 2.11 writes sr.inflater.amount ONE-SHOT at Inflate() end -- the FormListAdd
 ; and the amount write land together, between two poll ticks (verified in the
 ; 2.11 sources: sr_inflateThread.Inflate tail, FormListAdd + SetFloatValue
@@ -245,7 +245,7 @@ Function PollLevels(SkyrimNet_BakaIntegration akHost, Bool abSeedPass = False) G
             Float lastA = StorageUtil.GetFloatValue(None, "SNBaka.FHULast.A." + sId, -1.0)
             Float lastO = StorageUtil.GetFloatValue(None, "SNBaka.FHULast.O." + sId, -1.0)
             If last < 0.0 && !abSeedPass && cur > 0.0
-                ;  first-sighting on a LIVE poll: the one-shot write
+                ; REV-159 first-sighting on a LIVE poll: the one-shot write
                 ; contract means this actor was inflated between two ticks --
                 ; the full 0 -> cur jump IS the inflate event (see header).
                 ; Per-orifice "last" values pass 0.0 so _FireChange's delta
@@ -262,14 +262,14 @@ Function PollLevels(SkyrimNet_BakaIntegration akHost, Bool abSeedPass = False) G
                 StorageUtil.SetFloatValue(None, "SNBaka.FHULast.O." + sId, curO)
             EndIf
             _CheckCreatureAmbient(akHost, a, cur, curV, curA, curO)
-            _CheckAmbientExpose(akHost, a, cur)   ; : bystander reaction pass (30%/60% bands)
+            _CheckAmbientExpose(akHost, a, cur)   ; REV-154: bystander reaction pass (30%/60% bands)
         EndIf
         i += 1
     EndWhile
 EndFunction
 
-; : MOVED VERBATIM from the motherboard's _FireFHUChange.
-; : REWRITTEN -- orifice-aware instant inflate (context primary, captured
+; REV-96: MOVED VERBATIM from the motherboard's _FireFHUChange.
+; REV-149: REWRITTEN -- orifice-aware instant inflate (context primary, captured
 ; arousal secondary) + per-orifice deflate split (rulings (a)/(b)/(e) + the mid-rev
 ; orifice-aware inflate ruling). DRAFT cue texts: sec.7 approval pending; wording
 ; rule 3b-ii stands (never assert WHY -- no framework, source, or mechanism named).
@@ -319,7 +319,7 @@ Function _FireChange(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afLa
         EndIf
         akHost._Log("[SNBaka] _FireFHUChange: " + akActor.GetDisplayName() + " amount " + afLast + " -> " + afCur + " -> sdb_fhu_inflate orifice " + sOrifice + " context " + sCtx + " arousal tier " + tier)
         SkyrimNetApi.RegisterEvent("sdb_fhu_inflate", desc, akActor, None)
-        ;  (Follow-up Prompt pattern, the  shape): the direct
+        ; REV-153 (Follow-up Prompt pattern, the REV-134f shape): the direct
         ; narration is a SEPARATE, MCM-gated surface. The narration yaml
         ; (sdb_fhu_inflate_narr.yaml, sec.7 DRAFT = register entry 33) matches
         ; the sdb_fhu_inflate_narr event type ONLY, so the cue (mandatory,
@@ -381,7 +381,7 @@ Function _FireChange(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afLa
     EndIf
 EndFunction
 
-; ----  (d): CREATURE-CUM AMBIENT CUE ----
+; ---- REV-149 (d): CREATURE-CUM AMBIENT CUE ----
 ; Poll-tick ambient, one shot per inflation episode (flag set on the first
 ; evaluation of a non-zero episode, cleared when amount returns to zero). SKIP
 ; human/unsupported (silent to the cue stream, sentinel'd). {{creature}}
@@ -394,8 +394,8 @@ EndFunction
 ; creature races (the ~38 CREATURERACE_CUM_AMOUNT classes without effect lists
 ; -- gaps named in the register); the container word keys on the dominant
 ; cum.* type (womb/bowels/stomach per the user-quoted template). Template
-; fixed fields are USER-QUOTED ( ruling (d)): register-cited, no
-; approval loop on them; the canned lines are sec.7 DRAFTs ().
+; fixed fields are USER-QUOTED (REV-136 ruling (d)): register-cited, no
+; approval loop on them; the canned lines are sec.7 DRAFTs (rev-149).
 Function _CheckCreatureAmbient(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afCur, Float afCurV, Float afCurA, Float afCurO) Global
     String kFlag = "SNBaka.FHUCreatureFired." + akActor.GetFormID()
     If afCur <= 0.001
@@ -451,7 +451,7 @@ Function _CheckCreatureAmbient(SkyrimNet_BakaIntegration akHost, Actor akActor, 
     SkyrimNetApi.RegisterEvent("sdb_fhu_creature_cum", desc, akActor, None)
 EndFunction
 
-; : canned-description map (sec.7 DRAFT, , approval pending);
+; REV-149: canned-description map (sec.7 DRAFT, rev-149, approval pending);
 ; class patterns mirror FHU's own GetRaceIndex approach (sr_inflateQuest L935+
 ; substring matching) against the creature classes that carry
 ; CREATURERACE_CUM_EFFECTS entries (the FormList enumeration source,
@@ -475,27 +475,27 @@ String Function _CreatureClassLine(String asRace) Global
     Return "a strange, foreign warmth shifting inside them"
 EndFunction
 
-; ---- : FHU AMBIENT BYSTANDER REACTION CUE (the planner's 30%/60% expose
+; ---- REV-154: FHU AMBIENT BYSTANDER REACTION CUE (the planner's 30%/60% expose
 ; bands; the cum-ambient pattern applied to FHU). Poll-tick ambient: the 10s RT
 ; level poll (motherboard _RT_POLL_INTERVAL 10.0) walks every inflated actor
 ; already -- the per-actor next-fire RT stamp rides it (the ObservationPass
-; per-actor-cooldown pattern,  rider; NOT a DeDService timer rule: FHU
+; per-actor-cooldown pattern, REV-74 rider; NOT a DeDService timer rule: FHU
 ; has no DeDService state family and no compiled sr_* reference is possible --
 ; fork Scripts\Source carries zero sr_*.psc stubs). Cadence 60s RT per actor,
 ; anchored at FIRST band crossing (first ambient fires AT band entry as of the
-;  first-fire acceleration; the instant cue owns the fresh-inflation
-; moment; no catch-up per ).
+; REV-164 first-fire acceleration; the instant cue owns the fresh-inflation
+; moment; no catch-up per REV-127).
 ; Band floors = PERCENT of FHU maxInflation via the MCM sliders (C5 ruling:
 ; planner values 30/60 are the defaults, the MCM is the user valve). Band +
-; source wordings are sec.7 DRAFTs (, register entry 34). All
-; RegisterEvent descs ASCII ( rider).
+; source wordings are sec.7 DRAFTs (rev-154, register entry 34). All
+; RegisterEvent descs ASCII (REV-146a rider).
 Float Function _FHUMaxInflation() Global
     ; FHU's vaginal/anal capacity default (sr_inflateConfig.psc L60
     ; maxInflationDefault = 6.0, assigned at config load L364). No Papyrus
     ; surface against FHU scripts exists in-tree (no stubs), so the percent
     ; mapping rides the 6.0 default constant -- NAMED GAP: if the user raises
     ; maxInflation in FHU's own MCM, these bands still scale to the default
-    ; 6.0 (surfaced at the  gate report; a live-read pass would need an
+    ; 6.0 (surfaced at the REV-154 gate report; a live-read pass would need an
     ; sr_inflateQuest stub, out of Papyrus-only scope).
     Return 6.0
 EndFunction
@@ -511,8 +511,8 @@ Function _CheckAmbientExpose(SkyrimNet_BakaIntegration akHost, Actor akActor, Fl
         fHeavy = fNotice    ; clamp: the heavy band can never sit below noticeable
     EndIf
     Float now = Utility.GetCurrentRealTime()
-    ;  4.4: the ambient cadence is MCM-settable (key
-    ; SNBaka.FHUAmbientCadence, DEFAULT 60s = the  historic cadence,
+    ; REV-161 4.4: the ambient cadence is MCM-settable (key
+    ; SNBaka.FHUAmbientCadence, DEFAULT 60s = the REV-154 historic cadence,
     ; read live at every pass -- the 159 slider pattern, no re-arm needed).
     Float fCad = StorageUtil.GetFloatValue(None, "SNBaka.FHUAmbientCadence", 60.0)
     If afCur < fNotice
@@ -531,22 +531,22 @@ Function _CheckAmbientExpose(SkyrimNet_BakaIntegration akHost, Actor akActor, Fl
     EndIf
     Float nextAt = StorageUtil.GetFloatValue(None, kNext, 0.0)
     If nextAt == 0.0
-        ; Band entry: anchor the episode.  (Issue #4, user ruling --
+        ; Band entry: anchor the episode. REV-164 (Issue #4, user ruling --
         ; first-fire acceleration): the FIRST ambient fires AT BAND ENTRY, not
         ; one cadence later -- the +60s dead-air dies; the instant inflate cue
         ; still owns the fresh-moment narrative, and the cadence paces every
-        ; LATER fire. A re-crossing never catches up on missed ticks (
+        ; LATER fire. A re-crossing never catches up on missed ticks (REV-127
         ; rule, unchanged).
         StorageUtil.SetFloatValue(None, kStart, now)
         StorageUtil.SetFloatValue(None, kNext, now)
-        akHost._Log("[SNBaka] FHU ambient expose: band entered for " + akActor.GetDisplayName() + " (amount " + afCur + " >= noticeable " + fNotice + ") -- first ambient fires NOW (REV-164 acceleration; cadence key  paces later fires)")
+        akHost._Log("[SNBaka] FHU ambient expose: band entered for " + akActor.GetDisplayName() + " (amount " + afCur + " >= noticeable " + fNotice + ") -- first ambient fires NOW (REV-164 acceleration; cadence key REV-161 paces later fires)")
         ; Fall through: nextAt == now, so the cadence check below admits the
         ; immediate first fire.
     EndIf
     If now < nextAt
         Return
     EndIf
-    ; Failsafe-class lifetime guard (the  600s class, scaled to a
+    ; Failsafe-class lifetime guard (the REV-122 600s class, scaled to a
     ; state that can persist): 7200s RT of continuous firing exhausts the
     ; episode -- a stuck state cannot fire forever.
     If now - StorageUtil.GetFloatValue(None, kStart, now) > 7200.0
@@ -558,16 +558,16 @@ Function _CheckAmbientExpose(SkyrimNet_BakaIntegration akHost, Actor akActor, Fl
     _AmbientFire(akHost, akActor, afCur, fHeavy, now, kNext)
 EndFunction
 
-; : the per-fire composition + emission (band x source), split out of
+; REV-154: the per-fire composition + emission (band x source), split out of
 ; _CheckAmbientExpose for readability. Subjectless entry-19 shape; the actor
 ; args bind to the inflated actor so the reaction lands in nearby NPCs'
-; conversation (P2 trigger-bus semantics per the  restore --
+; conversation (P2 trigger-bus semantics per the REV-134a restore --
 ; RegisterEvent is the load-bearing emission, NO cue yaml, same as
 ; sdb_cum_ambient).
 Function _AmbientFire(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afCur, Float afHeavyFloor, Float afNow, String asNextKey) Global
-    ; Source resolution (the  creature-ambient resolver, reused):
+    ; Source resolution (the REV-149 creature-ambient resolver, reused):
     ; 0 indeterminate / 1 human / 2 creature. Indeterminate SKIPS cleanly.
-    ;  4.4: MCM cadence key (read live per fire; default 60s).
+    ; REV-161 4.4: MCM cadence key (read live per fire; default 60s).
     Float fCad = StorageUtil.GetFloatValue(None, "SNBaka.FHUAmbientCadence", 60.0)
     Int iSource = 0
     Actor inj = None
@@ -588,7 +588,7 @@ Function _AmbientFire(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afC
         If !r
             akHost._Log("[SNBaka] FHU ambient expose: injector " + inj.GetDisplayName() + " has no race -- skip (source indeterminate, REV-154)")
         ElseIf StorageUtil.FormListCount(r, "sr.inflater.race.cum.effects") > 0
-            iSource = 1    ; humanoid injector (the  humanoid test)
+            iSource = 1    ; humanoid injector (the REV-149 humanoid test)
         Else
             iSource = 2    ; creature injector reads the creature class
         EndIf
@@ -598,7 +598,7 @@ Function _AmbientFire(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afC
         Return
     EndIf
     ; Cue composition: band x source (sec.7 DRAFTs, register entry 34).
-    ;  SLIM (ruling (b), register entry 36): the ambient cue drops to
+    ; REV-157 SLIM (ruling (b), register entry 36): the ambient cue drops to
     ; NUDGE-CLASS wording -- the standing facts (band, freshness, the
     ; self/other split) now live in the get_ded_inflation bio fragment
     ; (0176_ded_fhu.prompt) and the moment-of-impact specifics stay in the
@@ -629,7 +629,7 @@ Function _AmbientFire(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afC
     akHost._Log("[SNBaka] FHU ambient expose: firing sdb_fhu_ambient for " + akActor.GetDisplayName() + " (amount " + afCur + ", band " + sBand + ", source " + sSrc + ")")
     SkyrimNetApi.RegisterEvent("sdb_fhu_ambient", desc, akActor, None)
     StorageUtil.SetFloatValue(None, asNextKey, afNow + fCad)
-    ;  (the 153/134f Follow-up Prompt pattern): the direct narration is
+    ; REV-154 (the 153/134f Follow-up Prompt pattern): the direct narration is
     ; a SEPARATE, MCM-gated surface -- sdb_fhu_ambient_narr.yaml matches the
     ; sdb_fhu_ambient_narr event type ONLY (guidance = sec.7 DRAFT, register
     ; entry 34). The gated event's own desc is a plain marker (the rendered
@@ -643,14 +643,14 @@ Function _AmbientFire(SkyrimNet_BakaIntegration akHost, Actor akActor, Float afC
 EndFunction
 
 ; ---- FHU INFLATION AWARENESS (Task 3b: fallback poll design) ----
-; [] The v1 comment block + the -moved HandleFHUStartSignal /
-; PollLevels / _FireChange bodies that lived HERE are RETIRED -- the 
+; [REV-149] The v1 comment block + the REV-96-moved HandleFHUStartSignal /
+; PollLevels / _FireChange bodies that lived HERE are RETIRED -- the REV-149
 ; rewrites (chunks 1-4, above) supersede them. History: sr_InfEventManager's
 ; broadcast system exists to register REFERENCE-ALIAS event scripts (esp records
 ; in sr_FillHerUp.esp -- out of Papyrus-only scope; flagged, not improvised);
 ; FHU's ModEvents carry no per-actor payload (sr.inflater.start/.absorb are
 ; parameterless; fhu.playerInflated / fhu.playerCumUpdate are player-only); the
-; per-actor surface is StorageUtil (sr.inflater.amount + 's per-orifice
+; per-actor surface is StorageUtil (sr.inflater.amount + REV-149's per-orifice
 ; cum.vaginal/.anal/.oral reads). Deflation detection stays poll-delta based
 ; (the SpermOut ability path exposes no event); sr.inflater.start is used ONLY
 ; as an immediate-poll nudge (now via HandleFHUStartSignal, above).
@@ -658,7 +658,7 @@ EndFunction
 ; (the SpermOut ability path exposes no event); sr.inflater.start is used ONLY
 ; as an immediate-poll nudge (now via HandleFHUStartSignal, above).
 
-; ---- : OSTIM CLIMAX DRIVER (self-owned inflation fills) ----
+; ---- REV-155: OSTIM CLIMAX DRIVER (self-owned inflation fills) ----
 ; The planner's final FHU v2 lane: OStim scenes had NO inflation driver in the
 ; enabled profile (the SL FHU Baka OStim 0.18 bridge is DISABLED in the active
 ; Ultra profile; the enabled FHU 2.11 Beta registers SexLab hooks only,
@@ -805,9 +805,9 @@ EndFunction
 ; event never sent = listener idle, the 0171 convention).
 
 ; ------------------------------------------------------------------
-;  - PROMPT-LAYER EXTENSION (the cum-v2 mold applied to FHU)
+; REV-157 - PROMPT-LAYER EXTENSION (the cum-v2 mold applied to FHU)
 ; ------------------------------------------------------------------
-; Two module-owned decorators (registered at arm - the /132b
+; Two module-owned decorators (registered at arm - the REV-129/132b
 ; class; the motherboard calls ArmDecorators every arm pass):
 ;   get_ded_inflation(actor)      bio-lane FACTS (the 0175 mold): the
 ;                                 self/other split, band (noticeable /
@@ -817,7 +817,7 @@ EndFunction
 ;                                 always inside an open window).
 ;   get_ded_inflation_any(actor)  disposition-lane eligibility (the 132b
 ;                                 minimal any/nearest class).
-; NULL CONTRACT (the  discipline): every absent-framework state
+; NULL CONTRACT (the REV-133 discipline): every absent-framework state
 ; returns well-formed JSON - FHU absent, quest form unresolved, no
 ; inflated actors, nothing in band, or an empty cell all read as
 ; {"present": false} / {"any": false}; band floors default 30/60 when the

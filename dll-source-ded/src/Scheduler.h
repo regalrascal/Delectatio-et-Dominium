@@ -1,6 +1,6 @@
 #pragma once
 
-//  -- DeDService single scheduler tick (spec section 1.3: ONE tick
+// REV-113 -- DeDService single scheduler tick (spec section 1.3: ONE tick
 // loop; rules are data, not processes). Divergence from the study subject
 // (Papyrus chronometer pull chains) is deliberate -- see service-dll.md 0.2.
 //

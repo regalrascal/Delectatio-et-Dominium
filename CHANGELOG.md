@@ -1,5 +1,50 @@
 # Changelog
 
+## v0.4.0 — the community-hardened release
+
+Everything v0.3.0-alpha carried, made to work right — the daedric-modes overhaul, a downed-state reliability patch, and a full author's-pen text pass.
+
+- **The daedric-modes overhaul.** Sanguine, Sheogorath, Mephala, and Molag Bal each
+  decide in their own voice. Every daemon decision is two-stage: the model weighs the
+  room first, then picks subject, target, and act together — with a one-line motive
+  ("why this subject, this target, right now"). Subjects and targets are cast from
+  live pools (recent picks stay sticky, conversation partners get priority, proximity
+  matters), with a Narrative / Random selection-method choice per mode in the MCM.
+- **Reaction lanes.** Each daemon moment can land four ways at once: as in-scene
+  narration, as the thoughts of nearby NPCs, as words aimed at you, or as your own
+  thoughts — each lane on its own MCM toggle, Baka modes and pose modes alike.
+- **Narratively robust.** Off-menu action paraphrases now always resolve to a legal
+  action instead of silently doing nothing, and the daemon cadences re-arm in seconds
+  after refusals and misses — no more silent dead air between moments. Arousal-keyed
+  disposition prompts became suggestion sets the model picks from, not mechanical
+  tiers.
+- **The Acheron downed-state patch.** A community-reported soft-lock, closed: downed
+  NPCs who aren't part of an active escalation now get up on their own about a minute
+  after the fight ends; Help Up is always available as the release valve; if Acheron
+  prematurely rescues someone twice, the third rescue is accepted; witness reactions
+  collapse to one short post-combat window. A panic-reset control and a README
+  troubleshooting guide ship with it.
+- **Fixed: pose actions were silently failing.** Every LLM-driven pose action now
+  fires as intended, and refusals leave named traces.
+- **Community performance fold.** Four findings from a community source-read, all
+  folded: no more deadline spin while combat blocks the daemon, no debug-string
+  builds on hot paths with logging off, the FHU poll guard audited, and the tattoo
+  observation walk yields frames on large pools.
+- **Pose cues, re-penned.** Every pose cue reads as in-story prose — a solo line when
+  no one is watching, a with-an-audience line when someone is — and stop lines read
+  naturally ("…no longer holds the pose").
+- **EmoTears fully optional.** Baka Interactions no longer carries EmoTears4NPCs as a
+  hidden master: the load-order constraint is gone, and existing saves are safe.
+- **The author's-pen text pass.** Trigger and action descriptions across the whole
+  package re-voiced by hand, plus typo fixes throughout.
+- **New optional decal source.** SLACS 2 + SCO (Cum Overlays) — an additional
+  supported cum overlay decal, picked from the MCM's Decal Source dropdown when
+  present.
+
+Safe to install over v0.3.0-alpha (no save-format changes). One-time MCM note: the
+GS-mode reaction-lane toggles reset to defaults once on this version (a settings-key
+rename) — re-toggle them to taste if you had changed them.
+
 ## v0.3.0-alpha — the first full release (alpha state)
 
 The full feature arc since v0.1.0: every module shipped — in an honest alpha state: tested in-house where possible, and looking to the community for testing, feedback, and shared logs to help diagnose issues.

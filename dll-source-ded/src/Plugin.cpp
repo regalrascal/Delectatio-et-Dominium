@@ -2,6 +2,7 @@
 #include "ServiceState.h"
 #include "Scheduler.h"
 #include "EventPump.h"
+#include "ActorContextStore.h"
 
 #include <spdlog/sinks/basic_file_sink.h>
 #include <RE/B/BSInputDeviceManager.h>
@@ -60,8 +61,8 @@ static void OnSaveCallback(SKSE::SerializationInterface* a_intfc)
                                   buf.data(), static_cast<std::uint32_t>(buf.size()))) {
             SKSE::log::error("[DeDService] STTE save failed.");
         } else {
-            // : positive save receipt (spec .3 adoption -- receipt
-            // logging on cosave ops;  shipped failures-only and the
+            // REV-116: positive save receipt (spec §0.3 adoption -- receipt
+            // logging on cosave ops; REV-115 shipped failures-only and the
             // dogfood had no way to see success from logs alone).
             SKSE::log::info("[DeDService] STTE record written ({} B, schema v{}).",
                             buf.size(), DeD::ServiceState::kSchemaVersion);
@@ -75,7 +76,7 @@ static void OnSaveCallback(SKSE::SerializationInterface* a_intfc)
                                   buf.data(), static_cast<std::uint32_t>(buf.size()))) {
             SKSE::log::error("[DeDService] TMRS save failed.");
         } else {
-            // : positive save receipt (spec .3 adoption).
+            // REV-116: positive save receipt (spec §0.3 adoption).
             SKSE::log::info("[DeDService] TMRS record written ({} B, schema v{}).",
                             buf.size(), DeD::Scheduler::kSchemaVersion);
         }
@@ -102,7 +103,7 @@ static void OnLoadCallback(SKSE::SerializationInterface* a_intfc)
                 SKSE::log::warn("[DeDService] STTE malformed -- state reset.");
                 ++malformed;
             } else {
-                // : positive load receipt (spec .3 adoption).
+                // REV-116: positive load receipt (spec §0.3 adoption).
                 SKSE::log::info("[DeDService] STTE record read ({} B, schema v{}) -- loaded.",
                                 length, version);
                 ++loaded;
@@ -117,7 +118,7 @@ static void OnLoadCallback(SKSE::SerializationInterface* a_intfc)
                 SKSE::log::warn("[DeDService] TMRS malformed -- rules reset.");
                 ++malformed;
             } else {
-                // : positive load receipt (spec .3 adoption).
+                // REV-116: positive load receipt (spec §0.3 adoption).
                 SKSE::log::info("[DeDService] TMRS record read ({} B, schema v{}) -- loaded.",
                                 length, version);
                 ++loaded;
@@ -127,7 +128,7 @@ static void OnLoadCallback(SKSE::SerializationInterface* a_intfc)
             ++unknown;
         }
     }
-    // : load summary receipt (spec .3) -- makes the with-DLL
+    // REV-116: load summary receipt (spec §0.3) -- makes the with-DLL
     // round-trip leg provable from DeDService.log alone, cross-checked by
     // the independent .skse block-walk.
     if (loaded + rejected + malformed + unknown > 0) {
@@ -140,6 +141,7 @@ static void OnRevertCallback(SKSE::SerializationInterface*)
 {
     DeD::ServiceState::GetSingleton().Revert();
     DeD::Scheduler::GetSingleton().Revert();
+    DeD::ActorContextStore::GetSingleton().Revert(); // REV-170 Leg 3: in-memory only, dropped wholesale
     SKSE::log::info("[DeDService] reverted (new game / cosave discard).");
 }
 
@@ -149,12 +151,12 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::log::info("[DeDService] Plugin loaded.");
 
     auto* serialization = SKSE::GetSerializationInterface();
-    // : the serialization UID is a BUILD REQUIREMENT (service-dll.md 
-    // constraint 5, amended this rev; the  dogfood gap of record).
+    // REV-116: the serialization UID is a BUILD REQUIREMENT (service-dll.md §2
+    // constraint 5, amended this rev; the REV-115 dogfood gap of record).
     // skse64's save-callback gate is `info->save && info->hadUID`
     // (skse64 Serialization.cpp L372) -- without SetUniqueID the save
     // callback is silently skipped and STTE/TMRS never reach the cosave.
-    // UID of record: 'DSED' (0x44455344), ruled  by OUR collision
+    // UID of record: 'DSED' (0x44455344), ruled REV-116 by OUR collision
     // check (skse64's own check is warn-only): 0 hits in both byte orders
     // against all 47 plugin UIDs in dogfood saves Save516/Save517 (receipt
     // rev116-uidcheck.txt; re-run when the load order gains a serialization
@@ -169,6 +171,28 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
         case SKSE::MessagingInterface::kDataLoaded:
             RE::BSInputDeviceManager::GetSingleton()->AddEventSink(ServiceDriveSink::GetSingleton());
             SKSE::log::info("[DeDService] scheduler drive registered (input sink).");
+            {
+                // REV-170 Leg 3: resolve the SkyrimNet C++ surface (DevKit
+                // CppAPI contract: LoadLibraryA("SkyrimNet") + GetProcAddress;
+                // v3+ gates FormIDToUUID; older installs degrade the Actor
+                // Context store to always-MISS, never crash).
+                auto hSN = LoadLibraryA("SkyrimNet");
+                if (hSN) {
+                    auto ver = reinterpret_cast<int (*)()>(GetProcAddress(hSN, "PublicGetVersion"));
+                    const int snVer = ver ? ver() : 0;
+                    if (snVer >= 3) {
+                        DeD::ActorContextStore::GetSingleton().PublicFormIDToUUID =
+                            reinterpret_cast<std::uint64_t (*)(std::uint32_t)>(
+                                GetProcAddress(hSN, "PublicFormIDToUUID"));
+                    }
+                    SKSE::log::info("[DeDService] SkyrimNet C++ surface {} (api v{}; ActorContext {}).",
+                        DeD::ActorContextStore::GetSingleton().PublicFormIDToUUID ? "resolved" : "absent",
+                        snVer,
+                        DeD::ActorContextStore::GetSingleton().PublicFormIDToUUID ? "LIVE" : "MISS-only");
+                } else {
+                    SKSE::log::info("[DeDService] SkyrimNet not loaded -- ActorContext MISS-only.");
+                }
+            }
             break;
         }
     });

@@ -1,0 +1,28 @@
+name: "sdb_mephala_mode_thought"
+description: "Mephala Mode NPC-thought lane (REV-174 reaction lanes; npc_thought, targetScope: all_nearby_actors, radius 2000; intro-only content, script-composed desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174 D3 -- REACTION LANES, R-YAML-SHAPE] Content = the mode influence
+# intro ONLY (one or two short mode-voiced sentences, written to flow into
+# the script-composed desc sentence that fires in the SAME event: subject ->
+# semantic description -> target, real names). Content is IDENTICAL across
+# this mode's FOUR lanes per A12 (narr / thought / pspeech / pthought); only response type and
+# scope differ. One-lane no-repeat rotation arbitration (REV-174g A37); the general cue fires unconditionally.
+# [REV-174g 2026-11-01] interrupt: true; content = the templated desc (the flat cue-reference sentence, Tier-1 live-probed) + the immutable closing sentence. ASCII. Register DRAFT at the user's pen.
+
+eventCriteria:
+  eventType: "sdb_mephala_mode_thought"
+
+response:
+  type: "npc_thought"
+  content: |
+    Mephala tugs on her threads, unperceived. Desire and hidden intent are dragged out on display.
+    {{ event_data }}
+  targetScope: all_nearby_actors
+  nearbyRadius: 2000
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

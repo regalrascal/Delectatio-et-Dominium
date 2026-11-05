@@ -26,7 +26,7 @@ Scriptname SkyrimNet_AcheronIntegration extends Quest
 ; ── MCM-tunable (stored in StorageUtil by the MCM; read each tick) ──
 Bool  Property bEnabled             = True   Auto
 Float Property fProximityCheckSeconds = 10.0  Auto  ; how often we check for a nearby creature (engagement roll only, not recovery)
-Float Property fCueIntervalSeconds  = 60.0   Auto  ; narrative "still downed" reminder cadence (: 30 -> 60s spacing, Issue #5 ruling)
+Float Property fCueIntervalSeconds  = 60.0   Auto  ; narrative "still downed" reminder cadence (REV-164: 30 -> 60s spacing, Issue #5 ruling)
 ; Hard ceiling on how long an abandoned, unattended down lasts -- the ONLY way a victim recovers on
 ; their own now besides the get-up key, HelpUp, or winning a struggle. Set on every fresh down and
 ; reset to the full duration whenever a paired animation involving them ends, or they lose a struggle/
@@ -308,7 +308,7 @@ Function _LoadSettings()
         _player = Game.GetPlayer()
     EndIf
     bEnabled             = StorageUtil.GetIntValue(_player,   "SNAcheron.Enabled",      1) == 1
-    fCueIntervalSeconds  = StorageUtil.GetFloatValue(_player, "SNAcheron.CueInterval",  60.0)   ; : default 30 -> 60 (Issue #5 cue-cap ruling; a key set at 30 by an older session is clamped by the 60s spacing check in _CueStillDowned)
+    fCueIntervalSeconds  = StorageUtil.GetFloatValue(_player, "SNAcheron.CueInterval",  60.0)   ; REV-164: default 30 -> 60 (Issue #5 cue-cap ruling; a key set at 30 by an older session is clamped by the 60s spacing check in _CueStillDowned)
     fProximityCheckSeconds = StorageUtil.GetFloatValue(_player, "SNAcheron.ProxInterval", 10.0)
     fAutoGetUpSeconds    = StorageUtil.GetFloatValue(_player, "SNAcheron.AutoGetUpSeconds", 600.0)
     fNearbyRadius        = StorageUtil.GetFloatValue(_player, "SNAcheron.Radius",       700.0)
@@ -601,9 +601,38 @@ Event OnActorRescued(Actor akVictim)
             StorageUtil.SetIntValue(akVictim, "SNAcheron.PrematureRescues", fights)
             If fights >= 2
                 _Trace("premature rescue x" + fights + " for the player in one down cycle -- Acheron insists, accepting recovery instead of loop-fighting it")
-                StorageUtil.SetIntValue(akVictim, "SNBaka.Captive", 0)
-                StorageUtil.SetIntValue(akVictim, "SNAcheron.PrematureRescues", 0)
-                _Recover(akVictim)   ; clears Held first (sanctioning), stand-up + control restore + cleanup
+                _Recover(akVictim)   ; the funeral inside clears Held/Captive/PrematureRescues first (sanctioning), then stand-up + control restore + cleanup
+                Return
+            EndIf
+        EndIf
+        ; [REV-181 Leg 1 -- T1, NPC ACCEPT-BUDGET] The community soft-lock report of record
+        ; (S254): a held NPC/follower rescued by ANY external Acheron surface -- the host's own
+        ; NPC/Follower recovery clocks, console "ach ra", Hunter's Pride options -- was redowned
+        ; unconditionally here, so every external rescue surface read "does not work" and the
+        ; follower stayed down until our ceiling (postponed indefinitely by the witness gate
+        ; while the player stood over them). Same law as the player branch above, now extended
+        ; to held NPCs (R-177a: never re-down-loop a clock we can't beat): budget of TWO
+        ; premature rescues per down cycle, then accept properly. Budget semantics receipted:
+        ; plain count, per-actor key, cleared on true recovery (the funeral). Skipped while
+        ; Locked (NPC redowns are load-bearing during scene transitions -- a rescue arriving
+        ; mid-struggle/scene is interaction machinery, not Acheron's clock) and while Tied
+        ; (the tie runs on its own game-hours clock, which the tie branch already honors).
+        If akVictim != _player \
+                && StorageUtil.GetIntValue(akVictim, "SNBaka.Locked", 0) != 1 \
+                && StorageUtil.GetIntValue(akVictim, "SNBaka.Tied",   0) != 1
+            Int fightsN = StorageUtil.GetIntValue(akVictim, "SNAcheron.PrematureRescues", 0) + 1
+            StorageUtil.SetIntValue(akVictim, "SNAcheron.PrematureRescues", fightsN)
+            _Trace("premature rescue x" + fightsN + " for " + akVictim + " (T1 NPC accept-budget consumed)")
+            If fightsN >= 2
+                _Trace("premature rescue x" + fightsN + " for " + akVictim + " in one down cycle -- accepting recovery (T1 budget spent, R-177a hotfix)")
+                _Recover(akVictim)   ; funeral first (Held/Captive/PrematureRescues cleared), then stand-up + cleanup
+                ; Mirror the auto-timer expiry handoff so Baka's own ground/restraint state
+                ; clears too (same queue + event pattern _TickActor's timer path uses; no-op
+                ; if Baka is absent).
+                If StorageUtil.GetIntValue(_player, "SNBaka.Present", 0) == 1
+                    StorageUtil.FormListAdd(_player, "SNAcheron.ForceRecoverQueue", akVictim)
+                    SendModEvent("SNAcheron_RequestForceRecover")
+                EndIf
                 Return
             EndIf
         EndIf
@@ -812,15 +841,43 @@ Function _TickActor(Actor a, Float now)
             ; around"): the unattended-recovery timer only fires when nobody able is nearby. Any
             ; live, standing actor within ~700 units — the player very much included — postpones it
             ; a minute at a time.
+            ; [REV-181 Leg 3 -- FIX 2, POST-COMBAT PLAYER-WITNESS BUDGET] The indefinite-stall
+            ; killer (the S254 community report: combat over, the player standing over downed
+            ; followers, the deadline postponed +60s per poll forever -- "leave them down a few
+            ; minutes and walk away" was the only workaround). While combat is ACTIVE the gate is
+            ; unchanged (postponements accumulate as today). Once combat ends, the PLAYER'S
+            ; witnessed presence buys at most ONE further 60s extension per down cycle -- the
+            ; deadline then stands, and recovery lands ~60s after the last witnessed tick.
+            ; Refusals are the fix working, not a bug. Hostile/bystander NPC witnesses keep the
+            ; unconditional gate (only the PLAYER's presence is budget-limited), and an actor
+            ; under an ACTIVE DeD escalation keeps today's behavior entirely (the escalation
+            ; guard -- the scene owns the actor).
             Actor[] loadedW = PO3_SKSEFunctions.GetActorsByProcessingLevel(0)
+            Bool combatActive = _player.IsInCombat() || (now - _fLastCombatRT) < 15.0
             Int wi = 0
             While wi < loadedW.Length
                 Actor w = loadedW[wi]
                 If w && w != a && !w.IsDead() && !w.IsBleedingOut() \
                         && StorageUtil.GetIntValue(w, "SNAcheron.Held", 0) != 1 && w.GetDistance(a) < 700.0
-                    StorageUtil.SetFloatValue(a, "SNBaka.AutoGetUpDeadlineRT", now + 60.0)
-                    _Trace(a + " auto-get-up postponed — " + w + " is able and nearby")
-                    Return
+                    Bool playerRefused = w == _player && !combatActive && !_IsEscalationSubject(a) \
+                            && StorageUtil.GetIntValue(a, "SNAcheron.PostCombatExtUsed", 0) == 1
+                    If playerRefused
+                        ; Post-combat budget spent: this witness does NOT postpone -- fall through
+                        ; to the loop tail and keep scanning (other NPC witnesses still count).
+                        _Trace(a + " auto-get-up: player-witness extension REFUSED (post-combat budget spent) — deadline stands (fix 2)")
+                    Else
+                        If w == _player && !combatActive && !_IsEscalationSubject(a)
+                            StorageUtil.SetIntValue(a, "SNAcheron.PostCombatExtUsed", 1)
+                            _Trace(a + " auto-get-up postponed — the player is able and nearby (post-combat budget CONSUMED: one 60s interval, then the deadline stands)")
+                        Else
+                            If w == _player && combatActive
+                                StorageUtil.SetIntValue(a, "SNAcheron.PostCombatExtUsed", 0)   ; fresh budget for the next post-combat window
+                            EndIf
+                            _Trace(a + " auto-get-up postponed — " + w + " is able and nearby")
+                        EndIf
+                        StorageUtil.SetFloatValue(a, "SNBaka.AutoGetUpDeadlineRT", now + 60.0)
+                        Return
+                    EndIf
                 EndIf
                 wi += 1
             EndWhile
@@ -843,6 +900,62 @@ Function _TickActor(Actor a, Float now)
     EndIf
 EndFunction
 
+; [REV-181 Leg 1 item 2 + Leg 2 item 2] THE FULL HOLD-STATE FUNERAL -- the shared teardown
+; helper, ONE copy for every recovery path (this script's _Recover and the T1 NPC accept-budget
+; branch, and Baka's fix-1 HelpUp circumvention, which calls it by script name). GLOBAL and
+; StorageUtil-only: no quest-instance state, so it runs even if this quest is stopped, and the
+; presence gate at the Baka call site keeps it a no-op when the bridge isn't installed. This is
+; the accept-then-residue gate (the escape-branch defect class, S212/S216): a recovery that
+; accepts the actor up but leaves ANY down-cycle key behind hands the next poll tick or rescue
+; event a half-down actor it can re-hold or redown. Per-item receipt table:
+;   SNAcheron.Held             the hold claim itself (cleared FIRST -- the sanctioning rule:
+;                              OnActorRescued redowns anyone rescued while still Held)
+;   SNBaka.AutoGetUpDeadlineRT the auto-get-up ceiling (a stale deadline must never fire early
+;                              on the NEXT down or re-arm against a recovered actor)
+;   SNAcheron.PrematureRescues the accept/re-down arm. Budget semantics receipted: a plain
+;                              count, PER-ACTOR scope, cleared here on true recovery so the
+;                              next down cycle starts with a fresh budget.
+;   SNBaka.Captive             Baka's capture claim (checked alongside Held by the redown gate)
+;   SNAcheron.LastCheckRT      the still-downed reminder clock
+;   SNAcheron.DownCueCount / DownCueLastRT   the downed-cue episode counters
+;   SNAcheron.PostCombatExtUsed   the fix-2 post-combat player-witness budget (fresh budget
+;                              next down cycle)
+;   SNBaka.DownPose            the shared down-pose clip key (idempotent with _Recover's own clear)
+;   SNBaka.OnGround            Baka's local ground flag (idempotent with _ForceRecover)
+; DELIBERATELY NOT cleared: SNAcheron.DownCueGateRT (the 180s cap survives recovery by user
+; ruling, REV-164 -- the cap applies "in any circumstance") and SNBaka.Tied/TiedUntilGT (the
+; tie owns its own game-hours clock; _TickActor's tie branch and HelpUp's untie own them).
+Function _AcheronHoldFuneral(Actor ak) Global
+    If !ak
+        Return
+    EndIf
+    StorageUtil.SetIntValue(ak,   "SNAcheron.Held",             0)
+    StorageUtil.SetFloatValue(ak, "SNBaka.AutoGetUpDeadlineRT", 0.0)
+    StorageUtil.SetIntValue(ak,   "SNAcheron.PrematureRescues", 0)
+    StorageUtil.SetIntValue(ak,   "SNBaka.Captive",             0)
+    StorageUtil.SetFloatValue(ak, "SNAcheron.LastCheckRT",      0.0)
+    StorageUtil.SetIntValue(ak,   "SNAcheron.DownCueCount",     0)
+    StorageUtil.SetFloatValue(ak, "SNAcheron.DownCueLastRT",    0.0)
+    StorageUtil.SetIntValue(ak,   "SNAcheron.PostCombatExtUsed", 0)
+    StorageUtil.SetStringValue(ak, "SNBaka.DownPose",           "")
+    StorageUtil.SetIntValue(ak,   "SNBaka.OnGround",            0)
+    Debug.Trace("[SNAcheron] hold funeral complete for " + ak + " (full hold-state teardown)")
+EndFunction
+
+; [REV-181 Leg 3 item 2] ESCALATION GUARD (the user's second condition on fix 2): the
+; post-combat player-witness budget applies ONLY when the actor is not the subject of an
+; active DeD escalation -- an active escalation preserves today's unconditional witness
+; postponement, because the scene owns the actor until it resolves. State source (receipted,
+; all shared StorageUtil keys Baka documents): SNBaka.Locked (mid struggle/scene),
+; SNBaka.Captive (captured), and SNBaka.GroundWindowAggressor (an open Baka
+; escalate-decision ground window -- set at down-time, cleared to None only when the window
+; closes). A tied actor never reaches the caller (the tie branch returns earlier).
+Bool Function _IsEscalationSubject(Actor a)
+    Return StorageUtil.GetIntValue(a, "SNBaka.Locked", 0) == 1 \
+        || StorageUtil.GetIntValue(a, "SNBaka.Captive", 0) == 1 \
+        || (StorageUtil.GetFormValue(a, "SNBaka.GroundWindowAggressor") as Actor) != None
+EndFunction
+
 ; Get a held actor up and out of Acheron. Called from _TickActor's confirm-clear path AND from
 ; _RunGetUpQTE's win branch -- each of those already traces its OWN reason right before calling this,
 ; so this function's own trace (at the end) just confirms the outcome, not why.
@@ -853,14 +966,14 @@ Function _Recover(Actor a)
     ; out from under us and REDOWNS them (see OnActorRescued). Clearing first is what marks this rescue
     ; as sanctioned. (Also a restored revert-casualty: this line was lost during the reverted local-down
     ; experiment, which left every timer/QTE recovery still reading as down forever.)
-    StorageUtil.SetIntValue(a,   "SNAcheron.Held",        0)
-    StorageUtil.SetFloatValue(a, "SNAcheron.LastCheckRT",  0.0)
-    ;  (Issue #5): the downed-cue episode ends with the down. The 180s
-    ; DownCueGateRT deliberately SURVIVES recovery -- the cap's gate applies "in
-    ; any circumstance" (user ruling), so a rapid re-down on the same character
-    ; re-enters the still-running gate rather than a fresh cue flood.
-    StorageUtil.SetIntValue(a,   "SNAcheron.DownCueCount", 0)
-    StorageUtil.SetFloatValue(a, "SNAcheron.DownCueLastRT", 0.0)
+    ; [REV-181] FULL FUNERAL (T1 item 2): _Recover now runs the shared teardown helper -- the
+    ; SAME complete table the T1 accept-budget branch and Baka's fix-1 HelpUp path use, one
+    ; helper for all three recovery paths. This replaces the partial clear that used to live
+    ; here (Held/LastCheckRT/DownCueCount/DownCueLastRT) and adds the deadline, the re-down
+    ; arm, the fix-2 budget key and the soft keys. Held still clears FIRST (the sanctioning
+    ; rule above); the 180s DownCueGateRT cap still survives by the REV-164 user ruling (see
+    ; the funeral's NOT-cleared list).
+    _AcheronHoldFuneral(a)
     ; The victim is actually being freed now — if Baka pacified the tracked aggressor for an escalation
     ; scene (held pacified on purpose since _EscalationCleanup, so it wouldn't re-engage the still-
     ; subdued victim), restore its aggression here. No hard Baka reference needed: same shared
@@ -967,7 +1080,7 @@ EndFunction
 ; awareness. The concrete follow-up actions were already spelled out in the first cue (_CueDowned) and
 ; are surfaced by the get_baka_state decorator; this just keeps them present without a wall of text.
 ;
-;  (Issue #5, user-ruled cue cap): the downed cue fires ONCE at the first moment of the down
+; REV-164 (Issue #5, user-ruled cue cap): the downed cue fires ONCE at the first moment of the down
 ; (_CueDowned is fire #1), then AT MOST TWO more times at 60s spacing while the character is still
 ; down -- after which that character is GATED FOR 180s before the cue can fire again in any
 ; circumstance. Per-actor StorageUtil keys:
@@ -978,7 +1091,7 @@ Function _CueStillDowned(Actor a)
     Float now = Utility.GetCurrentRealTime()
     Float gateUntil = StorageUtil.GetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
     If gateUntil > now
-        Return    ; capped + gated: silent in any circumstance until the gate lapses ()
+        Return    ; capped + gated: silent in any circumstance until the gate lapses (REV-164)
     ElseIf gateUntil > 0.0
         ; Gate lapsed on a down that is STILL running -- re-arm a fresh cue episode.
         StorageUtil.SetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
@@ -1100,12 +1213,15 @@ Function _CueDowned(Actor a)
     ; Marks the moment of a genuinely FRESH down -- see fFreshDownGraceDuration. Read by both this
     ; script's own _TickActor and Baka's _TryCreatureEscalateOnDowned (shared key, no hard dependency).
     StorageUtil.SetFloatValue(a, "SNAcheron.FreshDownRT", now)
-    ;  (Issue #5): this cue IS fire #1 of the per-episode downed-cue cap
+    ; REV-164 (Issue #5): this cue IS fire #1 of the per-episode downed-cue cap
     ; (1 at the down moment + 2 more at 60s spacing -> 180s gate). Fresh down =
     ; fresh episode: counter re-anchored, gate cleared.
     StorageUtil.SetIntValue(a, "SNAcheron.DownCueCount", 1)
     StorageUtil.SetFloatValue(a, "SNAcheron.DownCueLastRT", now)
     StorageUtil.SetFloatValue(a, "SNAcheron.DownCueGateRT", 0.0)
+    ; [REV-181 fix 2] Fresh down = fresh post-combat player-witness budget (per-cycle key; the
+    ; funeral clears it on true recovery too).
+    StorageUtil.SetIntValue(a, "SNAcheron.PostCombatExtUsed", 0)
     ; Track whoever/whatever downed them — same shared key Baka's own ground window sets for its
     ; aggressor (SNBaka.GroundWindowAggressor). Lets the proximity/creature checks below do a plain
     ; GetDistance() against one known reference instead of scanning (Yamete Redux's approach).

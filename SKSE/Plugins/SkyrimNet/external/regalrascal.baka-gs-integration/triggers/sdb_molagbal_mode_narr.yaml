@@ -1,15 +1,14 @@
 name: "sdb_molagbal_mode_narr"
-description: "Molag Bal Mode action narration (MCM-gated optional second surface; register entry 37 DRAFT)"
+description: "Molag Bal Mode narration lane (REV-174 reaction lanes; intro-only content, script-composed desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
 
-#  5.1 (user-ruled at the dogfood; BOTH user rulings honored: Molag
-# Bal narration YES, thoughts still NO -- no thought-seeding rides this leg
-# under any setting). This yaml matches the gated sdb_molagbal_mode_narr
-# event type ONLY: SkyrimNet_BakaIntegration._DaemonModeNarration emits it
-# when (and only when) the Baka Interactions MCM "Molag Bal Mode Narration"
-# toggle (motherboard property bMolagBalModeNarration, DEFAULT OFF) is ON.
-# The event desc says what just happened (actor names + the picked action);
-# this narration is the gated second surface asking surrounding NPCs to
-# react. No template variables (the D8/sec.137 binding rule); ASCII.
+# [REV-174 D3 -- REACTION LANES, R-YAML-SHAPE] Content = the mode influence
+# intro ONLY (one or two short mode-voiced sentences, written to flow into
+# the script-composed desc sentence that fires in the SAME event: subject ->
+# semantic description -> target, real names). Content is IDENTICAL across
+# this mode's FOUR lanes per A12 (narr / thought / pspeech / pthought); only response type and
+# scope differ. One-lane no-repeat rotation arbitration (REV-174g A37); the general cue fires unconditionally.
+# [REV-174g 2026-11-01] interrupt: true; content = the templated desc (the flat cue-reference sentence, Tier-1 live-probed) + the immutable closing sentence. ASCII. Register DRAFT at the user's pen.
 
 eventCriteria:
   eventType: "sdb_molagbal_mode_narr"
@@ -17,16 +16,13 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    Something has just been done to someone nearby, described by the cue
-    above. Those who witnessed it take it in their own way -- fear,
-    fascination, a dark joke, a warning glance, or looking away -- each true
-    to who they are and where they stand. The most affected feel compelled
-    to speak.
-
-    What the cue described is the whole of what happened.
-
+    The malevolent presence of Molag Bal broods over the scene, unperceived. The air hums with the demand to dominate or submit.
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
 audience: "nearby_npcs"
+
 enabled: true
 probability: 1
 cooldownSeconds: 30
 priority: 7
+interrupt: true

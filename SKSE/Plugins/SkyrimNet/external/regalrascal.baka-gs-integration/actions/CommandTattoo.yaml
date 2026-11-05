@@ -1,11 +1,8 @@
 name: CommandTattoo
 description: |
-  [REV-156 DRAFT - pending-approvals register entry 35; wording at the user's pen]
-  The initiator commands a tattoo onto a standing character who accepts their
-  dominance - a submissive partner, an intimidated rival, a claimed servant. The
-  initiator decides where the mark goes, which specific tattoo it is, and its color,
-  drawn from what the target's own tattoo packs offer. The mark is applied to their
-  skin.
+  The initiator commands another character to submit to receiving a degrading tattoo. The
+  character who accepts their dominance - a submissive partner, an intimidated rival, or
+  a claimed servant is marked by the initiator.
 
   WHEN A CHARACTER WOULD DO THIS:
   - Commanding a tattoo onto a submissive or cowed character during dialogue
@@ -13,15 +10,6 @@ description: |
   - A victor demanding a visible sign of ownership
   - The character asks to "mark their skin", to "give them a tattoo", or to
     "brand them with my mark" - all of these mean THIS action
-
-  KILL VS INK: when the intent is a lasting mark of ownership or shame on a
-  living character, this is the action. Execute is the killing blow on a
-  downed enemy - a character who only wants to brand or mark someone never
-  reaches for Execute.
-
-  The target must be willing in the moment: someone with a relationship with the
-  initiator, or someone too intimidated to refuse. Standing characters only - a
-  downed character takes the Force Tattoo action instead. Never on children.
 
   CONSEQUENCES:
   - The chosen tattoo appears on the target's skin and stays until removed
@@ -40,13 +28,13 @@ parameterMapping:
     description: The standing NPC being marked.
   - type: dynamic
     name: asSection
-    description: The tattoo pack section to draw the mark from.
+    description: Suggested tattoo pack section (non-binding hint to the scene director).
   - type: dynamic
     name: asName
-    description: The specific tattoo name within that section.
+    description: Suggested tattoo name within that section (non-binding hint).
   - type: dynamic
     name: asColor
-    description: "Hex color for the mark, e.g. 8b1a1a (optional - pack default if omitted)."
+    description: "Ignored when the director chooses - the mark is inked black."
 
 enabled: true
 defaultPriority: 2

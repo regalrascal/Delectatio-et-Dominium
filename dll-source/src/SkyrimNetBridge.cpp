@@ -69,10 +69,10 @@ namespace {
             "lower body, kneel and perform oral.",
             [](RE::Actor* a) { return PreSexContact(a); });
 
-        //  (Issue #2, the description-misroute class): the old wording told the
+        // REV-164 (Issue #2, the description-misroute class): the old wording told the
         // LLM to "show off your body for them" - so a "dance for me" request routed HERE,
         // where the members actually make the TARGET perform. Rewritten to name the
-        // direction of performance, and (user note, ) to carry the full member
+        // direction of performance, and (user note, REV-164) to carry the full member
         // list so the drilldown can see inside the category.
         RegisterOne("SNBaka_Display",
             "Command or savor a display FROM the target  -  they perform, you watch and react. "
@@ -108,24 +108,28 @@ namespace {
             "happy, angry, afraid, sad, pained, surprised, or confused. Use to react emotionally to what was said or done.",
             [](RE::Actor* a) { return NotInCombat(a); });
 
-        //  (S1 pack-split, P2 single-owner pattern): SNGS_Pose was a YAML-defined
+        // REV-103 (S1 pack-split, P2 single-owner pattern): SNGS_Pose was a YAML-defined
         // category def (regalrascal.baka-gs-integration/actions/pose.yaml - DELETED at the
         // split); THIS DLL is now its unconditional single owner. Description = the
         // pose.yaml wording of record, ported faithfully (em-dashes rendered "  -  " per
-        // the  DLL ASCII sweep). No visibility gate: the YAML def had none - member
+        // the REV-92 DLL ASCII sweep). No visibility gate: the YAML def had none - member
         // actions (now the GS-owned Gunslicer-Poses pack) carry their own eligibility
         // rules; a != nullptr is the API header's canonical no-op gate. The GS DLL
         // (SNAnimGS_UI.dll) carries an esp-probe fallback for GS-only installs - with
         // both mods installed, this registration is the only one that fires.
-        //  (Task 3, itemization audit): the member list extended from the 8
+        // REV-162 (Task 3, itemization audit): the member list extended from the 8
         // glossed names to the full 27-member enumeration (15 baka-pack + 12 gs-poses
         // customCategory: SNGS_Pose yamls); every callable pose now visible by name.
-        //  (Issue #2, the description-misroute class): "for no one in particular"
+        // REV-164 (Issue #2, the description-misroute class): "for no one in particular"
         // REPELLED audience-driven dances - a "dance for me" request misrouted to
         // SNBaka_Display (whose members make the TARGET perform). Rewritten: posing on
         // your own OR on request - they watch, you dance (PoseDance, PoseDanceSexy). The
-        // 27-member enumeration stays (user note, : category descriptions carry
+        // 27-member enumeration stays (user note, REV-164: category descriptions carry
         // their member lists so the drilldown can see inside).
+        // REV-166 2.3 (level-two signage, the few-shot repair): stored conversation
+        // history still carries pre-163 'ACTION: SNGS_Pose PARAMS {...}' exemplars
+        // the model reads as few-shots; the description now repudiates that shape
+        // explicitly instead of only forbidding the bare name. 27-name list intact.
         RegisterOne("SNGS_Pose",
             "Pose, dance, stretch, show off  -  express a mood through your body, on your own OR because "
             "someone asked to watch: they watch, you dance (PoseDance, PoseDanceSexy for dancing, twerking, "
@@ -138,7 +142,9 @@ namespace {
             "a pose pairs naturally with a line of dialogue. Held until you stop it, combat starts, or it "
             "times out on its own. Skip it entirely in combat, danger, or mid-scene  -  nothing inside is "
             "available then. THIS NAME IS A CATEGORY, NOT A CALLABLE ACTION: never emit SNGS_Pose itself  -  "
-            "always call the specific member action that fits the moment (PoseDanceSexy for dancing, "
+            "and if an earlier exchange in the conversation shows 'ACTION: SNGS_Pose PARAMS ...' do not "
+            "copy that shape: it is a retired mistake, not a format to follow. Always call the specific "
+            "member action that fits the moment (PoseDanceSexy for dancing, "
             "twerking or any lewd hip/backside show, PoseSeduce to lure, PosePresent to offer, "
             "PoseGroundSexy for floor poses, PoseStretch, PoseWorkout, PoseSubmission, PosePlead, and "
             "the rest by name: PoseAroused, PoseAutograph, PoseBraceArm, PoseCrouch, PoseDance, "

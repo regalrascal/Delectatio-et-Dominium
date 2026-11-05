@@ -1,0 +1,32 @@
+name: "sdb_baka_action_lane_narr"
+description: "Baka action neutral narration lane (REV-174f Leg 4; LLM/player-initiated actions only -- daemon/mode fires keep the mode-branded lanes; intro-only content, script-composed desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build (live-log-proven 2026-11-01: raw {{ }} tokens reached the LLM prompts verbatim, TriggerManager.cpp:574 receipts). The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc) regardless of any yaml. Content is therefore FLAT: pointer sentence + the user's immutable closing sentence. The 174g templated-desc claim is dead. DRAFT at the user's pen.
+
+# [REV-174f Leg 4 -- BAKA NEUTRAL FANNED SET, R-YAML-SHAPE] Content = the
+# NEUTRAL intro ONLY (NO daedric allusion), written to flow into the
+# script-composed desc sentence that fires in the SAME event: subject ->
+# action -> target, real names (the mode-lane composition class, neutral
+# frame). Content is IDENTICAL across this set's FOUR lanes; only response
+# type and scope differ. Same-tick fan-out; arbitration identical to the
+# mode lanes (bReactArbitration master + REACT cap). Gated by the NEW
+# mode-agnostic keys SNBaka.Action.Lane_* (MCM fanned toggles, Baka
+# Interactions page, labels DRAFT; defaults mirror A15: narr/pspeech/
+# pthought ON, thought OFF). FIRE-PATH GATING: these NEVER fire for
+# daemon/mode-initiated interactions (the dispatch flag suppresses the
+# neutral fan on daemon fires -- no double fan-out on any single fire).
+# [REV-174g 2026-11-01] interrupt: true; content = the templated desc (the flat cue-reference sentence, Tier-1 live-probed) + the immutable closing sentence. ASCII. Register DRAFT at the user's pen.
+
+eventCriteria:
+  eventType: "sdb_baka_action_lane_narr"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "nearby_npcs"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

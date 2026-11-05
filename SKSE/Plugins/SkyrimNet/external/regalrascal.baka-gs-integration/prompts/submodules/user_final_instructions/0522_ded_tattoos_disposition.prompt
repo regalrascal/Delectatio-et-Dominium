@@ -1,36 +1,45 @@
-{# DeD Tattoos — disposition guidance for witnesses. ACTING-NPC-keyed: the
-   branches read the ACTING NPC's arousal tier (get_ded_arousal), NOT the
-   wearer's — a neutral witness and a fascinated witness react differently
-   to the same visibly marked actor (the planner's fascination/disgust
-   matrix as disposition text). Eligibility via get_ded_marks_any
-   (module-owned companion decorator, the 132b class): a visibly marked
-   actor in the observer's cell. VISIBLE marks only (the REV-157 ruling —
-   covered marks do not enter this lane). Tier-0 = silence (the
-   anti-obsession rule; 0171's tier-1 floor).
+{# DeD Tattoos -- disposition guidance for witnesses. ACTING-NPC-keyed (the
+    WITNESS's reaction, not the wearer's): a neutral witness and a
+    fascinated witness react differently to the same visibly marked actor
+    (the planner's fascination/disgust matrix as the register spectrum).
+    Eligibility via get_ded_marks_any (module-owned companion decorator,
+    the 132b class): a visibly marked actor in the observer's cell.
+    VISIBLE marks only (the REV-157 ruling -- covered marks do not enter
+    this lane).
 
-   REV-157 (2026-10-24) — the 0520 mold applied to SlaveTats. Lane
-   conventions transcribed exactly: this lane's actor variable is
-   npc.UUID (the 0050/0550 ufi precedent), NOT actor_uuid; NO
-   render_mode gate (the 0520 hardening — eligibility via
-   get_ded_marks_any already renders nothing when nothing is visible);
-   the tier read is guarded (default() + isNumber; tier defaults 0 =
-   silence when the arousal framework is absent — the s9 null contract).
-   NULL CONTRACT (psc side, REV-157): get_ded_marks_any always returns
-   well-formed JSON — {"any": false} under every absent-framework state.
-   Branch texts below are STRATEGIST DRAFT (register entry 36) — the
-   user's ruling gates INSTALL; first enabled render IS the probe
-   (clean = LIVE; error box = escalate). #}
-{% set dedany = get_ded_marks_any(npc.UUID) %}
+    REV-178c-hotfix Leg 3 (user ruling 2026-11-0X) -- THE DEBAND COMPLETION
+    (extends 178c's 0520 doctrine to this family; the user caught the
+    seam). FUNERAL RECEIPTS -- the {% if %} DISPATCH GATES are RETIRED:
+    (1) "{% set tier = default(get_ded_arousal(npc.UUID).tier, 0) %}" +
+        the isNumber guard -- GONE (the mechanical anchor);
+    (2) "{% if tier == 3 %} ... run hot -- open admiration and appetite;
+        the marks on their skin hold your gaze and you make no effort
+        to hide it." -- the GATE is GONE; the register TEXT lives on in
+        the block below;
+    (3) "{% else if tier == 2 %} ... be intrigued -- curiosity and
+        appraising interest, reading the marks and what they say about
+        the one wearing them." -- the GATE is GONE; the TEXT lives on;
+    (4) "{% else if tier == 1 %} ... be taken aback -- scandal,
+        disapproval, or quiet contempt for what is written on their
+        skin." -- GATE gone, TEXT lives on;
+    (5) the TIER-0 SILENCE RULE ("Tier-0 = silence", the anti-obsession
+        rule, 0171's tier-1 floor) -- GONE: a low-arousal witness may now
+        also react (or not) per the LLM's context judgment; arousal no
+        longer gates WHETHER the fragment renders.
+    NOTHING flattened, NO branch deleted: all three registers render as
+    a suggestion block; the witness's arousal rides the pack as FACT
+    (the A17 band+raw discipline, untouched in the bio/state decorators
+    -- what is retired here is the STEERING, not the facts); the LLM
+    picks the register. Lane conventions unchanged (REV-157): actor var
+    npc.UUID (0050/0550 precedent); NO render_mode gate; NULL CONTRACT
+    (psc side): get_ded_marks_any always returns well-formed JSON.
+    Suggestion block = REGISTER DRAFT (the user's pen; release's last
+    text additions); first enabled render IS the probe (clean = LIVE;
+    error box = escalate). #}{% set dedany = get_ded_marks_any(npc.UUID) %}
 {% if dedany and dedany.any %}
-{% set tier = default(get_ded_arousal(npc.UUID).tier, 0) %}
-{% if not isNumber(tier) %}
-{% set tier = 0 %}
-{% endif %}
-{% if tier == 3 %}
-When reacting to the visible tattoos, run hot — open admiration and appetite; the marks on their skin hold your gaze and you make no effort to hide it.
-{% else if tier == 2 %}
-When reacting to the visible tattoos, be intrigued — curiosity and appraising interest, reading the marks and what they say about the one wearing them.
-{% else if tier == 1 %}
-When reacting to the visible tattoos, be taken aback — scandal, disapproval, or quiet contempt for what is written on their skin.
-{% endif %}
+Your own arousal is a fact in this scene (it rides your character facts). When reacting to the visible tattoos, pick the register that fits YOU as read in this moment — any of these may read true, and only you know which:
+- Run hot: open admiration and appetite; the marks on their skin hold your gaze and you make no effort to hide it.
+- Intrigued: curiosity and appraising interest, reading the marks and what they say about the one wearing them.
+- Taken aback: scandal, disapproval, or quiet contempt for what is written on their skin.
+- Or any register between these the moment and your facts suggest.
 {% endif %}

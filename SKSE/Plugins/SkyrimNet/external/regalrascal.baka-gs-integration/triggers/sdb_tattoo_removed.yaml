@@ -7,12 +7,8 @@ eventCriteria:
 response:
   type: "direct_narration"
   content: |
-    The mark on {{ target }}'s skin has just been wiped away. Anyone who notices reacts
-    in their own register -- relief, curiosity, a comment, or pointed silence.
-
-    The specific mark that was removed is named in the event text; nothing
-    beyond it is apparent to onlookers. {{ target }}'s own reaction belongs to
-    the conversation that follows.
+    The mark on {{ target }}'s skin has just been removed. Anyone who notices reacts
+    in their own register -- relief, curiosity, disappointment, or pointed silence.
 
 audience: "nearby_npcs"
 

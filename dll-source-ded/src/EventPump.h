@@ -1,6 +1,6 @@
 #pragma once
 
-//  -- DeDService event pump (spec section 1.4): ModEvent emission with
+// REV-113 -- DeDService event pump (spec section 1.4): ModEvent emission with
 // naming validation + debug tracing. Emissions ride the standard ModCallbackEvent
 // source (eventName, strArg, numArg[float], sender); afFloatArg/akFormArg are
 // accepted for API completeness -- the platform ModEvent carries no extra

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fomod>
-  <!-- Authored  Phase C (2026-10-02); verified against two known-working local
+  <!-- Authored REV-68 Phase C (2026-10-02); verified against two known-working local
        FOMODs (SeverActions 3.9.14, IntelEngine 3.5.0.1) same session. Player-facing
-       title per the  ?7 rider: "Delectatio et Dominium" (tagline: "Bedroom drama
+       title per the REV-68 ?7 rider: "Delectatio et Dominium" (tagline: "Bedroom drama
        for SkyrimNet"). Legacy Beta 25 names live ONLY in technical ids/paths (manifest
        id regalrascal.baka-gs-integration, folder names) - load-bearing, unchanged. -->
   <Name>Delectatio et Dominium</Name>

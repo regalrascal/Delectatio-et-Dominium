@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-REM  WARNING (FILE_STRUCTURE.md): the 2026-09-30 repo migration (path 1b^>1a)
+REM REV-57 WARNING (FILE_STRUCTURE.md): the 2026-09-30 repo migration (path 1b^>1a)
 REM left stale CMake caches in this build tree (CMakeCache.txt, cmake_install.cmake,
 REM compile_commands.json still point at the OLD BKA workspace path). The NEXT clean
 REM build of BOTH DLLs requires, from the repo root, BEFORE configuring:
@@ -45,12 +45,12 @@ if %ERRORLEVEL% neq 0 ( echo CONFIGURE FAILED & exit /b 1 )
 
 if %ERRORLEVEL% neq 0 ( echo BUILD FAILED & exit /b 1 )
 
-REM  ( remediation step 3): companion psc compiles with the DLL build - the
+REM REV-114 (REV-113b remediation step 3): companion psc compiles with the DLL build - the
 REM psc-flow fix. The canonical island compile (GS tools/compile/compile_baka.bat) stays
 REM the flow of record; this step makes the DLL bat self-contained (psc + pex travel with
 REM the DLL artifact). Vanilla imports suffice: DeDService.psc is a Hidden script declaring
 REM only global natives with vanilla Actor/Form params.
-REM  FIX: PapyrusCompiler resolves the TARGET script through the import path too
+REM REV-116 FIX: PapyrusCompiler resolves the TARGET script through the import path too
 REM (vanilla-only -i fails with "<unknown>(0,0): unable to locate script DeDService";
 REM proven by reproducing both variants this session). The psc's own dir joins -i.
 set CC=D:\Steam\steamapps\common\Skyrim Special Edition\Papyrus Compiler\PapyrusCompiler.exe

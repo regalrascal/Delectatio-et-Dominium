@@ -68,18 +68,18 @@ Function RunConsequence()
     ; through a session (one successful recovery observed, then nothing). Without it alive, nobody held
     ; here ever gets a recovery check — they stay down forever. EnsureAlive() re-arms its poll loop
     ; unconditionally, which is a harmless no-op if it's already ticking.
-    ;  Amendment 3 (Option C, user-ruled 2026-10-12): the manager is esp-attached at QUST
+    ; REV-98b Amendment 3 (Option C, user-ruled 2026-10-12): the manager is esp-attached at QUST
     ; 0x801 (second script, 0 props, DNAM 11 start-game-enabled) — clean-save instantiation intact
-    ; since the  fold; 's "no esp host form" finding is WITHDRAWN (objectFormat-2
+    ; since the REV-62 fold; REV-96's "no esp host form" finding is WITHDRAWN (objectFormat-2
     ; decode error — the prior hand-decode misread property values as script names; enumeration
-    ; receipts in PROJECT_STATE ). 0x800 is the author-designed Downed WORKER transient
+    ; receipts in PROJECT_STATE §104). 0x800 is the author-designed Downed WORKER transient
     ; (Stop() on all six exits) — the old 0x800 cast here was a wrong-form cast, effectively a
     ; no-op; every prior "manager instance ABSENT" log line was true about the wrong form.
     ; Retargeted to 0x801 (the un-cast 0x800 PRESENCE probes elsewhere stay — presence and
     ; manager are different questions at different forms).
     ; (bridge declared at function scope, not inside the If: Papyrus block-scopes local
     ; variables, and the ForceEssential borrow below (the `If bridge` further down) needs it
-    ; after this probe block closes —  compile-0/0 lesson.)
+    ; after this probe block closes — REV-96 compile-0/0 lesson.)
     SkyrimNet_AcheronIntegration bridge = None
     If Game.GetFormFromFile(0x000801, "SkyrimNet_AcheronIntegration.esp")
         bridge = Game.GetFormFromFile(0x000801, "SkyrimNet_AcheronIntegration.esp") as SkyrimNet_AcheronIntegration
@@ -136,8 +136,8 @@ Function RunConsequence()
     ; Borrowed from the Surrender mod's own proven technique: force Essential for the duration of the
     ; hold so a stray follow-up hit while helpless doesn't actually kill them. Reuses the bridge's own
     ; copy of this (same shared SNBaka.EssentialForcedByUs key its _Recover already knows how to clear).
-    ; : with the 0x801 retarget this borrow is LIVE for the first time (the old 0x800
-    ; wrong-form cast made it a silent no-op on every path).  sentinel ( observability
+    ; REV-98b: with the 0x801 retarget this borrow is LIVE for the first time (the old 0x800
+    ; wrong-form cast made it a silent no-op on every path). §5 sentinel (REV-89 observability
     ; rider): unexpected victim behavior = REPORT, don't tune.
     If bridge
         bridge._ForceEssentialForDown(v, True)

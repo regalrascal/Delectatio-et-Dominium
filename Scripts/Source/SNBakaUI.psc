@@ -20,7 +20,7 @@ Bool Function IsAvailable() Global Native
 ;   0=BackHug  1=FrontHug  2=Kiss  3=Flirt
 ;   4=GrabHold 5=Struggle  6=Choke  7=WombHit
 ;   8=ForcedKiss 9=Spank 10=TouchChest 11=Examine
-;  12=ShowOffBody [ UI label: "Ogle Body"] 13=DrunkExploit 14=DrugFood 15=Fondle
+;  12=ShowOffBody [REV-84 UI label: "Ogle Body"] 13=DrunkExploit 14=DrugFood 15=Fondle
 ;  -1=Cancel
 Function ShowInteractMenu(Actor akCaster, Actor akTarget) Global Native
 
@@ -75,19 +75,19 @@ Actor Function GetLastHitAggressor(Actor akTarget) Global Native
 ; now starts the QTE). Any negative value hides the bar. Safe to call every tick while the key is held.
 Function SetGetUpCharge(Float afPct) Global Native
 
-;  Feature B: pushes the ambient mode-button ON/OFF highlight state to the open
+; REV-147 Feature B: pushes the ambient mode-button ON/OFF highlight state to the open
 ; SNBaka_Menu footer (Mephala/Molag Bal buttons). Papyrus is the arbiter -- it owns the
 ; SNBaka.MephalaMode / SNBaka.MolagBalMode flags and calls this at panel open and after
 ; every toggle; the DLL relays the payload to JS (the SetGetUpCharge invoke pattern).
 Function SetModeStates(Bool abMephala, Bool abMolagBal) Global Native
 
-; : opens the SlaveTats degradation-set picker (SNSlaveTats_Menu view). asJson is the payload
+; REV-72: opens the SlaveTats degradation-set picker (SNSlaveTats_Menu view). asJson is the payload
 ; built by SNBaka_SlaveTatsModule.BuildMenuJSON(). The player's pick comes back to
 ; SkyrimNet_BakaIntegration._ST_MenuChoice(slot, section, name) via the DLL's modal dispatch:
 ; slot is "spank"/"defeat"/"escalation"; empty section/name = cleared; "cancel" = no change.
 Function ShowSlaveTatsMenu(String asJson) Global Native
 
-;  (Task 2.3): opens the Execute accept/decline confirmation popup (SNBaka_ExecuteConfirm
+; REV-92 (Task 2.3): opens the Execute accept/decline confirmation popup (SNBaka_ExecuteConfirm
 ; view) shown when the LLM-gate (MCM "Execution Action Use") requires the player's consent before
 ; a companion (level 2) or any actor (level 3) executes a downed victim. Game PAUSES while the
 ; popup waits (Focus pauseGame=true - a killing blow must not land mid-menu). The answer comes

@@ -11,8 +11,13 @@ description: |
   naturally with a line of dialogue — the "as you wish," the lowered "yes, my thane."
 
   THE POOL THIS ACTION DRAWS FROM: kneeling tied with hands behind the head, surrendered with hands up, standing with hands tied back, on the ground tied and resting on the side. (REV-161 4.3 moves enrichment - register batch DRAFT.)
-  A fight, real danger, or an ongoing sex scene ends the pose at once — it never
-  begins in one.
+  POOL KEYWORDS (REV-167b tier-1 tag carry, entry-45 candidates as shipped; the user pen refinement is pending): cuffed, bound, dancing, prisoner, captive, tied, kneeling, hands behind head, surrender, surrendered, hands up, yielding, standing, hands behind back, ground, helpless, side, resting
+  (REV-167b finding 1: this boilerplate line previously claimed a fight ends the
+  pose at once — mechanically FALSE for this action, the lockAI surrender holds;
+  the body text above is the truth.)
+  An ongoing sex scene never includes this pose — it never begins in one; a
+  fight alone does NOT free you (unlike other poses, the surrender holds until
+  you stop it or it times out).
 questEditorId: SkyrimNet_AnimationsGS
 scriptName: SkyrimNet_AnimationsGS
 executionFunctionName: PoseSubmission_Execute

@@ -1,7 +1,7 @@
 #include "SkyrimNetBridge.h"
 
 namespace {
-    //  (S1 pack-split, P2 single-owner pattern): this DLL registers SNGS_Pose
+    // REV-103 (S1 pack-split, P2 single-owner pattern): this DLL registers SNGS_Pose
     // ONLY as the esp-probe FALLBACK - the Baka DLL (SkyrimNet_BakaIntegration.dll) is
     // the def's unconditional owner. Probe = resolving the Baka motherboard quest
     // (QUST 0xD62); null exactly when SkyrimNet_BakaIntegration.esp is absent from the
@@ -53,17 +53,21 @@ void SkyrimNetBridge::Init() {
     }
     SKSE::log::info("[SNAnimGS] SkyrimNet C++ API v{} detected (Baka integration absent - GS fallback path, REV-103).", ver);
     // Description = the deleted pose.yaml wording of record (regalrascal.baka-gs-integration
-    // pack;  ruling (b): ported faithfully; em-dashes rendered "  -  " per the
-    //  DLL ASCII sweep). No visibility gate: the YAML def had none (member actions
+    // pack; REV-103 ruling (b): ported faithfully; em-dashes rendered "  -  " per the
+    // REV-92 DLL ASCII sweep). No visibility gate: the YAML def had none (member actions
     // carry their own eligibility rules) - a != nullptr is the API header's canonical no-op.
-    //  (Task 3, itemization audit): the member list extended from the 8
+    // REV-162 (Task 3, itemization audit): the member list extended from the 8
     // glossed names to the full 27-member enumeration (matches the Baka DLL's
     // owning def verbatim; every callable pose visible by name).
-    //  (Issue #2, the description-misroute class): "for no one in particular"
+    // REV-164 (Issue #2, the description-misroute class): "for no one in particular"
     // REPELLED audience-driven dances - a "dance for me" request misrouted to
     // SNBaka_Display (whose members make the TARGET perform). Rewritten: posing on
     // your own OR on request - they watch, you dance (PoseDance, PoseDanceSexy).
     // Kept in lockstep with the Baka DLL's owning def (dll-source/src).
+    // REV-166 2.3 (level-two signage, the few-shot repair): stored conversation
+    // history still carries pre-163 'ACTION: SNGS_Pose PARAMS {...}' exemplars
+    // the model reads as few-shots; the description now repudiates that shape
+    // explicitly instead of only forbidding the bare name. 27-name list intact.
     RegisterOne("SNGS_Pose",
         "Pose, dance, stretch, show off  -  express a mood through your body, on your own OR because "
         "someone asked to watch: they watch, you dance (PoseDance, PoseDanceSexy for dancing, twerking, "
@@ -76,7 +80,9 @@ void SkyrimNetBridge::Init() {
         "a pose pairs naturally with a line of dialogue. Held until you stop it, combat starts, or it "
         "times out on its own. Skip it entirely in combat, danger, or mid-scene  -  nothing inside is "
         "available then. THIS NAME IS A CATEGORY, NOT A CALLABLE ACTION: never emit SNGS_Pose itself  -  "
-        "always call the specific member action that fits the moment (PoseDanceSexy for dancing, "
+        "and if an earlier exchange in the conversation shows 'ACTION: SNGS_Pose PARAMS ...' do not "
+        "copy that shape: it is a retired mistake, not a format to follow. Always call the specific "
+        "member action that fits the moment (PoseDanceSexy for dancing, "
         "twerking or any lewd hip/backside show, PoseSeduce to lure, PosePresent to offer, "
         "PoseGroundSexy for floor poses, PoseStretch, PoseWorkout, PoseSubmission, PosePlead, and "
         "the rest by name: PoseAroused, PoseAutograph, PoseBraceArm, PoseCrouch, PoseDance, "

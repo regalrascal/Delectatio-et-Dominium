@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-REM  WARNING (FILE_STRUCTURE.md): the 2026-09-30 repo migration (path 1b^>1a)
+REM REV-57 WARNING (FILE_STRUCTURE.md): the 2026-09-30 repo migration (path 1b^>1a)
 REM left stale CMake caches in this build tree (CMakeCache.txt, cmake_install.cmake,
 REM compile_commands.json still point at the OLD BKA workspace path). The NEXT clean
 REM build of BOTH DLLs requires, from the repo root, BEFORE configuring:

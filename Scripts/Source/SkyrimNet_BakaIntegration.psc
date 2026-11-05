@@ -120,7 +120,7 @@ Float Property fNPCStageTime        = 5.0 Auto
 Float Property fQTEStartDelay       = 4.0  Auto
 ; Escalation window and QTE difficulty after QTE defeat
 Float Property fEscalationWindow     = 20.0 Auto  ; how long the downed victim waits for escalate before recovering
-Float Property fDownedSilenceSec     = 25.0 Auto  ;  Task 2: silence-watch length for an ABANDONED delegated hold (20-30s band)
+Float Property fDownedSilenceSec     = 25.0 Auto  ; REV-17 Task 2: silence-watch length for an ABANDONED delegated hold (20-30s band)
 Float Property fEscalationDifficulty = 70.0 Auto
 ; SexLab is now reached ONLY through the SkyrimNet_BakaSL bridge (global funcs), so this script holds
 ; no SexLab script types and the mod loads/runs without SexLab installed.
@@ -138,6 +138,14 @@ Bool Property bCreatureSceneAllowed = True Auto
 ; proximity pipeline only — on-hit mid-combat grapples stay instant, an LLM round-trip is too slow
 ; for a live melee exchange). Fail-open on any LLM error. See snbaka_escalation_gate.prompt.
 Bool Property bLLMGateEscalation   = False Auto
+; [REV-178e rider 4 / S250] LLM tattoo-selection ask: ON (default, A/B
+; dogfood) = the auto-apply tattoo lanes (downed ApplyTattoo, NPC-initiated
+; CommandTattoo, MarkPlayer) fire a snbaka_tattoo_select ask so the director
+; picks a real design from the target's installed non-event body-compat
+; packs; OFF = rider-2 behavior exactly (local pick/validate, no ask). The
+; player-initiated CommandTattoo picker lane (rider 3) is never LLM'd.
+; Applies are always color 0x000000 (user ruling 3).
+Bool Property bTattooSelectAsk    = True Auto
 ; Corner-message master switch: all player-facing Debug.Notification messages route through _Notify,
 ; so turning this off gives a clean HUD. Papyrus log traces are unaffected.
 Bool Property bShowNotifications   = True Auto
@@ -220,26 +228,26 @@ Bool  Property bAnimatedTearsEnabled   = True  Auto
 Bool  Property bExpressionsEnabled      = True  Auto  ; master toggle for facial expressions
 Float Property fExpressionIntensity     = 0.50  Auto  ; 0.0-1.0 scale on all expression morphs (lower = subtler)
 Bool  Property bMatchHeight             = True  Auto  ; height-match paired-anim actors (DOM ScaleActorToOther) so tall/short pairs align
-; ===== : detection + inflation triggers (cum detection / FHU inflation) =====
+; ===== REV-63: detection + inflation triggers (cum detection / FHU inflation) =====
 ; Soft-optional guards: OCum / SL proxy / FHU each carry a toggle; all presence-gated
 ; (listeners idle with the source mod absent -- no error spam; see the DETECTION
 ; TRIGGERS section near the tail for the full design notes).
 Bool  Property bCumDetectionEnabled = True Auto  ; master: OCum + SL-proxy cum cues (sdb_cum_applied)
 Bool  Property bSLProxyEnabled      = True Auto  ; SexLab orgasm-hook proxy share of the cum cue
-;  Task 2.2 (register 24, ruled text): "When enabled, sex scenes will
+; REV-133c Task 2.2 (register 24, ruled text): "When enabled, sex scenes will
 ; generate cum decals on additional body parts." Throat finishes also apply
 ; face+chest; vaginal/anal finishes also apply thighs. Driven in
 ; SNBaka_CumDetectionModule._WriteCumState (per-scene-source appliance).
-Bool  Property bMoreCumEnabled     = False Auto  ; More Cum: additional cum decals on additional body parts (: default flipped to OFF by user ruling; was True at )
-;  (user-ruled dogfood 2026-10-21): Follow-up Prompt -- the OPTIONAL
-; direct narration for the ambient cum cue. OFF by default (the 
+Bool  Property bMoreCumEnabled     = False Auto  ; More Cum: additional cum decals on additional body parts (REV-134c: default flipped to OFF by user ruling; was True at REV-133c)
+; REV-134f (user-ruled dogfood 2026-10-21): Follow-up Prompt -- the OPTIONAL
+; direct narration for the ambient cum cue. OFF by default (the REV-134d
 ; cue-only anatomy verdict stays the default); ON restores the register
 ; entry-22 narration as a gated second surface via the sdb_cum_ambient_narr
 ; event type (SNBaka_CumDetectionModule.HandleCumAmbientDue emits it only
 ; when this is ON; the yaml sdb_cum_ambient_narr.yaml matches that event type
 ; ONLY, so cue and narration are fully separable surfaces).
 Bool  Property bCumFollowUpNarration = False Auto
-;  (R2, user-ruled 2026-10-21): Decal Source Selection -- which cum decal
+; REV-134d (R2, user-ruled 2026-10-21): Decal Source Selection -- which cum decal
 ; source this module applies and tracks. 0=OCum (default, user-ruled), 1=SexLab,
 ; 2=P+, 3=SLACS-2+SCO. Retires the bSLProxyEnabled MCM toggle (that property stays,
 ; dormant, for save compatibility -- its detection gate keeps its last value; the
@@ -247,7 +255,7 @@ Bool  Property bCumFollowUpNarration = False Auto
 ; starts at 0/OCum on every save; the old toggle's state is NOT migrated.
 Int   Property iDecalSource        = 0    Auto
 Bool  Property bFHUInflationEnabled = True Auto  ; FHU inflation level awareness (sdb_fhu_inflate/deflate)
-;  (Follow-up Prompt pattern,  precedent applied to FHU;
+; REV-153 (Follow-up Prompt pattern, REV-134f precedent applied to FHU;
 ; user-ruled 2026-10-24): optional direct narration for the inflation cue as a
 ; gated second surface via the sdb_fhu_inflate_narr event type
 ; (SNBaka_FHUInflationModule._FireChange emits it immediately after the
@@ -255,13 +263,13 @@ Bool  Property bFHUInflationEnabled = True Auto  ; FHU inflation level awareness
 ; matches that event type ONLY, so cue and narration are fully separable).
 ; Default OFF = cue-only, per the 134f anatomy verdict.
 Bool  Property bFHUInflateNarration = False Auto
-;  (FHU ambient bystander reaction cue -- the planner's 30%/60% expose
+; REV-154 (FHU ambient bystander reaction cue -- the planner's 30%/60% expose
 ; bands, the cum-ambient pattern applied to FHU; the user's 2026-10-24 shape):
 ; bFHUAmbientNarration = the gated direct-narration second surface for the
 ; AMBIENT cue (Fill Her Up MCM "Ambient Narration"; the yaml
 ; sdb_fhu_ambient_narr.yaml matches the sdb_fhu_ambient_narr event type ONLY,
 ; so ambient cue and narration are fully separable -- the 153/134f pattern).
-;  (Issue #4, user ruling): DEFAULT FLIPPED OFF -> ON (the 163 dogfood
+; REV-164 (Issue #4, user ruling): DEFAULT FLIPPED OFF -> ON (the 163 dogfood
 ; ran ambient-narration dark because nobody had found the toggle; defaults now
 ; match the intended out-of-box experience). A user who turned it off in the
 ; MCM keeps their off (the key is read live per fire).
@@ -270,24 +278,38 @@ Bool  Property bFHUInflateNarration = False Auto
 ; per the C5 ruling). The ambient cue itself (sdb_fhu_ambient) rides the
 ; 10s level poll with a per-actor 60s cadence, anchored at first band
 ; crossing, no catch-up, 7200s-RT lifetime guard (module detail in
-; SNBaka_FHUInflationModule._CheckAmbientExpose). : the FIRST ambient
+; SNBaka_FHUInflationModule._CheckAmbientExpose). REV-164: the FIRST ambient
 ; now fires AT BAND ENTRY (first-fire acceleration, module-side).
 Bool  Property bFHUAmbientNarration = True Auto
 Int   Property iFHUAmbientNoticeBand = 30 Auto
 Int   Property iFHUAmbientHeavyBand  = 60 Auto
-;  5.1 (user-ruled at the dogfood): MODE DIRECT-NARRATION TRIGGERS, the
-; 134f Follow-up Prompt pattern per mode. bMephalaModeNarration /
-; bMolagBalModeNarration gate a narration event fired alongside each daemon
-; mode-action execution (desc = what just happened, actor names + action);
-; the yaml (sdb_mephala_mode_narr.yaml / sdb_molagbal_mode_narr.yaml) matches
-; its event type ONLY and asks surrounding NPCs to react (direct_narration).
-; DEFAULT OFF per the user ruling. MOLAG BAL: narration YES, thoughts still NO
-; (both user rulings -- the thought-seeding refusal stands). Labels/tooltips
-; are pending-approvals register DRAFTs (entry 37; the 134f naming pattern).
-Bool  Property bMephalaModeNarration  = False Auto
-Bool  Property bMolagBalModeNarration = False Auto
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] bMephalaModeNarration /
+; bMolagBalModeNarration REMOVED with _DaemonModeNarration -- the reaction
+; lanes (per-lane toggles + bReactArbitration master) are the live surface.
+; ============================================================================
+; [REV-174 D3 LEG 3 / A15] REACTION LANES + REACT ARBITRATION MCM surface.
+; ALL FOUR lanes ON by default (user ruling of record 2026-10-30, A15 --
+; supersedes every earlier player-lanes-OFF posture). Per-lane toggles per
+; mode (narr / thought / pspeech / pthought, design doc 4.2/4.6); the master
+; bReactArbitration toggle is the "LLM decides reactions" switch (6.2: OFF =
+; manual mode -- every enabled lane fires; ON = the answer's REACT: field
+; arbitrates, fail-open on missing/invalid). Labels/tooltips = register
+; DRAFTs (entry-class 4.6; the user's pen at the sitting). The Sanguine /
+; Sheogorath lane toggles live GS-side as GSAnim.* StorageUtil keys (the
+; established GS MCM pattern); these motherboard properties cover Mephala +
+; MolagBal only.
+; ============================================================================
+Bool  Property bReactArbitration   = True Auto
+Bool  Property bMephalaLaneNarr    = True Auto
+Bool  Property bMephalaLaneThought = False Auto   ; [REV-174a D2e] default OFF (user fallback ruling; toggle still on the MCM surface)
+Bool  Property bMephalaLanePSpeech = True Auto
+Bool  Property bMephalaLanePThought = True Auto
+Bool  Property bMolagBalLaneNarr    = True Auto
+Bool  Property bMolagBalLaneThought = False Auto   ; [REV-174a D2e] default OFF (user fallback ruling; toggle still on the MCM surface)
+Bool  Property bMolagBalLanePSpeech = True Auto
+Bool  Property bMolagBalLanePThought = True Auto
 ; Per-source vs unified cum-cue shaping (amendment 2b): 0 = unified (framework-neutral,
-; default -- the proposal awaiting  ruling), 1 = per-source wording.
+; default -- the proposal awaiting §7 ruling), 1 = per-source wording.
 Int   Property iCumCueMode          = 0    Auto
 
 ; === Sounds (assign in CK to Baka sound descriptors) ===
@@ -395,6 +417,16 @@ Bool  _bGatePending  = False
 Float _fGateSentRT   = 0.0
 Actor _gateCreature  = None
 Actor _gateVictim    = None
+; --- [REV-178e rider 4 / S250] tattoo-selection ask transient state: one ask
+; in flight at a time (the escalation-gate precedent), 30s expiry on a stale
+; pending slot, duplicate lanes degrade immediately instead of queueing ---
+Bool   _bTattooAskPending     = False
+Float  _fTattooAskSentRT      = 0.0
+Actor  _akTattooAskInitiator  = None
+Actor  _akTattooAskTarget     = None
+String _sTattooAskLane        = ""     ; "llm_action" | "dialogue" | "ownership"
+String _sTattooAskHintSection = ""
+String _sTattooAskHintName    = ""
 
 ; Corner-message wrapper — every player-facing Debug.Notification in this script routes through here
 ; so the MCM "Show Notifications" toggle can silence the lot for a clean HUD. Traces are unaffected.
@@ -439,13 +471,13 @@ Actor _pendingSexNPC2  = None
 ; ============================================================
 ; Init
 ; ============================================================
-Bool _bFreshBoot = False  ;  4.2: True only when OnInit (a new game, or this module's
+Bool _bFreshBoot = False  ; REV-144 4.2: True only when OnInit (a new game, or this module's
                           ; first boot inside an ongoing save) started this instance -- NOT set
                           ; when a save restores the script and Setup() runs via the MCM reload
                           ; chain. Drives the player-target policy migration seed.
 
 Event OnInit()
-    _bFreshBoot = True    ;  4.2: fresh-boot marker (see _SeedPlayerTargetPolicy)
+    _bFreshBoot = True    ; REV-144 4.2: fresh-boot marker (see _SeedPlayerTargetPolicy)
     PlayerRef   = Game.GetPlayer()
     XMarkerBase = Game.GetFormFromFile(0x0E, "Skyrim.esm")
     Setup()
@@ -463,7 +495,7 @@ Event OnPlayerLoadGame()
     _bPlayerIsVictim      = False
     _bDruggedEscalation   = False
     _fLastNPCActionTime   = 0.0
-    ; : the D5 clamp call that lived HERE (OnPlayerLoadGame) is DEAD CODE on
+    ; REV-123: the D5 clamp call that lived HERE (OnPlayerLoadGame) is DEAD CODE on
     ; this quest -- this script extends Quest and the quest's OnPlayerLoadGame never
     ; fires (this repo's own receipts: L8992/L9229 comments; the 10-17 session proves
     ; it -- no clamp sentinel at the 01:59:31 load while the stale cosave stamp
@@ -480,20 +512,20 @@ Event OnPlayerLoadGame()
 EndEvent
 
 Function Setup()
-    ; : the D5 stale-cosave-stamp clamp moved HERE from the quest's
+    ; REV-123: the D5 stale-cosave-stamp clamp moved HERE from the quest's
     ; OnPlayerLoadGame (dead site -- a Quest script never receives that event;
-    ; see the  receipts: no clamp sentinel at the 10-17 01:59:31 load
+    ; see the REV-123 receipts: no clamp sentinel at the 10-17 01:59:31 load
     ; while the stale LastCumCueRT stamp suppressed the 02:05:45 P+ cue).
     ; Setup() is the PROVEN load path (OnInit + SkyrimNet_BakaIntegration_MCM's
     ; OnGameReload on every single load -- see L418's own receipt comment), and
     ; the clamp must run BEFORE anything arms so no arming path can consume a
     ; stale stamp. Boot (new game) is a no-op pass: stamps are fresh.
     SNBaka_CumDetectionModule.ClampStaleRTStamps(Self)
-    ;  4.2: player-target policy migration seed (the bPlayerCanBeSpanked fold-in).
+    ; REV-144 4.2: player-target policy migration seed (the bPlayerCanBeSpanked fold-in).
     ; One-shot; see _SeedPlayerTargetPolicy for the continuity-vs-default decision.
     _SeedPlayerTargetPolicy()
     _SeedTargetSexLevel()
-    _DaemonArm()   ; : re-arm the ambient daemon tick from save-persisted mode flags (idempotent when both off)
+    _DaemonArm()   ; REV-145: re-arm the ambient daemon tick from save-persisted mode flags (idempotent when both off)
     ; Confirmed real bug from testing: THIS is the actual primary re-registration path (called from
     ; SkyrimNet_BakaIntegration_MCM's OnGameReload on every single load -- see that script's own comment;
     ; the OnUpdateGameTime heartbeat in this quest is only a secondary backup), yet it never refreshed
@@ -504,7 +536,7 @@ Function Setup()
     If !PlayerRef
         PlayerRef = Game.GetPlayer()
     EndIf
-    ;  1a: clear stale PendingScene latches BEFORE anything re-registers — every
+    ; REV-24 1a: clear stale PendingScene latches BEFORE anything re-registers — every
     ; surviving latch at this point is prior-session residue (the owning VM thread is gone).
     _SweepStaleSceneLatches()
     UnregisterForAllModEvents()
@@ -512,19 +544,19 @@ Function Setup()
     ; Acheron-downed handoff (creature pounce) + AEL/menu events. Re-asserted from OnUpdateGameTime too,
     ; as a backup in case this path is ever skipped.
     _RegisterModEvents()
-    ;  (Phase B,  module contract): module lifecycle arm pass — runs right
+    ; REV-68 (Phase B, §67 module contract): module lifecycle arm pass — runs right
     ; after the forwarding-event surface so every module is armed/handshaken on the
     ; same paths that re-assert the listeners (Setup + heartbeat, both idempotent).
     _ArmModules()
-    ; : FHU inflation level poll (soft-optional: armed only when FHU is
+    ; REV-63: FHU inflation level poll (soft-optional: armed only when FHU is
     ; actually installed and the toggle is on; multiplexed onto the shared
     ; real-time update slot -- see _ArmRealtimeTimer).
-    If bFHUInflationEnabled && SNBaka_FHUInflationModule.Installed()   ;  Task 2: probe moved to the module (call shape only)
+    If bFHUInflationEnabled && SNBaka_FHUInflationModule.Installed()   ; REV-96 Task 2: probe moved to the module (call shape only)
         _FHUStartPoll()
     Else
         _FHUStopPoll()
     EndIf
-    _STAmbientStart()   ;  (dogfood 2.2): decoupled ST ambient exposure cadence (mode-agnostic)
+    _STAmbientStart()   ; REV-159 (dogfood 2.2): decoupled ST ambient exposure cadence (mode-agnostic)
     ; Re-read SNBaka_Offsets.ini so edits to the offsets file apply on game load (no restart needed).
     SNBakaUI.ReloadOffsets()
     ; Persist the "Sell to Slavery disabled" choice across loads: the YAML re-registers the action every
@@ -663,7 +695,7 @@ Bool Function IsFollowerSlaveryInstalled()
     Return StorageUtil.GetIntValue(None, "fsm_bIsMCMInstalled", 0) == 1
 EndFunction
 
-; Plugin-presence probe for the Acheron bridge ( MCM "Downed State" section) —
+; Plugin-presence probe for the Acheron bridge (REV-68 MCM "Downed State" section) —
 ; reads the bridge's own quest form (SNAcheron_Quest 0x800) exactly like the liveness
 ; probes in _DelegateDownToAcheron and _RegisterModEvents. Returns None (with a harmless
 ; engine log line) when the bridge esp is absent. Shared by the Acheron MCM page and
@@ -676,7 +708,7 @@ EndFunction
 ; Guards
 ; ============================================================
 ; ============================================================
-;  — THE CHILD BOUNDARY (user ruling, SAFETY PRIORITY)
+; REV-146a — THE CHILD BOUNDARY (user ruling, SAFETY PRIORITY)
 ; ============================================================
 ; No Baka-module action of ANY kind may touch an NPC the engine marks
 ; as a child. Engine-true check of record: Actor.IsChild() — vanilla
@@ -714,7 +746,7 @@ Bool Function IsEligible(Actor akA1, Actor akA2, Bool abAllowMidCombat = False)
         _Log("[SNBaka] IsEligible: blocked — null actor")
         Return False
     EndIf
-    ;  child boundary: FIRST substantive gate (safety priority) — no
+    ; REV-146a child boundary: FIRST substantive gate (safety priority) — no
     ; module action of any kind on an engine-marked child, at any site.
     If _ChildBoundaryRefused(akA1, akA2, "IsEligible")
         Return False
@@ -746,7 +778,7 @@ Bool Function IsEligible(Actor akA1, Actor akA2, Bool abAllowMidCombat = False)
         _Log("[SNBaka] IsEligible: blocked — an actor is mid sex scene (" + akA1.GetDisplayName() + " -> " + akA2.GetDisplayName() + ")")
         Return False
     EndIf
-    ; Pending-scene latch (): an escalation is mid-dispatch for this pair — the
+    ; Pending-scene latch (rev-22): an escalation is mid-dispatch for this pair — the
     ; wizard is open or the thread is still in setup, so IsInSexAnimation reads False
     ; for both even though they are committed to a scene. This is the guard that
     ; refuses the would-be interleave the 09-17 session raced through.
@@ -755,7 +787,7 @@ Bool Function IsEligible(Actor akA1, Actor akA2, Bool abAllowMidCombat = False)
         Return False
     EndIf
     ; Player-involved uses the crosshair-range gate; NPC-vs-NPC gets the larger reach.
-    ;  Task 7 (manual out-of-range pairs): a PLAYER-initiated pair may
+    ; REV-146a Task 7 (manual out-of-range pairs): a PLAYER-initiated pair may
     ; now come from up to the walk ceiling (fApproachWalkCeiling) away -- the
     ; approach window walks the NPC into snap range before setup, with the
     ; teleport as the bounded fallback. NPC-vs-NPC reach is unchanged.
@@ -777,7 +809,7 @@ Bool Function IsEligible(Actor akA1, Actor akA2, Bool abAllowMidCombat = False)
         _Log("[SNBaka] IsEligible: blocked — attacker in combat, target not downed (" + akA1.GetDisplayName() + " -> " + akA2.GetDisplayName() + ")")
         Return False
     EndIf
-    ;  4.2: central player-target admission ( blanket). The retired
+    ; REV-144 4.2: central player-target admission (rev-55a blanket). The retired
     ; bPlayerCanBeTarget property FOLDED IN here -- one policy, StorageUtil class
     ; SNBaka.PlayerTargetPolicy (player-keyed, default OFF), consulted for every
     ; NPC-initiated player-target site. Player-own initiations (akA1 == player)
@@ -819,7 +851,7 @@ Bool Function IsEligible(Actor akA1, Actor akA2, Bool abAllowMidCombat = False)
         _Log("[SNBaka] IsEligible: blocked — late re-check: mid sex scene (" + akA1.GetDisplayName() + " -> " + akA2.GetDisplayName() + ")")
         Return False
     EndIf
-    ; Pending-scene latch () — see the main guard above. Belt-and-braces second
+    ; Pending-scene latch (rev-22) — see the main guard above. Belt-and-braces second
     ; site, same as the doubled IsInSexAnimation check.
     If _IsScenePending(akA1) || _IsScenePending(akA2)
         _Log("[SNBaka] IsEligible: blocked — late re-check: scene latch held (" + akA1.GetDisplayName() + " -> " + akA2.GetDisplayName() + ")")
@@ -879,11 +911,11 @@ EndFunction
 ; sex-gated at all: iTargetSex had zero effect on who Escalate could target, regardless of the setting.
 ; HelpUp/Release deliberately do NOT call this — recovering or releasing a downed victim should never be
 ; blocked by target sex.
-;  3.3 (ruling (c), the baka-daemon.md  SS-C gate map): the three-level
+; REV-145 3.3 (ruling (c), the baka-daemon.md REV-144 SS-C gate map): the three-level
 ; target-sex dropdown FOLDS this gate under SNBaka.TargetSexLevel. The retired
 ; iTargetSex property stays declared for save-member/VMAD compatibility but no
 ; longer gates anything; existing saves seed the level once from it
-; (_SeedTargetSexLevel, the  bPlayerCanBeSpanked fold-in precedent).
+; (_SeedTargetSexLevel, the REV-144 bPlayerCanBeSpanked fold-in precedent).
 ;   Level 1 "Only female targets"                 -> female targets only (the old iTargetSex=1)
 ;   Level 2 "Male and female targets, male aggr." -> any target, MALE aggressors only
 ;   Level 3 "Anything goes"                       -> any target, any aggressor
@@ -894,7 +926,7 @@ Bool Function _TargetSexAllowed(Actor akTarget)
     Return True
 EndFunction
 
-;  3.3: the level of record (StorageUtil on None, save-persisted).
+; REV-145 3.3: the level of record (StorageUtil on None, save-persisted).
 ; Unknown/clamped values read as 1 -- never a silent behavior change on an
 ; unread value (the 6a discipline; conservative default = female-only).
 Int Function _TargetSexLevel()
@@ -905,7 +937,7 @@ Int Function _TargetSexLevel()
     Return iLevel
 EndFunction
 
-;  3.3 one-shot seed from the retired keys (guarded, logged; the 
+; REV-145 3.3 one-shot seed from the retired keys (guarded, logged; the REV-144
 ; fold-in precedent). Existing saves: iTargetSex 1 -> L1 (female-only, behavior-
 ; preserving); 0 or 2 -> L3 (both/male-only target admission preserved; no level
 ; covers male-only targets, the closest target-admission-preserving level is L3).
@@ -928,7 +960,7 @@ Function _SeedTargetSexLevel()
     EndIf
 EndFunction
 
-;  3.3: LEVEL-2 AGGRESSOR-SEX HELPER (the  SS-C surfaced conflict:
+; REV-145 3.3: LEVEL-2 AGGRESSOR-SEX HELPER (the REV-144 SS-C surfaced conflict:
 ; level-2's male-aggressor constraint had no aggressor-side sex check). First
 ; consumer = the daemon's pair selection; the escalation funnel sites adopt it
 ; as they are touched. Level 1: no aggressor constraint (targets are female-only
@@ -947,7 +979,7 @@ Bool Function _AggressorSexAllowed(Actor akInitiator, String asSite)
 EndFunction
 
 ; ============================================================
-;  4.2 — CENTRAL PLAYER-TARGET POLICY ( required deliverable)
+; REV-144 4.2 — CENTRAL PLAYER-TARGET POLICY (rev-55a required deliverable)
 ; ============================================================
 ; User ruling: ONE central admission function, blanket across the ENTIRE Baka
 ; module (fresh interactions, the escalation funnel, spank/slap lanes, every
@@ -955,15 +987,15 @@ EndFunction
 ; Molag-Bal consult this same policy at candidate selection). StorageUtil class
 ; SNBaka.PlayerTargetPolicy, PLAYER-KEYED, DEFAULT OFF (0 = refuse NPC-initiated
 ; player-targeting). MCM-controlled -- the toggle builds with the baka-daemon MCM
-; session; its label/tooltip is a pending-approvals DRAFT (gated, ).
+; session; its label/tooltip is a pending-approvals DRAFT (gated, §7).
 ;
-; MIGRATION (the bPlayerCanBeSpanked fold-in; DECIDED + SURFACED at ):
-; RETIRED AT  (dogfood 2.5 verdict). The v1 continuity read seeded the
+; MIGRATION (the bPlayerCanBeSpanked fold-in; DECIDED + SURFACED at REV-144):
+; RETIRED AT REV-159 (dogfood 2.5 verdict). The v1 continuity read seeded the
 ; policy from the retired spank property's save value -- but that property's
 ; compile-time default is TRUE, so a save that NEVER WROTE the property reads
 ; TRUE and is indistinguishable from a save that deliberately set it TRUE
 ; (dogfood receipt: "[SNBaka] player-target policy SEEDED: ON (1) (existing
-; save -- seeded from retired bPlayerCanBeSpanked=TRUE, )" while the
+; save -- seeded from retired bPlayerCanBeSpanked=TRUE, REV-144)" while the
 ; user's old spank setting was OFF). The inheritance claim is also retired
 ; from the MCM tooltip (register entry 30a already dropped the sentence; the
 ; seed now matches the tooltip's promise). The corrected rule: the policy
@@ -1003,10 +1035,10 @@ EndFunction
 ; Unconditional passes: target is not the player; PLAYER-OWN action (initiator ==
 ; PlayerRef -- the Execute pattern: buttons/power/crosshair initiations stay
 ; ungated, the user's deliberate choice is never second-guessed). Otherwise the
-; central policy is consulted, with a per-site reason code on the  sentinel
+; central policy is consulted, with a per-site reason code on the §5 sentinel
 ; (unconditional trace on BOTH admit and refuse).
 ; Consumers: IsEligible (paired executors), the daemon scan sites
-; (mode.scan / mode.downed), and since  the NPC-on-player tattoo
+; (mode.scan / mode.downed), and since REV-156 the NPC-on-player tattoo
 ; action lane (site "MarkPlayer", MarkPlayer_Execute — the action-lane
 ; consumer per the 3.5 pre-check; the player's own dialogue-commanded
 ; application stays ungated per the Execute pattern).
@@ -1030,47 +1062,51 @@ Bool Function _PlayerTargetAdmitted(Actor akInitiator, Actor akTarget, String as
 EndFunction
 
 ; ============================================================
-;  — THE BAKA AMBIENT DAEMON (Mephala Mode / Molag Bal Mode)
+; REV-145 — THE BAKA AMBIENT DAEMON (Mephala Mode / Molag Bal Mode)
 ; ============================================================
-; Spec of record: baka-daemon.md  SS-A..SS-D + the  design pass
+; Spec of record: baka-daemon.md REV-144 SS-A..SS-D + the REV-134e design pass
 ; (planner text verbatim). ONE daemon, two vocabularies (the module boundary
 ; respected): Baka = SECOND CONSUMER of the GS service class -- the arbiter/
 ; scan/floor patterns are copied shape, never merged scripts.
 ;   StorageUtil class SNBaka (on None, save-persisted, the GSAnim.Muse pattern):
-;     SNBaka.MephalaMode   1 = ambient thought-seeding mode ON (45s tick since , 60s per-actor)
+;     SNBaka.MephalaMode   1 = ambient thought-seeding mode ON (45s tick since REV-146a, 60s per-actor)
 ;     SNBaka.MolagBalMode  1 = ambient overdrive ON (15s tick, 30s per-actor, no LLM, no thoughts)
-;   Mode names = USER-AUTHORED, register-cited (17b precedent; entry 30/ (e)).
+;   Mode names = USER-AUTHORED, register-cited (17b precedent; entry 30/REV-134e (e)).
 ; Session-scoped by StorageUtil save-persistence exactly like GSAnim.Muse (the
 ; GS toggle-scope precedent -- SURFACED: same behavior, flags persist in saves).
 ; TIMER ANCHOR: the scan clock re-stamps at tick time (the GS interval-clock
 ; pattern); the per-actor action clock stamps at ACTION START (137f generalized
-; at  SS-B(f)) -- SNBaka.DaemonLast, GAME-time, per-actor.
+; at REV-144 SS-B(f)) -- SNBaka.DaemonLast, GAME-time, per-actor.
 ; Molag-Bal preempts Mephala when both ON (the GS overdrive-preempts-muse
 ; arbiter precedent). Multi-actor: Molag-Bal permitted (137f precedent,
 ; per-actor bookkeeping, no single-flight gate); Mephala ONE pending action
 ; at a time.
 
 Actor[] _daemonPool
-Actor[] _daemonDownedPool           ;  Task 8: downed actors stay POOL-ELIGIBLE as targets
-Int _iDaemonDownedCount   = 0      ;  Task 8: valid entries in _daemonDownedPool
-Actor _akMephalaInitiator = None   ; pending consideration pair (ONE at a time)
-Actor _akMephalaTarget    = None
-Int _iMephalaBand         = 0      ; arousal band of the in-flight pick (1/2/3)
-Bool _bMephalaPending     = False
+Actor[] _daemonDownedPool           ; REV-146a Task 8: downed actors stay POOL-ELIGIBLE as targets
+Int _iDaemonDownedCount   = 0      ; REV-146a Task 8: valid entries in _daemonDownedPool
+; [REV-174 D3 LEG 4] the Mephala pending-pair state (_akMephalaInitiator/
+; _akMephalaTarget/_iMephalaBand/_bMephalaPending) REMOVED with
+; _DaemonMuseAsk; single-in-flight lives on _bLanePending.
 
-;  3.6: the two mode toggles (Prisma footer buttons + MCM both route here).
+; REV-145 3.6: the two mode toggles (Prisma footer buttons + MCM both route here).
 ; Names/notifications USER-AUTHORED (register-cited); ASCII throughout.
 Function _MephalaToggle()
     Int v = 1 - StorageUtil.GetIntValue(None, "SNBaka.MephalaMode", 0)
     StorageUtil.SetIntValue(None, "SNBaka.MephalaMode", v)
     If v == 1
-        Debug.Notification("Mephala Mode: on. The web of whispers stirs.")
+        ; REV-169 leg 6 (user ruling 2026-10-28: all four DeD modes expire at
+        ; 3600s -- the "forgot-it-is-on" residue guard): Mephala had NO
+        ; auto-expire (manual toggle only). Stamp the 1h guard; the tick checks it.
+        StorageUtil.SetFloatValue(None, "SNBaka.MephalaExpireAt", Utility.GetCurrentRealTime() + 3600.0)
+        Debug.Notification("Mephala Mode - on. The web of whispers stirs.")   ; REV-174a D5 " - " sweep
         _Log("[SNBaka] daemon mode ON: Mephala (45s/60s) -- REV-146a cadence")
     Else
-        _bMephalaPending = False
-        _akMephalaInitiator = None
-        _akMephalaTarget = None
-        Debug.Notification("Mephala Mode: off.")
+        _bLanePending = False
+        _akLaneSubject = None
+        _sLaneMode = ""
+        StorageUtil.SetFloatValue(None, "SNBaka.MephalaExpireAt", 0.0)
+        Debug.Notification("Mephala Mode - off.")   ; REV-174a D5 " - " sweep
         _Log("[SNBaka] daemon mode OFF: Mephala -- REV-145")
     EndIf
     _DaemonArm()
@@ -1081,17 +1117,20 @@ Function _MolagBalToggle()
     Int v = 1 - StorageUtil.GetIntValue(None, "SNBaka.MolagBalMode", 0)
     StorageUtil.SetIntValue(None, "SNBaka.MolagBalMode", v)
     If v == 1
-        Debug.Notification("Molag Bal Mode: on. The ball begins.")
+        ; REV-169 leg 6: the 1h guard, same as Mephala above.
+        StorageUtil.SetFloatValue(None, "SNBaka.MolagBalExpireAt", Utility.GetCurrentRealTime() + 3600.0)
+        Debug.Notification("Molag Bal Mode - on. The ball begins.")   ; REV-174a D5 " - " sweep
         _Log("[SNBaka] daemon mode ON: Molag Bal (15s/30s, no thoughts) -- REV-145")
     Else
-        Debug.Notification("Molag Bal Mode: off.")
+        StorageUtil.SetFloatValue(None, "SNBaka.MolagBalExpireAt", 0.0)
+        Debug.Notification("Molag Bal Mode - off.")   ; REV-174a D5 " - " sweep
         _Log("[SNBaka] daemon mode OFF: Molag Bal -- REV-145")
     EndIf
     _DaemonArm()
     _PushModeStates()
 EndFunction
 
-;  Feature B: push the live mode-button ON/OFF highlight to the open panel.
+; REV-147 Feature B: push the live mode-button ON/OFF highlight to the open panel.
 ; Papyrus is the arbiter (the flags above); the DLL relays the payload to JS. Called
 ; at panel open and after every toggle, so the footer buttons always mirror the flags.
 Function _PushModeStates()
@@ -1101,9 +1140,9 @@ Function _PushModeStates()
     _Log("[SNBaka][PANEL] mode states pushed: Mephala=" + iMeph + " MolagBal=" + iMolag)
 EndFunction
 
-;  Feature B: the footer mode buttons (numeric 900/901) now arrive on their own
+; REV-147 Feature B: the footer mode buttons (numeric 900/901) now arrive on their own
 ; DLL dispatch that KEEPS THE PANEL OPEN (the bridge intercepts the ids before the
-; modal unfocus/hide path -- the  JS design intent "both modes toggled in one
+; modal unfocus/hide path -- the REV-146a JS design intent "both modes toggled in one
 ; visit" is now actually true bridge-side). Papyrus arbitrates exactly as before; the
 ; toggles push the new highlight state back through _PushModeStates.
 Function _MenuModeButton(Int aiWhich)
@@ -1137,17 +1176,58 @@ EndFunction
 ; The tick (receipt standard: EVERY leg sentinel'd, ASCII, unconditional -- the
 ; 137f precedent template). Combat suspend: player in combat = early return,
 ; scan clock NOT re-stamped (resumes cleanly at cadence; the GS MuseTick
-; pattern, ruling  (b)). No expiry clock exists (modes are manual toggles),
+; pattern, ruling rev-9 (b)). 1h expiry guard since REV-169 leg 6 (SNBaka.MephalaExpireAt / MolagBalExpireAt, checked in _DaemonTick);
 ; so the GS expiry clock-pause leg has no equivalent here -- SURFACED, not
 ; silently dropped.
 Function _DaemonTick()
-    _Log("[SNBaka] daemon tick opportunity (Mephala=" + StorageUtil.GetIntValue(None, "SNBaka.MephalaMode", 0) + " MolagBal=" + StorageUtil.GetIntValue(None, "SNBaka.MolagBalMode", 0) + ", level L" + _TargetSexLevel() + ") -- REV-145")
+    ; REV-167c 2.2 (community performance fold, the lazy-string shape): the
+    ; tick-opportunity concatenation (two StorageUtil reads + _TargetSexLevel()
+    ; + the string build) ran every cadence BEFORE the bDebugLog check --
+    ; Papyrus evaluates arguments first, so the construction cost was paid
+    ; even with logging off. Construction now gated behind the flag; the
+    ; trace string itself is unchanged.
+    If bDebugLog
+        _Log("[SNBaka] daemon tick opportunity (Mephala=" + StorageUtil.GetIntValue(None, "SNBaka.MephalaMode", 0) + " MolagBal=" + StorageUtil.GetIntValue(None, "SNBaka.MolagBalMode", 0) + ", level L" + _TargetSexLevel() + ") -- REV-145")
+    EndIf
     If PlayerRef.IsInCombat()
-        _Log("[SNBaka] daemon suspend-player-combat: tick skipped, clock unspent -- REV-145")
+        ; REV-167c 2.1 (community performance fold, by-concept): the
+        ; overdue-deadline re-request loop. This early Return left
+        ; _fBakaDaemonNextRT in the past (overdue); _ArmRealtimeTimer clamps
+        ; registration to RegisterForSingleUpdate(0.1) when the next deadline
+        ; is <= now -- so every 0.1s OnUpdate re-fires _DaemonTick, which hits
+        ; this same combat early-return, forever: the spin loop (the finder's
+        ; "repeated 0.1-second update requests" headline). Fix per their
+        ; shape: advance the deadline by 5s on the blocked leg -- an idle
+        ; re-check cadence during combat, never a spin. DIVERGENCE FROM
+        ; REV-145 NAMED: the old receipt said "clock unspent -- resumes
+        ; cleanly at cadence"; the +5s advances ARE spent, so post-combat the
+        ; next tick lands within <=5s of combat end (a bounded, receipted
+        ; drift from the instant-resume intent -- not silently dropped).
+        _fBakaDaemonNextRT = _fBakaDaemonNextRT + 5.0
+        _Log("[SNBaka] daemon suspend-player-combat: tick skipped, deadline +5s (idle re-check, no spin) -- REV-167c 2.1")
         Return
     EndIf
     Int iMolag = StorageUtil.GetIntValue(None, "SNBaka.MolagBalMode", 0)
     Int iMeph  = StorageUtil.GetIntValue(None, "SNBaka.MephalaMode", 0)
+    ; REV-169 leg 6 (user ruling 2026-10-28): the 1h "forgot-it-is-on" guard.
+    ; Mephala/Molag Bal had NO auto-expire (manual toggles only). The tick is
+    ; the guard point: expired = call the user's own toggle (reuses the shipped
+    ; OFF notification verbatim -- no new user-facing string), sentinel first.
+    ; Molag-Bal checked first (it preempts); each leg Returns -- the disarmed
+    ; re-arm inside the toggle sets the next deadline correctly.
+    Float fNowRT = Utility.GetCurrentRealTime()
+    Float fExpMolag = StorageUtil.GetFloatValue(None, "SNBaka.MolagBalExpireAt", 0.0)
+    Float fExpMeph  = StorageUtil.GetFloatValue(None, "SNBaka.MephalaExpireAt", 0.0)
+    If iMolag == 1 && fExpMolag > 0.0 && fNowRT >= fExpMolag
+        _Log("[SNBaka] daemon mode auto-expire (1h guard): Molag Bal -- REV-169")
+        _MolagBalToggle()
+        Return
+    EndIf
+    If iMeph == 1 && fExpMeph > 0.0 && fNowRT >= fExpMeph
+        _Log("[SNBaka] daemon mode auto-expire (1h guard): Mephala -- REV-169")
+        _MephalaToggle()
+        Return
+    EndIf
     Int iMode = 0   ; 2 = Molag-Bal (preempts), 1 = Mephala
     If iMolag == 1
         iMode = 2
@@ -1159,45 +1239,65 @@ Function _DaemonTick()
         _Log("[SNBaka] daemon refuse: both modes off at tick -- disarmed")
         Return
     EndIf
-    ; re-stamp the scan clock at tick time (the interval-clock pattern)
-    ;  Task 6 (user ruling 2026-10-23): Mephala cadence 30s -> 45s
-    ; (fired a bit too often in the [] dogfood); Molag Bal stays 15s.
-    ;  5.2: both cadences are now MCM SLIDER values (15s-240s, the Baka
-    ; Interactions page) carried on StorageUtil keys -- the historic constants
-    ; are the DEFAULTS (45.0 / 15.0 unchanged for existing installs).
-    If iMode == 2
-        _fBakaDaemonNextRT = Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(None, "SNBaka.MolagBalCadence", 15.0)
-    Else
-        _fBakaDaemonNextRT = Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(None, "SNBaka.MephalaCadence", 45.0)
-    EndIf
-    ;  (dogfood 2.2): the tattoo ambient exposure roll is DECOUPLED from
+    ; [REV-178d Leg 1] the tick-entry re-stamp is REMOVED (S244 verdict,
+    ; 2026-11-04: armed-at-tick = every pending-blocked tick burned a full
+    ; cadence slot of pure waiting -- the 65s-ask starvation case, 4-5 lost
+    ; Molag slots per in-flight answer). A cadence slot is consumed only when
+    ; an ask actually DISPATCHES (_DaemonTwoStageAsk arms there now); ticks
+    ; that dispatch nothing fall to the 5s idle re-arm at the tail of this
+    ; tick. Cadence keys unchanged (SNBaka.MolagBalCadence 15s /
+    ; SNBaka.MephalaCadence 45s defaults, MCM sliders per REV-159 5.2).
+    ; REV-159 (dogfood 2.2): the tattoo ambient exposure roll is DECOUPLED from
     ; the daemon tick -- it now rides its own multiplexer cadence
     ; (_STAmbientStart, 30s) so the observed-cue rolls with the modes OFF
     ; (the dogfood finding: modes-off = silence). Roll chance + cooldown are
     ; unchanged (module-owned). This call site is RETIRED; banner per the
-    ; ruleset. The v1 heartbeat ObservationPass remains RETIRED ().
-    ; SNBaka_SlaveTatsModule.AmbientExposurePass()   ; RETIRED at 
-    If iMode == 1 && _bMephalaPending
-        _Log("[SNBaka] daemon refuse: busy (Mephala pending) -- one pending action at a time -- REV-145")
-        Return
+    ; ruleset. The v1 heartbeat ObservationPass remains RETIRED (REV-156).
+    ; SNBaka_SlaveTatsModule.AmbientExposurePass()   ; RETIRED at REV-159
+    If _bLanePending
+        ; [REV-178a Leg 7] AGE-STAMP RECLAIM: a pending ask older than 30s
+        ; real-time is a lost callback (wedge), never a live ask -- named
+        ; sentinel (mode + actor), reclaim, let the tick proceed.
+        If Utility.GetCurrentRealTime() - _fLanePendingStamp > 30.0
+            String sRe = _sLaneMode
+            If _akLaneSubject
+                sRe = sRe + ", actor=" + _akLaneSubject.GetDisplayName()
+            EndIf
+            _Log("[SNBaka] pending-gate RECLAIM (>30s real-time, " + sRe + ") -- REV-178a Leg 7")
+            _bLanePending = False
+            _akLaneSubject = None
+            _sLaneMode = ""
+        Else
+            _Log("[SNBaka] daemon refuse: busy (two-stage ask pending) -- one pending ask at a time -- REV-174 D3")
+            Return
+        EndIf
     EndIf
     _DaemonAttempt(iMode)
+    ; [REV-178d Leg 1] IDLE-DEADLINE GUARD: with arming moved to the dispatch
+    ; site, a tick that dispatched nothing leaves the deadline in the past;
+    ; the multiplexer would clamp registration to 0.1s and spin (the
+    ; REV-167c 2.1 class). Advance by a 5s idle re-check instead -- bounded,
+    ; sentinel'd, and pending-blocked ticks cost 5s, never a cadence slot.
+    If _fBakaDaemonNextRT > 0.0 && _fBakaDaemonNextRT <= Utility.GetCurrentRealTime()
+        _fBakaDaemonNextRT = Utility.GetCurrentRealTime() + 5.0
+        _Log("[SNBaka] daemon idle re-arm (+5s, no ask dispatched this tick) -- REV-178d Leg 1")
+    EndIf
 EndFunction
 
-;  3.2: THE CANDIDATE POOL (paired-action _DaemonScan; the GS service-class
+; REV-145 3.2: THE CANDIDATE POOL (paired-action _DaemonScan; the GS service-class
 ; pattern, Baka-side filters). Radius 2500 (fDaemonRadius precedent), loaded/alive/
 ; not-combat, plus the Baka busy guards (SNBaka.Locked, downed, mid sex scene,
 ; creature skeleton). Seated/idle candidates are ADMITTED as candidates when the
-; /136/137 idle-interrupt service is present (the /88/89 seated-
+; REV-135/136/137 idle-interrupt service is present (the REV-87/88/89 seated-
 ; candidate question resolved interrupt-then-fire per the 2026-10-20 ruling (d)):
 ; class 1/2 (furniture sit / idle-marker hold) enter the pool and are exited at
 ; fire time; essential classes (-1 sleep, -2 downed, -3 mounted, -4 swimming,
 ; -5 sneaking) never enter. Without the GS esp there is no class read and no
 ; interrupt: seated candidates are refused reason-coded (the old exclusion, now
-; named instead of silent -- the  rider class).
-;  Task 2: the child boundary gates the POOL itself (belt-and-braces
+; named instead of silent -- the REV-90 rider class).
+; REV-146a Task 2: the child boundary gates the POOL itself (belt-and-braces
 ; with IsEligible's own gate; the pool refuse is named).
-;  Task 8 (user ruling: downed follow-up "should happen sometimes"):
+; REV-146a Task 8 (user ruling: downed follow-up "should happen sometimes"):
 ; DOWNED actors are NO LONGER pool-refused — they enter the separate
 ; _daemonDownedPool and stay eligible as TARGETS with a downed-family action
 ; subset at fire time (_DaemonDownedAction below). Downed actors still never
@@ -1222,14 +1322,14 @@ Int Function _DaemonScan()
         If !ak || ak == PlayerRef || ak.IsDead() || ak.IsInCombat() || ak.GetDistance(PlayerRef) > 2500.0
             ; walk-neutral: never-candidates, no sentinel (the pool census logs n)
         ElseIf ak.IsChild()
-            ;  Task 2: the child boundary gates the pool itself.
+            ; REV-146a Task 2: the child boundary gates the pool itself.
             _Log("[SNBaka] daemon pool refuse: child-boundary (" + ak.GetDisplayName() + ") -- REV-146a")
         ElseIf _IsCreatureActor(ak)
             _Log("[SNBaka] daemon pool refuse: creature-skeleton (" + ak.GetDisplayName() + ") -- REV-145")
         ElseIf IsInSexAnimation(ak) || StorageUtil.GetIntValue(ak, "SNBaka.Locked", 0) == 1
             _Log("[SNBaka] daemon pool refuse: busy (in-scene/locked) (" + ak.GetDisplayName() + ") -- REV-145")
         ElseIf _IsDownedAny(ak)
-            ;  Task 8: downed actors are DOWNED-POOL candidates (targets
+            ; REV-146a Task 8: downed actors are DOWNED-POOL candidates (targets
             ; only; the downed-family subset draws at fire). Named admission.
             _daemonDownedPool[nd] = ak
             nd += 1
@@ -1251,7 +1351,7 @@ Int Function _DaemonScan()
     Return n
 EndFunction
 
-;  Task 8: the DOWNED-FAMILY ACTION SUBSET (user ruling: forced/
+; REV-146a Task 8: the DOWNED-FAMILY ACTION SUBSET (user ruling: forced/
 ; intimate/strip/tattoo executor class; NEVER Execute). Drawn only when the
 ; selected target is downed. Player-target policy + target-sex gates run at
 ; target selection and the fire-time IsEligible recheck (unchanged).
@@ -1271,7 +1371,7 @@ String[] Function _DaemonDownedActionPool()
     Return d
 EndFunction
 
-;  3.4: arousal band on the INITIATOR (the  tiering chain read:
+; REV-145 3.4: arousal band on the INITIATOR (the REV-82 tiering chain read:
 ; band -> action-class subset). Same framework reads as GetDedArousal; no
 ; framework = tier 1 (mild -- never a silent extremity unlock).
 Int Function _DaemonArousalTier(Actor ak)
@@ -1295,9 +1395,93 @@ Int Function _DaemonArousalTier(Actor ak)
     Return 2
 EndFunction
 
-;  3.4: the ACTION -> CLASS -> EXTREMITY-BAND table of record (ruling (a):
+; ============================================================================
+; REV-167 TRANCHE 3 (entry 44) -- THE UNIFIED SELECTION LADDER (consolidated
+; spec "Ambient Modes -- Unified Selection Architecture" 3.1/3.3; rulings
+; R-1..R-6). Defaults preserve R-1 (targeted Molag) + R-3 (unbanded default):
+; both toggles read live, default OFF, keys on None (global).
+; ============================================================================
+
+; [REV-174 A3] RETIRED: the Madness toggle read. The R-2 dice-torrent shape is
+; gone with randomization (A1); extremity is now the mode's default character.
+; [REV-174 D1] Madness now also removed from the MCM surface entirely (user
+; ruling 2026-10-30: redundant beside the dropdown's random options).
+
+; [REV-174 A3] RETIRED: the Banded Actions toggle read. The lockout ladder's
+; purpose died with the trust-the-LLM arc (banding retired, Molag
+; de-randomized, idles re-admitted); the full pool ships premise-steered.
+
+; R-5 (helper, inlined in _DaemonOptionsPool): WombHit leaves Mephala's options
+; set ENTIRELY (not banded out -- absent, in every tier/toggle state). Band-3
+; membership unchanged; mode membership is Molag-only. Papyrus array `New`
+; sizes must be literals, so the strip is the band-3 set's fixed 29 -> 28 copy
+; (the ONLY pool carrying WombHit -- verified against the band table above).
+
+; 3.1/3.2: THE OPTIONS RENDER -- one tier read per consideration (the caller
+; reads once, passes it; the same read feeds the pack context AND the ladder,
+; no double reads). Banded OFF = base band 3 = the full set (R-3); Banded ON =
+; base band = the initiator's tier (bands below LOCKED OUT -- lockout, not
+; unlock). The mode filter then applies (R-5). Receipts: tier x lockout per
+; consideration (8's "ladder receipts" gate) + the render's action count (8's
+; "options completeness" gate).
+String[] Function _DaemonOptionsPool(String asMode, Actor akInitiator, Int aiTier)
+    ; [REV-174 A3] Banded RETIRED: base band is ALWAYS 3 (the full set,
+    ; premise-steered -- the R-3 default made permanent). The tier rides as
+    ; context only (the pack's arousalBand field).
+    Int iBase = 3
+    _Log("[SNBaka] ladder receipt: mode=" + asMode + " initiator=" + akInitiator.GetDisplayName() + " tier=" + aiTier + " banded=RETIRED -> full set offered (tier rides as context) -- REV-174 A3")
+    String[] pool = _DaemonActionPool(iBase)
+    If asMode == "Mephala"
+        If pool.Length == 29
+            ; the band-3 full set: strip WombHit (fixed 29 -> 28 copy)
+            String[] m28 = New String[28]
+            Int mi = 0
+            Int mx = 0
+            While mi < 29
+                If pool[mi] != "WombHit"
+                    m28[mx] = pool[mi]
+                    mx += 1
+                EndIf
+                mi += 1
+            EndWhile
+            pool = m28
+        EndIf
+        _Log("[SNBaka] wombhit mode-scope: WombHit absent from Mephala's options render (R-5, every state) -- REV-167 t3")
+    EndIf
+    _Log("[SNBaka] options render: mode=" + asMode + " count=" + pool.Length + " -- REV-167 t3")
+    Return pool
+EndFunction
+
+; ----------------------------------------------------------------------------
+; REV-167 t3 2.4 -- THE 15.5 LOCK AUDIT (both trees, receipts):
+;  * ADMISSION EXCLUSION (Baka): _DaemonScan refuses SNBaka.Locked=1,
+;    in-scene, and GSAnim.Pose!="" actors at BOTH pools (the subject walk and
+;    the target walk draw only from _daemonPool/_daemonDownedPool, which
+;    exclude them) -- no mid-action actor can be selected on either side.
+;  * ADMISSION EXCLUSION (GS): the GS-side candidate gates refuse posed actors
+;    (the GSAnim.Pose check) and the seed/fire guards re-run _IsBusyElsewhere,
+;    which consumes SNBaka.Locked + SNBaka.OnGround + SNAcheron.Held +
+;    bleedout + foreign sex scenes + combat + furniture.
+;  * FIRE-TIME RECHECK (Baka): OnBakaMuseConsideration + OnMolagConsideration
+;    both re-verify SNBaka.Locked on BOTH actors between answer and dispatch
+;    (the named "ongoing-action lock" sentinel) -- the race window is closed.
+;  * FIRE-TIME RECHECK (GS): OnMuseConsideration (seed) + OnSheoConsideration
+;    (fire) re-run _IsBusyElsewhere on the pending actor (named sentinels).
+;  * BUSY-FLAG SET/CLEAR: SNBaka.Locked is set on every Baka action start and
+;    cleared on every end path (the shipped busy flag the audit consumes; no
+;    new state added); GSAnim.Pose is set at pose fire and cleared at pose end
+;    (the 3s sweep backstops). The lock CONSUMES these flags -- this audit is
+;    the receipt the spec asked for.
+;  * MADNESS MULTI-PENDING (enumerated): the torrent is single-SLOT as built
+;    (one _bMolagPending pair in flight at a time); its multi-actor character
+;    is the dice casting ACROSS ticks at the 15s-class cadence, and the 15.5
+;    lock serializes every in-flight pair so nothing stacks -- the 15.7
+;    mitigation, load-bearing exactly as specced for Companions Only + 15s.
+; ----------------------------------------------------------------------------
+
+; REV-145 3.4: the ACTION -> CLASS -> EXTREMITY-BAND table of record (ruling (a):
 ; ALL module actions in the pool; Mephala subsets by band, Molag-Bal draws the
-; full set; asset-guards stay UNCONDITIONAL in the executors () -- the
+; full set; asset-guards stay UNCONDITIONAL in the executors (rev-55b) -- the
 ; pool never pre-clears them).
 ;   Band 1 (mild / social-affection):  Flirt, FlirtFace, FlirtBreast, FlirtPussy,
 ;     BackHug, FrontHug, KissLove, ArmHold, ShowingOffBody
@@ -1307,7 +1491,7 @@ EndFunction
 ;   Band 3 (aggressive/overpower, tier 3 only): Struggle, ChokeHug, ChokeHelpless,
 ;     WombHit, PinHelpless, Subdue, BackHugMolest
 ; STRUGGLE-CHAIN (ruling): forced/choke/wombhit-class REQUIRE the struggle first
-; (see _DaemonIsStruggleChain). Strip is in the pool from day one ( 6.x
+; (see _DaemonIsStruggleChain). Strip is in the pool from day one (REV-144 6.x
 ; build, SS-B(a)); the player-side downed-menu tile stays its manual surface.
 String[] Function _DaemonActionPool(Int aiBand)
     If aiBand < 1
@@ -1386,7 +1570,7 @@ String[] Function _DaemonActionPool(Int aiBand)
     Return pool3
 EndFunction
 
-;  3.4: the struggle-chain class (ruling: forced/choke/wombhit-class
+; REV-145 3.4: the struggle-chain class (ruling: forced/choke/wombhit-class
 ; REQUIRE the struggle first -- the ambient seeds the INTENTION, the actor
 ; initiates, the follow-up rides the outcome through the existing struggle/
 ; escalation machinery (Struggle_Execute's _DefeatGroundWindow -> baka_escalate
@@ -1397,7 +1581,7 @@ Bool Function _DaemonIsStruggleChain(String sAction)
         || sAction == "BackHugMolest"
 EndFunction
 
-;  3.7: the drunk/tavern variant (planner: "struggle action picks should
+; REV-145 3.7: the drunk/tavern variant (planner: "struggle action picks should
 ; do the drunk struggle action when in taverns or if the target is drunk").
 ; Tavern-class read: the player's current location carries LocTypeInn.
 Bool Function _DaemonIsTavernClass()
@@ -1407,8 +1591,8 @@ Bool Function _DaemonIsTavernClass()
     Return PlayerRef.GetCurrentLocation().HasKeyword(Keyword.GetKeyword("LocTypeInn"))
 EndFunction
 
-;  3.7: drunk-target read. The tree has NO dedicated drunk-state query
-; (SURFACED -- the  "Baka drunk-state queries" pointer was design-
+; REV-145 3.7: drunk-target read. The tree has NO dedicated drunk-state query
+; (SURFACED -- the REV-134e "Baka drunk-state queries" pointer was design-
 ; inferred, not site-verified; not a spec-vs-tree conflict: the variant is fully
 ; deliverable on tree-true signals); the two signals used: the PoseDrink
 ; blackout stamp (written at the blackout site, cleared at its recovery leg) and
@@ -1423,10 +1607,663 @@ Bool Function _DaemonIsDrunkTarget(Actor akTarget)
     Return StorageUtil.GetStringValue(akTarget, "SNBaka.LastAnim", "") == "DrunkExploit"
 EndFunction
 
-;  3.2/3.4: ONE attempt = scan -> initiator -> target -> select -> fire.
+; ============================================================================
+; REV-167 t3 (entry 44, §5/2.3): THE SELECTION MODES (subject + target, per
+; Baka mode). Dropdown keys SNBaka.<Mode>Subject / SNBaka.<Mode>Target
+; (None-keyed StorageUtil ints; 0 = the shipped Random draw = byte-equivalent
+; behavior -- no filter, no weighting). The Target Link Weight slider key is
+; [REV-174a A35] the UNIFORM selection vocabularies (parity table of record,
+; REV-174a_A35_PARITY.md; both modules).
+; Subject: 0 Random / 1 Companions Only / 2 Arousal Based (NEW -- weighted
+; toward the most aroused candidates, tier A = arousal >= 50, ratio 70%).
+; Target: 0 Random / 1 Bio Led / 2 Relationship Priority / 3 Player
+; Only / 4 Companions Only / 5 Non-Companion NPCs Only. Bio Led + RP are
+; PROMPT-SIDE steering (A36a: facts in, trust the LLM -- the pack carries a
+; targetSteer field; the roster is NOT filtered). [REV-174a A46] the "Wide"
+; option (v21 slot 3; roster cap 10->20) is RETIRED pre-ship -- never a
+; user-facing surface, no shipped text; the cap is the standing 10.
+; [REV-174a A36c] the mechanical two-tier bio-link draws
+; + the Target Link Weight slider are RETIRED (the SNBaka.BioNames cache was
+; cold since REV-173 Path A -- the no-op D2 named); the stored
+; SNBaka.TargetLinkWeight key is no longer read.
+; Every non-Random draw is receipted; empty pool = skip tick, never
+; fall-through (§15.12).
+; ============================================================================
+Int Function _SelectionSubject(String asMode)
+    Int v = StorageUtil.GetIntValue(None, "SNBaka." + asMode + "Subject", 0)
+    ; [REV-174a A35] clamp 0-2 (legacy 2 RP / 3 Bio Led retired subject-side;
+    ; the MCM v21 migration remaps stored values, out-of-range clamps Random).
+    If v < 0 || v > 2
+        Return 0
+    EndIf
+    Return v
+EndFunction
+
+Int Function _SelectionTarget(String asMode)
+    Int v = StorageUtil.GetIntValue(None, "SNBaka." + asMode + "Target", 0)
+    ; [REV-178 L3] clamp 0-3 (the v23 POOL space: Everyone/Player Only/
+    ; Companions/Non-Companions; the MCM v23 migration _SelVocabMigrate5
+    ; remaps stored values, out-of-range clamps Everyone).
+    If v < 0 || v > 3
+        Return 0
+    EndIf
+    Return v
+EndFunction
+
+; ============================================================================
+; [REV-178 L4] NARRATIVE SELECTION -- the shared pool service (Baka side;
+; the GS tree carries the mirror). §6.1: sticky 5 + conversation-priority
+; (vanilla IsInDialogue()/GetDialogueTarget() pair-priority, §22 ruling),
+; proximity fill, churn recompute, player = TARGET-pool constant only
+; (OR2 -- never a subject). SA guard + getters per §6.2/§22.
+; ============================================================================
+Actor[] _akNarrSubPool
+Int     _iNarrSubPoolN = 0
+Actor   _akNarrLastSubj = None
+Actor   _akNarrLastTgt = None
+Int     _iNarrSAResolved = 0
+Bool    _bNarrSAPresent = False
+
+Bool Function _NarrSAPresent()
+    If _iNarrSAResolved == 0
+        _iNarrSAResolved = 1
+        _bNarrSAPresent = SKSE.GetPluginVersion("SeverActionsNative") > 0
+        If _bNarrSAPresent
+            Debug.Trace("[SNBaka] SA presence guard: SeverActions PRESENT (first-call sentinel) -- REV-178 L4")
+        Else
+            Debug.Trace("[SNBaka] SA presence guard: SeverActions absent -- SA fields skipped every pack (V5 receipts live here) -- REV-178 L4")
+        EndIf
+    EndIf
+    Return _bNarrSAPresent
+EndFunction
+
+; [REV-178 L4] SA candidate fragment (saManaged/saMood/saPlayerRapport,
+; OR3; SA numbers as STRINGS per the §6.5 example).
+String Function _NarrSAFieldsJson(Actor akC)
+    If !akC || !_NarrSAPresent()
+        Return ""
+    EndIf
+    Float fMood = SeverActionsNative.Native_GetMood(akC)
+    Float fRap = SeverActionsNative.Native_GetRapport(akC)
+    Bool bManaged = !(fMood == 50.0 && fRap == 0.0)
+    Return "\"saManaged\":" + bManaged as Int \
+         + ",\"saMood\":\"" + (fMood as Int) + "\"" \
+         + ",\"saPlayerRapport\":\"" + (fRap as Int) + "\""
+EndFunction
+
+; [REV-178 L4] does akC pass the mode's SUBJECT POOL filter?
+; v23 space: 0 Everyone / 1 Companions Only / 2 Non-Companion NPCs Only.
+Bool Function _NarrSubjectPoolAdmits(Actor akC, Int aiPool)
+    If !akC || akC == PlayerRef
+        Return False
+    EndIf
+    If aiPool == 1
+        Return _SelectionIsCompanion(akC)
+    ElseIf aiPool == 2
+        Return !_SelectionIsCompanion(akC)
+    EndIf
+    Return True
+EndFunction
+
+Function _NarrStickyRemember(Actor akSubj, Actor akTgt)
+    _akNarrLastSubj = akSubj
+    _akNarrLastTgt = akTgt
+EndFunction
+
+Bool Function _NarrSubPoolHas(Actor akC)
+    Int j = 0
+    While j < _iNarrSubPoolN
+        If _akNarrSubPool[j] == akC
+            Return True
+        EndIf
+        j += 1
+    EndWhile
+    Return False
+EndFunction
+
+; [REV-178 L4] the SUBJECT POOL build: sticky first, dialogue-priority
+; pair-next, proximity fill to 5; churn recompute (full recomposition only
+; below 3 valid -- §6.1.6, no rotation quota). Anchor = the tick's subject.
+Function _NarrSubjectPoolBuild(Actor akAnchor, Int aiPoolN, Int aiSubjectPoolSetting)
+    If !_akNarrSubPool || _akNarrSubPool.Length < 5
+        _akNarrSubPool = New Actor[5]
+    EndIf
+    Int iStillValid = 0
+    Int i = 0
+    While i < _iNarrSubPoolN
+        Actor akM = _akNarrSubPool[i]
+        If akM && !akM.IsDead() && akAnchor.GetDistance(akM) <= 2500.0 \
+           && _NarrSubjectPoolAdmits(akM, aiSubjectPoolSetting)
+            iStillValid += 1
+        EndIf
+        i += 1
+    EndWhile
+    If iStillValid >= 3
+        Return
+    EndIf
+    _iNarrSubPoolN = 0
+    If _akNarrLastSubj && !_akNarrLastSubj.IsDead() && _akNarrLastSubj != PlayerRef \
+       && akAnchor.GetDistance(_akNarrLastSubj) <= 2500.0 \
+       && _NarrSubjectPoolAdmits(_akNarrLastSubj, aiSubjectPoolSetting)
+        _akNarrSubPool[_iNarrSubPoolN] = _akNarrLastSubj
+        _iNarrSubPoolN += 1
+    EndIf
+    If _akNarrLastTgt && _akNarrLastTgt != _akNarrLastSubj && !_akNarrLastTgt.IsDead() \
+       && _akNarrLastTgt != PlayerRef \
+       && akAnchor.GetDistance(_akNarrLastTgt) <= 2500.0 \
+       && _NarrSubjectPoolAdmits(_akNarrLastTgt, aiSubjectPoolSetting)
+        _akNarrSubPool[_iNarrSubPoolN] = _akNarrLastTgt
+        _iNarrSubPoolN += 1
+    EndIf
+    i = 0
+    While i < aiPoolN && _iNarrSubPoolN < 5
+        Actor akT = _daemonPool[i]
+        If akT && akT != akAnchor && _NarrSubjectPoolAdmits(akT, aiSubjectPoolSetting) \
+           && akT.GetDialogueTarget() != None && !_NarrSubPoolHas(akT) && !akT.IsDead() \
+           && akAnchor.GetDistance(akT) <= 2500.0
+            _akNarrSubPool[_iNarrSubPoolN] = akT
+            _iNarrSubPoolN += 1
+            Actor akP = akT.GetDialogueTarget()
+            If akP && akP != akAnchor && akP != PlayerRef && !akP.IsDead() \
+               && _iNarrSubPoolN < 5 \
+               && akAnchor.GetDistance(akP) <= 2500.0 \
+               && _NarrSubjectPoolAdmits(akP, aiSubjectPoolSetting) && !_NarrSubPoolHas(akP)
+                _akNarrSubPool[_iNarrSubPoolN] = akP
+                _iNarrSubPoolN += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    i = 0
+    While i < aiPoolN && _iNarrSubPoolN < 5
+        Actor akT = _daemonPool[i]
+        If akT && akT != akAnchor && !akT.IsDead() \
+           && akAnchor.GetDistance(akT) <= 2500.0 \
+           && _NarrSubjectPoolAdmits(akT, aiSubjectPoolSetting) && !_NarrSubPoolHas(akT)
+            _akNarrSubPool[_iNarrSubPoolN] = akT
+            _iNarrSubPoolN += 1
+        EndIf
+        i += 1
+    EndWhile
+    If _iNarrSubPoolN > 0
+        Debug.Trace("[SNBaka] narrative subject pool built: n=" + _iNarrSubPoolN + " (sticky+dialogue+proximity) -- REV-178 L4")
+    EndIf
+EndFunction
+
+; [REV-178 L4] the subjectPool[] JSON (§6.5): name/uuid/sex/state/
+; arousalBand/arousalRaw + inflation marker (FHU module, when installed)
+; + SA fields under guard. CUM markers OMITTED + debug note -- the cum
+; state layer (SNBaka_CumDetectionModule) exposes no read accessor
+; in-tree (_WriteCumState is write-only); §6.2: markers absent = omit,
+; never an error. Adversarial names ride _JsonEsc.
+String Function _NarrSubjectPoolJson()
+    String s = ""
+    Int i = 0
+    While i < _iNarrSubPoolN
+        Actor akC = _akNarrSubPool[i]
+        If akC
+            If i > 0
+                s = s + ","
+            EndIf
+            String sSex = "male"
+            If _SexOf(akC) == 1
+                sSex = "female"
+            EndIf
+            Int iTier = _DaemonArousalTier(akC)
+            s = s + "{\"name\":\"" + _JsonEsc(akC.GetDisplayName()) + "\"" \
+                + ",\"uuid\":" + _UuidJsonLiteralCtx(akC) \
+                + ",\"sex\":\"" + sSex + "\"" \
+                + ",\"state\":\"" + _JsonEsc(_DaemonLaneStateLine(akC)) + "\"" \
+                + ",\"arousalBand\":\"" + _DaemonArousalBandRaw(akC, iTier) + "\""
+            Int iRaw = _DaemonArousalRawOf(akC)
+            If iRaw >= 0
+                s = s + ",\"arousalRaw\":" + iRaw
+            EndIf
+            If SNBaka_FHUInflationModule.Installed()
+                String sInfl = SNBaka_FHUInflationModule.GetDedInflation(akC)
+                If sInfl != ""
+                    s = s + ",\"inflation\":\"" + _JsonEsc(sInfl) + "\""
+                EndIf
+            EndIf
+            String sSA = _NarrSAFieldsJson(akC)
+            If sSA != ""
+                s = s + "," + sSA
+            EndIf
+            s = s + "}"
+        EndIf
+        i += 1
+    EndWhile
+    Debug.Trace("[SNBaka] subjectPool composed: cum markers omitted (no in-tree read accessor -- §6.2 omit note) -- REV-178 L4")
+    Return s
+EndFunction
+
+; [REV-178 L4] numeric arousal (the A17 raw half). -1 = unknown.
+Int Function _DaemonArousalRawOf(Actor akC)
+    If !akC
+        Return -1
+    EndIf
+    If SKSE.GetPluginVersion("OSLAroused") > 0
+        Return OSLArousedNative.GetArousalNoSideEffects(akC) as Int
+    EndIf
+    slaFrameworkScr kNG = Quest.GetQuest("sla_Framework") as slaFrameworkScr
+    If kNG
+        Return kNG.GetActorArousal(akC)
+    EndIf
+    Return -1
+EndFunction
+
+; [REV-178 L4] the player field (§6.5): TARGET-pool constant only (OR2);
+; present when the Baka player-target policy admits the player.
+String Function _NarrPlayerField()
+    If _PlayerTargetPolicy() != 1
+        Return ""
+    EndIf
+    Return "{\"name\":\"" + _JsonEsc(PlayerRef.GetDisplayName()) + "\"" \
+         + ",\"uuid\":" + _UuidJsonLiteralCtx(PlayerRef) + "}"
+EndFunction
+
+; [REV-178 L4/V6] the cadence band: read at dispatch; < 30s = "lean".
+String Function _NarrCadenceBand(String asMode)
+    Float fInt = StorageUtil.GetFloatValue(None, "SNBaka." + asMode + "Cadence", 60.0)
+    If fInt < 30.0
+        Return "lean"
+    EndIf
+    Return "full"
+EndFunction
+
+; [REV-178 L4] the selection-method word (v23 key; R1 default Narrative).
+String Function _NarrSelectionMethodWord(String asMode)
+    If StorageUtil.GetIntValue(None, "SNBaka." + asMode + "SelectionMethod", 1) == 1
+        Return "narrative"
+    EndIf
+    Return "random"
+EndFunction
+
+; [REV-178 L6/§7.3] SUBJECT resolution + validation: on subject-pool and
+; lane-roster union (§7.3.1); Subject Pool filter (§7.3.2); the PLAYER is
+; NEVER a valid SUBJECT (OR2 belt). Invalid -> None (caller degrades).
+Actor Function _NarrResolveSubject(String asMode, String sName)
+    If sName == ""
+        Return None
+    EndIf
+    Int iS = _SelectionSubject(asMode)
+    Int i = 0
+    While i < _iNarrSubPoolN
+        Actor akC = _akNarrSubPool[i]
+        If akC && akC.GetDisplayName() == sName
+            Return akC
+        EndIf
+        i += 1
+    EndWhile
+    Int r = 0
+    While r < _iLaneRosterN
+        Actor akR = _akLaneRoster[r]
+        If akR && akR.GetDisplayName() == sName
+            If akR == PlayerRef
+                Debug.Trace("[SNBaka] narrative SUBJECT '" + sName + "' = PLAYER -- refused (OR2) -- REV-178 L6")
+                Return None
+            EndIf
+            If !_NarrSubjectPoolAdmits(akR, iS)
+                Debug.Trace("[SNBaka] narrative SUBJECT '" + sName + "' fails the Subject Pool filter -- named drop (§7.3.2) -- REV-178 L6")
+                Return None
+            EndIf
+            Return akR
+        EndIf
+        r += 1
+    EndWhile
+    ; [REV-178a Leg 2] case-folded rung (exact first above; NOTHING else).
+    String sLowS = _AsciiILower(sName)
+    i = 0
+    While i < _iNarrSubPoolN
+        If _akNarrSubPool[i] && _AsciiILower(_akNarrSubPool[i].GetDisplayName()) == sLowS
+            Return _akNarrSubPool[i]
+        EndIf
+        i += 1
+    EndWhile
+    r = 0
+    While r < _iLaneRosterN
+        Actor akF = _akLaneRoster[r]
+        If akF && _AsciiILower(akF.GetDisplayName()) == sLowS
+            If akF == PlayerRef
+                Debug.Trace("[SNBaka] narrative SUBJECT '" + sName + "' = PLAYER -- refused (OR2) -- REV-178 L6")
+                Return None
+            EndIf
+            If !_NarrSubjectPoolAdmits(akF, iS)
+                Debug.Trace("[SNBaka] narrative SUBJECT '" + sName + "' fails the Subject Pool filter -- named drop (§7.3.2) -- REV-178 L6")
+                Return None
+            EndIf
+            Return akF
+        EndIf
+        r += 1
+    EndWhile
+    If _AsciiILower(PlayerRef.GetDisplayName()) == sLowS
+        Debug.Trace("[SNBaka] narrative SUBJECT '" + sName + "' = PLAYER -- refused (OR2) -- REV-178 L6")
+        Return None
+    EndIf
+    _i178aSubjectSkips += 1
+    Debug.Trace("[SNBaka] unresolvable-subject: '" + sName + "' (skip-tally=" + _i178aSubjectSkips + ") -- degrade to mechanical pick (§7.2) -- REV-178a Leg 2")
+    Return None
+EndFunction
+
+; [REV-178 L4/§6.5] the composition-level parse receipt (structural lint;
+; devkit-side parse receipts at dogfood via request bodies). Mirrors the
+; GS _GSJsonLintOK.
+Bool Function _JsonLintOK(String asJson, String asComposer)
+    Int iDepthB = 0
+    Int iDepthK = 0
+    Int iQuotes = 0
+    Int i = 0
+    Int iLen = StringUtil.GetLength(asJson)
+    While i < iLen
+        String ch = StringUtil.GetNthChar(asJson, i)
+        If ch == "\""
+            iQuotes += 1
+        ElseIf ch == "{"
+            iDepthB += 1
+        ElseIf ch == "}"
+            iDepthB -= 1
+        ElseIf ch == "["
+            iDepthK += 1
+        ElseIf ch == "]"
+            iDepthK -= 1
+        EndIf
+        i += 1
+    EndWhile
+    Bool bOK = iDepthB == 0 && iDepthK == 0 && (iQuotes % 2) == 0
+    If !bOK
+        Debug.Trace("[SNBaka] JSON LINT FAIL (composer " + asComposer + "): braces " + iDepthB + " brackets " + iDepthK + " quotes " + iQuotes + " -- REV-178 L4 parse receipt")
+    Else
+        Debug.Trace("[SNBaka] JSON lint PASS (composer " + asComposer + ", " + iLen + " chars) -- REV-178 L4 parse receipt")
+    EndIf
+    Return bOK
+EndFunction
+
+
+
+
+; [REV-174a A36c] _LinkWeightPct RETIRED with the slider (kept compiled as a
+; 70.0 constant return -- the arousal draw's fixed ratio; no MCM surface).
+Float Function _LinkWeightPct()
+    Return 70.0
+EndFunction
+
+String Function _SubjectSelName(Int aiV)
+    If aiV == 1
+        Return "Companions Only"
+    ElseIf aiV == 2
+        Return "Arousal Based"   ; [REV-174a A35] user wording of record
+    EndIf
+    Return "Random"
+EndFunction
+
+String Function _TargetSelName(Int aiV)
+    If aiV == 1
+        Return "Bio Led"
+    ElseIf aiV == 2
+        Return "Relationship Priority"
+    ElseIf aiV == 3
+        Return "Player Only"
+    ElseIf aiV == 4
+        Return "Companions Only"
+    ElseIf aiV == 5
+        Return "Non-Companion NPCs Only"
+    EndIf
+    Return "Random"
+EndFunction
+
+; The companion pool (§5/2.3): IsPlayerTeammate is the exact check this file
+; already uses for followers (the FollowerSlavery gate, formerly L6555) --
+; the cited precedent, consumed via the shipped _ExecuteIsCompanion.
+Bool Function _SelectionIsCompanion(Actor ak)
+    Return _ExecuteIsCompanion(ak)
+EndFunction
+
+; Subject Tier A: the candidate is bio-linked (either direction) to ANY other
+; standing-pool actor -- the room pool. Tier B = the unlinked strangers.
+Bool Function _SelectionSubjectTierA(Actor akCandidate, Int aiN)
+    Int j = 0
+    While j < aiN
+        Actor akOther = _daemonPool[j]
+        If akOther && akOther != akCandidate
+            If _BioLinkedTo(akCandidate, akOther) || _BioLinkedTo(akOther, akCandidate)
+                Return True
+            EndIf
+        EndIf
+        j += 1
+    EndWhile
+    Return False
+EndFunction
+
+; Target Tier A: the pool actor is bio-linked (either direction -- beloveds
+; and rivals both) to the SELECTED SUBJECT.
+Bool Function _SelectionTargetTierA(Actor akSubject, Actor akCandidate)
+    If !akSubject || !akCandidate
+        Return False
+    EndIf
+    Return _BioLinkedTo(akSubject, akCandidate) || _BioLinkedTo(akCandidate, akSubject)
+EndFunction
+
+; SUBJECT RESOLUTION (non-Random only): collect the gate-admitted candidates
+; (the SAME gates the shipped walk applies -- per-actor cooldown floor +
+; aggressor-sex), then the companion filter or the two-tier weighted draw at
+; the Link Weight ratio. Empty pool = skip tick + sentinel, never
+; fall-through (§15.12).
+Actor Function _ResolveSubjectSelection(String asMode, Int aiSel, Int aiN, Float afFloorDays)
+    Actor[] akCand = New Actor[64]
+    Int[] iTier = New Int[64]
+    Int nC = 0
+    Int nA = 0
+    Int i = 0
+    While i < aiN
+        Actor akC = _daemonPool[i]
+        If akC
+            If Utility.GetCurrentGameTime() - StorageUtil.GetFloatValue(akC, "SNBaka.DaemonLast", 0.0) < afFloorDays
+                _Log("[SNBaka] daemon floor skip: " + akC.GetDisplayName() + " (per-actor cooldown, mode=" + asMode + ") -- REV-145")
+            ElseIf !_AggressorSexAllowed(akC, asMode + ".scan")
+                ; aggressor-sex refused (sentinel inside the helper)
+            ElseIf aiSel == 1 && !_SelectionIsCompanion(akC)
+                ; companions-only filter: ambient strangers never initiate
+                ; (the census receipt below names the count, not per-actor noise)
+            Else
+                ; [REV-174a A35] Arousal Based (subject 2): tier A = arousal
+                ; >= 50 (the _DaemonArousalRaw read; the old bio-link tier is
+                ; RETIRED -- A36c).
+                If aiSel == 2 && _DaemonArousalRaw(akC) >= 50
+                    iTier[nC] = 1
+                    nA += 1
+                Else
+                    iTier[nC] = 0
+                EndIf
+                akCand[nC] = akC
+                nC += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    _Log("[SNBaka] selection subject census: mode=" + asMode + " setting=" + _SubjectSelName(aiSel) + " eligible=" + nC + " tierA=" + nA + " -- REV-167 t3")
+    If nC == 0
+        _Log("[SNBaka] selection refuse: subject pool EMPTY (mode=" + asMode + ", setting=" + _SubjectSelName(aiSel) + ") -- skip tick, never fall through -- REV-167 t3")
+        Return None
+    EndIf
+    Int iPick = Utility.RandomInt(0, nC - 1)
+    If aiSel == 2
+        ; [REV-174a A35] Arousal Based: 70% of draws from the aroused tier
+        ; (fixed ratio -- the slider is retired, A36c); degrades receipted.
+        Float w = _LinkWeightPct()
+        Bool bWantA = Utility.RandomFloat(0.0, 100.0) <= w
+        If bWantA && nA == 0
+            bWantA = False
+            _Log("[SNBaka] subject draw degrade: tier A EMPTY this tick (no bio-linked candidate) -- falling to tier B, weight=" + w + "% -- REV-167 t3")
+        ElseIf !bWantA && nA == nC
+            bWantA = True
+            _Log("[SNBaka] subject draw degrade: tier B EMPTY this tick (every candidate bio-linked) -- falling to tier A, weight=" + w + "% -- REV-167 t3")
+        EndIf
+        Int iSteps = 0
+        While iSteps < nC && ((bWantA && iTier[iPick] != 1) || (!bWantA && iTier[iPick] != 0))
+            iPick = (iPick + 1) % nC
+            iSteps += 1
+        EndWhile
+        String sTier = "B (unlinked stranger)"
+        If bWantA
+            sTier = "A (bio-linked to someone present)"
+        EndIf
+        _Log("[SNBaka] subject draw: mode=" + asMode + " tier=" + sTier + " linkweight=" + w + "% -- REV-167 t3")
+    EndIf
+    _Log("[SNBaka] selection subject drawn: " + akCand[iPick].GetDisplayName() + " (mode=" + asMode + ", setting=" + _SubjectSelName(aiSel) + ") -- REV-167 t3")
+    Return akCand[iPick]
+EndFunction
+
+; TARGET RESOLUTION (non-Random only): the candidate set = standing pool +
+; player + downed pool, each admitting through the SAME gates the shipped
+; target legs apply (reach, target-sex level, the central player-target
+; policy, the child boundary), then the population filter or the two-tier
+; subject-link weighting. Downed members carry their kind so the fire-time
+; downed-family subset machinery sees them (REV-146a Task 8 class).
+Actor[] _selTargetCand = None
+Int[] _selTargetTier = None
+Int[] _selTargetKind = None
+Int _iSelTargetCount = 0
+
+Int Function _SelTargetAdd(Actor akT, Int aiKind, Int aiTier)
+    _selTargetCand[_iSelTargetCount] = akT
+    _selTargetKind[_iSelTargetCount] = aiKind
+    _selTargetTier[_iSelTargetCount] = aiTier
+    _iSelTargetCount += 1
+    Return _iSelTargetCount
+EndFunction
+
+; [REV-174a A35] aiSel 3/4/5 population filters (Player Only / Companions
+; Only / Non-Companion NPCs Only); 1/2 (Bio Led / RP) skip this pass
+; (prompt-side); compacts in place and returns the surviving count.
+Int Function _SelTargetFilter(Int aiSel)
+    Int m = 0
+    Int i = 0
+    While i < _iSelTargetCount
+        Bool bKeep = True
+        If aiSel == 3
+            bKeep = (_selTargetKind[i] == 2)
+        ElseIf aiSel == 4
+            bKeep = (_selTargetKind[i] != 2) && _SelectionIsCompanion(_selTargetCand[i])
+        ElseIf aiSel == 5
+            bKeep = (_selTargetKind[i] != 2) && !_SelectionIsCompanion(_selTargetCand[i])
+        EndIf
+        If bKeep
+            _selTargetCand[m] = _selTargetCand[i]
+            _selTargetKind[m] = _selTargetKind[i]
+            _selTargetTier[m] = _selTargetTier[i]
+            m += 1
+        EndIf
+        i += 1
+    EndWhile
+    Return m
+EndFunction
+
+; The weighted target draw: compacts to the drawn tier (slot 0 = the pick)
+; and returns 1, or -1 for an EMPTY pool. The tier roll and its degradations
+; are receipted.
+Int Function _SelTargetWeightDraw(String asMode, Int aiNA)
+    Float w = _LinkWeightPct()
+    Bool bWantA = Utility.RandomFloat(0.0, 100.0) <= w
+    If bWantA && aiNA == 0
+        bWantA = False
+        _Log("[SNBaka] target draw degrade: tier A EMPTY this tick (no bio-linked candidate) -- falling to tier B, weight=" + w + "% -- REV-167 t3")
+    ElseIf !bWantA && aiNA == _iSelTargetCount
+        bWantA = True
+        _Log("[SNBaka] target draw degrade: tier B EMPTY this tick (every candidate bio-linked) -- falling to tier A, weight=" + w + "% -- REV-167 t3")
+    EndIf
+    Int i = 0
+    While i < _iSelTargetCount
+        If (bWantA && _selTargetTier[i] == 1) || (!bWantA && _selTargetTier[i] == 0)
+            _selTargetCand[0] = _selTargetCand[i]
+            _selTargetTier[0] = _selTargetTier[i]
+            _selTargetKind[0] = _selTargetKind[i]
+            String sTier = "B (unlinked)"
+            If bWantA
+                sTier = "A (bio-linked to the subject)"
+            EndIf
+            _Log("[SNBaka] target draw: mode=" + asMode + " tier=" + sTier + " linkweight=" + w + "% -- REV-167 t3")
+            Return 1
+        EndIf
+        i += 1
+    EndWhile
+    _Log("[SNBaka] selection refuse: target pool EMPTY after the tier draw (mode=" + asMode + ") -- REV-167 t3")
+    Return -1
+EndFunction
+
+Actor Function _ResolveTargetSelection(String asMode, Int aiSel, Actor akInitiator, Int aiN)
+    _selTargetCand = New Actor[128]
+    _selTargetTier = New Int[128]
+    _selTargetKind = New Int[128]
+    _iSelTargetCount = 0
+    Int i = 0
+    While i < aiN
+        Actor akT = _daemonPool[i]
+        If akT && akT != akInitiator && akInitiator.GetDistance(akT) <= fNPCInteractionDistance
+            If !_TargetSexAllowed(akT)
+                _Log("[SNBaka] daemon refuse: target-sex-refused (" + akT.GetDisplayName() + ", level L" + _TargetSexLevel() + ", mode=" + asMode + ") -- REV-145")
+            ElseIf !_PlayerTargetAdmitted(akInitiator, akT, asMode + ".scan")
+                ; policy-refused (sentinel inside the central gate)
+            ElseIf _ChildBoundaryRefused(akInitiator, akT, asMode + ".scan")
+                ; child-boundary (sentinel inside the helper)
+            Else
+                _SelTargetAdd(akT, 0, 0)
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    ; the player (the shipped fallback leg's gates, the same class)
+    If akInitiator.GetDistance(PlayerRef) <= fNPCInteractionDistance
+        If _TargetSexAllowed(PlayerRef) && _PlayerTargetAdmitted(akInitiator, PlayerRef, asMode + ".scan")
+            _SelTargetAdd(PlayerRef, 2, 0)
+        EndIf
+    EndIf
+    ; the downed pool (targets only; the downed-family subset draws at fire)
+    If _iDaemonDownedCount > 0
+        Int k = 0
+        While k < _iDaemonDownedCount
+            Actor akD = _daemonDownedPool[k]
+            If akD && akD != akInitiator && akInitiator.GetDistance(akD) <= fNPCInteractionDistance
+                If !_TargetSexAllowed(akD)
+                    _Log("[SNBaka] daemon refuse: target-sex-refused (downed " + akD.GetDisplayName() + ", level L" + _TargetSexLevel() + ", mode=" + asMode + ") -- REV-146a")
+                ElseIf !_PlayerTargetAdmitted(akInitiator, akD, asMode + ".downed")
+                    ; policy-refused (sentinel inside the central gate)
+                ElseIf _ChildBoundaryRefused(akInitiator, akD, asMode + ".downed")
+                    ; child-boundary (sentinel inside the helper)
+                Else
+                    _SelTargetAdd(akD, 1, 0)
+                EndIf
+            EndIf
+            k += 1
+        EndWhile
+    EndIf
+    ; [REV-174a A35/A36] Bio Led (1) and Relationship Priority (2) are
+    ; PROMPT-SIDE: NO mechanical filter or weighted draw here (the old
+    ; two-tier bio-link draw -- legacy aiSel == 1 -- is RETIRED with the
+    ; cold BioNames cache, A36c; the pack's targetSteer field does the
+    ; steering). [REV-174a A46] Wide is RETIRED; the cap is the standing 10.
+    ; They fall through to the uniform draw below with the full admitted pool.
+    _iSelTargetCount = _SelTargetFilter(aiSel)
+    _Log("[SNBaka] selection target census: mode=" + asMode + " setting=" + _TargetSelName(aiSel) + " pool=" + _iSelTargetCount + " -- REV-167 t3")
+    If _iSelTargetCount == 0
+        _Log("[SNBaka] selection refuse: target pool EMPTY (mode=" + asMode + ", setting=" + _TargetSelName(aiSel) + "; Player Only needs NPCs May Target You on) -- skip tick, never fall through -- REV-167 t3")
+        Return None
+    EndIf
+    Int iPick = Utility.RandomInt(0, _iSelTargetCount - 1)
+    If _selTargetKind[iPick] == 1
+        _Log("[SNBaka] daemon downed-target selected: " + akInitiator.GetDisplayName() + " -> " + _selTargetCand[iPick].GetDisplayName() + " (mode=" + asMode + ", downed-family subset at fire) -- REV-146a")
+    EndIf
+    String sKind = ""
+    If _selTargetKind[iPick] == 2
+        sKind = " (the player)"
+    EndIf
+    _Log("[SNBaka] selection target drawn: " + akInitiator.GetDisplayName() + " -> " + _selTargetCand[iPick].GetDisplayName() + sKind + " (mode=" + asMode + ", setting=" + _TargetSelName(aiSel) + ") -- REV-167 t3")
+    Return _selTargetCand[iPick]
+EndFunction
+
+; REV-145 3.2/3.4: ONE attempt = scan -> initiator -> target -> select -> fire.
 ; Every refusal NAMED (toggle/pool-empty/policy-refused/target-sex-refused/
 ; aggressor-sex-refused/busy/anim-reject). Player-target consults the ONE central
-; gate ( blanket; site codes mephala.scan / molagbal.scan).
+; gate (rev-55a blanket; site codes mephala.scan / molagbal.scan).
 Function _DaemonAttempt(Int aiMode)
     String sMode = "Mephala"
     If aiMode == 2
@@ -1437,13 +2274,36 @@ Function _DaemonAttempt(Int aiMode)
         _Log("[SNBaka] daemon refuse: pool-empty (n=" + n + ", mode=" + sMode + ") -- REV-145")
         Return
     EndIf
-    ; initiator: random-walk first-eligible (the GS muse walk pattern)
+    ; REV-167 t3 2.3 (§5/2.3): the SELECTION-MODE READS. The subject/target
+    ; dropdowns are consumed by BOTH Baka modes' DEFAULT paths (Mephala and
+    ; targeted Molag, R-1). [REV-174 D1] the Madness bypass is RETIRED with the
+    ; toggle (A1/A3); the dropdowns now always steer. Subject value 3 (Bio Led,
+    ; MolagBal only this build) routes the Bio Led roster ask below.
+    Int iSubSel = 0
+    Int iTgtSel = 0
+    iSubSel = _SelectionSubject(sMode)
+    iTgtSel = _SelectionTarget(sMode)
+    ; [REV-174a A46] the Wide roster-cap branch (10 -> 20 for target 3) is
+    ; RETIRED with the option -- the cap is the standing 10, set once here.
+    _iLaneRosterCap = 10
+    _Log("[SNBaka] selection read: mode=" + sMode + " subject=" + iSubSel + " (" + _SubjectSelName(iSubSel) + ") target=" + iTgtSel + " (" + _TargetSelName(iTgtSel) + ") -- REV-174a A35")
+    ; [REV-174 D3 LEG 3] The D1 Bio Led branch (MolagBal, subject dropdown
+    ; value 3) is SUPERSEDED by the universal two-stage below -- value 3 now
+    ; falls through the generic subject resolution (one-lineage supersession;
+    ; the _DaemonMolagBioLedAsk family is dead code pending the leg-4
+    ; retirement sweep + D4 MCM relabel).
+    _Log("[SNBaka] daemon shape: TWO-STAGE (subject + roster consideration, de-randomized) -- REV-174 D3")
+    ; initiator: random-walk first-eligible (the GS muse walk pattern); the
+    ; walk is the SHIPPED Random path (subject=Random; [REV-174] the Madness
+    ; bypass is retired); every other subject setting routes through the
+    ; resolution helper.
     Float fFloor = 60.0
     If aiMode == 2
         fFloor = 30.0
     EndIf
     Float fFloorDays = fFloor / (24.0 * 60.0 * 60.0)
     Actor akInitiator = None
+    If iSubSel == 0
     Int i = Utility.RandomInt(0, n - 1)
     Int steps = 0
     While steps < n && !akInitiator
@@ -1464,142 +2324,282 @@ Function _DaemonAttempt(Int aiMode)
         _Log("[SNBaka] daemon refuse: pool-empty (no initiator past floor/gates, n=" + n + ", mode=" + sMode + ") -- REV-145")
         Return
     EndIf
-    ; target: random NPC partner within NPC reach; the player only via the
-    ; central policy + target-sex level
-    Actor akTarget = None
-    Int j = Utility.RandomInt(0, n - 1)
-    Int jSteps = 0
-    While jSteps < n && !akTarget
-        Actor akT = _daemonPool[j]
-        If akT != akInitiator && akT.GetDistance(akInitiator) <= fNPCInteractionDistance
-            If !_TargetSexAllowed(akT)
-                _Log("[SNBaka] daemon refuse: target-sex-refused (" + akT.GetDisplayName() + ", level L" + _TargetSexLevel() + ", mode=" + sMode + ") -- REV-145")
-            ElseIf !_PlayerTargetAdmitted(akInitiator, akT, sMode + ".scan")
-                ; policy-refused (sentinel inside the central gate)
-            Else
-                akTarget = akT
-            EndIf
-        EndIf
-        If !akTarget
-            j = (j + 1) % n
-            jSteps += 1
-        EndIf
-    EndWhile
-    If !akTarget
-        ; the player remains: policy + level gated
-        If _TargetSexAllowed(PlayerRef) && _PlayerTargetAdmitted(akInitiator, PlayerRef, sMode + ".scan") \
-           && akInitiator.GetDistance(PlayerRef) <= fNPCInteractionDistance
-            akTarget = PlayerRef
+    Else
+        akInitiator = _ResolveSubjectSelection(sMode, iSubSel, n, fFloorDays)
+        If !akInitiator
+            Return   ; skip tick + sentinel inside the resolver (§15.12)
         EndIf
     EndIf
-    ;  Task 8: DOWNED-POOL targets — with no standing target in reach,
-    ; a standing initiator may act on a nearby DOWNED actor (downed-family
-    ; subset at fire). Every existing gate applies: target-sex level, central
-    ; player-target policy, reach, and the fire-time IsEligible recheck.
-    If !akTarget && _iDaemonDownedCount > 0
-        Int k = Utility.RandomInt(0, _iDaemonDownedCount - 1)
-        Int kSteps = 0
-        While kSteps < _iDaemonDownedCount && !akTarget
-            Actor akD = _daemonDownedPool[k]
-            If akD && akD != akInitiator && akInitiator.GetDistance(akD) <= fNPCInteractionDistance
-                If !_TargetSexAllowed(akD)
-                    _Log("[SNBaka] daemon refuse: target-sex-refused (downed " + akD.GetDisplayName() + ", level L" + _TargetSexLevel() + ", mode=" + sMode + ") -- REV-146a")
-                ElseIf !_PlayerTargetAdmitted(akInitiator, akD, sMode + ".downed")
-                    ; policy-refused (sentinel inside the central gate)
-                ElseIf _ChildBoundaryRefused(akInitiator, akD, sMode + ".downed")
-                    ; child-boundary (sentinel inside the helper)
-                Else
-                    akTarget = akD
-                    _Log("[SNBaka] daemon downed-target selected: " + akInitiator.GetDisplayName() + " -> " + akD.GetDisplayName() + " (mode=" + sMode + ", downed-family subset at fire) -- REV-146a")
-                EndIf
-            EndIf
-            If !akTarget
-                k = (k + 1) % _iDaemonDownedCount
-                kSteps += 1
-            EndIf
-        EndWhile
-    EndIf
-    If !akTarget
-        _Log("[SNBaka] daemon refuse: pool-empty (no target for " + akInitiator.GetDisplayName() + ", mode=" + sMode + ") -- REV-145")
+    ; [REV-174 D3 LEG 3] TWO-STAGE (3.5: BOTH Baka modes): the subject is the
+    ; resolved candidate; the TARGET resolves at answer time from the roster
+    ; (3.2/3.4). The pre-picked target walks below are DEAD on this path
+    ; (leg-4 retirement sweep); the roster re-applies every gate per candidate.
+    Int nRoster = _DaemonLaneRosterBuild(akInitiator, n)
+    If nRoster <= 0
+        _Log("[SNBaka] daemon two-stage refuse: roster EMPTY (subject " + akInitiator.GetDisplayName() + ", mode=" + sMode + ", pool n=" + n + ") -- skip tick, never fall through -- REV-174 D3")
         Return
     EndIf
-    _Log("[SNBaka] daemon candidate selected: " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " (mode=" + sMode + ", pool n=" + n + ", level L" + _TargetSexLevel() + ") -- REV-145")
-    If aiMode == 2
-        _DaemonMolagPick(akInitiator, akTarget)
-    Else
-        _DaemonMuseAsk(akInitiator, akTarget)
-    EndIf
+    _Log("[SNBaka] daemon two-stage roster census: subject=" + akInitiator.GetDisplayName() + " mode=" + sMode + " roster=" + nRoster + " of pool=" + n + " -- REV-174 D3")
+    _DaemonTwoStageAsk(sMode, akInitiator, nRoster)
+    Return
+    ; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] the pre-picked-pair tail
+    ; (target walks + the aiMode==2 _DaemonMolagPick/_DaemonMuseAsk split)
+    ; REMOVED -- unreachable since the two-stage early Return above.
+    ; Absence proof: rev174d3_leg4_absence.ps1.
 EndFunction
 
-;  3.5: MOLAG-BAL PICK -- random from the FULL pool (ruling (a): all
+; REV-145 3.5: MOLAG-BAL PICK -- random from the FULL pool (ruling (a): all
 ; actions, no arousal gating, no thoughts, no LLM call).
-;  Task 8 (user ruling: downed follow-up "should happen sometimes"):
+; REV-146a Task 8 (user ruling: downed follow-up "should happen sometimes"):
 ; when the selected target is DOWNED, the random draw admits the downed-family
 ; subset at a SURFACED probability of 35% (the recommended 30-40% band's
 ; midpoint; surfaced here + in the gate report + baka-daemon.md as-built).
 ; The remaining 65% draws the normal full pool exactly as before. Receipt
 ; sentinel carries the surfaced number on every downed-target draw.
-Float _fDaemonDownedPct = 0.35   ;  Task 8: surfaced Molag downed-draw probability
-Function _DaemonMolagPick(Actor akInitiator, Actor akTarget)
-    If _IsDownedAny(akTarget)
-        Bool bDownedDraw = (Utility.RandomInt(0, 99) as Float) < (_fDaemonDownedPct * 100.0)
-        _Log("[SNBaka] daemon MolagBal downed-target draw: " + akTarget.GetDisplayName() + " downed; downed-subset probability=" + (_fDaemonDownedPct * 100.0 as Int) + "% -- draw=" + (bDownedDraw as String) + " -- ")
-        If bDownedDraw
-            String[] dpool = _DaemonDownedActionPool()
-            String sAct = dpool[Utility.RandomInt(0, dpool.Length - 1)]
-            _Log("[SNBaka] daemon MolagBal pick: " + sAct + " (" + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", downed-subset draw, no LLM) -- REV-146a")
-            _DaemonDispatchAction(akInitiator, akTarget, sAct, "MolagBal")
-            Return
+Float _fDaemonDownedPct = 0.35   ; REV-146a Task 8: surfaced Molag downed-draw probability
+; REV-167 (entry 44, §7.3) ROLL-THEN-CONSIDER pending pair: the dice pre-select
+; ONE candidate pair per tick exactly as shipped (_DaemonAttempt, all gates);
+; then a SINGLE consideration call contextualizes the pick per fire. The pair
+; is held through the async answer (the _bMephalaPending pattern), every gate
+; re-verified at fire time; a refused/failed/off-pool answer degrades to the
+; shipped dice draw with a named sentinel -- never a silent fall-through (§15.12).
+; [REV-174 D1] the pending-pair state now lives with _DaemonMolagPick below
+; (Madness member retired with the toggle; Bio Led member added).
+
+; [REV-174 A1] DE-RANDOMIZED DEGRADE: the dice fire is RETIRED (no random
+; picks, ruling of record 2026-10-30). Every refuse/off-pool/prompt-miss leg
+; is now a NAMED DROP -- skip tick, sentinel, never a random fire. The
+; downed-draw probability (_fDaemonDownedPct) is retained above as a record
+; of the REV-146a as-built; it has no live consumer under REV-174.
+; [REV-174 D3 LEG 4] _DaemonMolagDrop REMOVED -- its named-drop calls all
+; lived on the retired lineages; the two-stage answer owns its own drops.
+
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] the Bio Led family REMOVED
+; (_DaemonMolagBioLedAsk, _DaemonBioLedPack, _MolagBioNearestTarget,
+; _akMolagBioRoster/_iMolagBioRosterN/_iMolagBioPoolN) -- superseded by
+; the universal two-stage (subject dropdown value 3 falls through the
+; generic subject resolution). Absence proof: rev174d3_leg4_absence.ps1.
+
+; ============================================================================
+; [REV-174 D3 LEG 3] TWO-STAGE SELECTION (design doc 3.1/3.2) + REACTION
+; LANES (4/6). Supersedes the D1 interim Bio Led roster-ask above (one-lineage,
+; pre-release, clean) and the pre-picked-pair asks; the old _DaemonMolagPick /
+; _DaemonMolagBioLedAsk / _DaemonMuseAsk paths are dead code pending the leg-4
+; retirement sweep (absence proofs there).
+; ============================================================================
+
+Int   _iLaneRosterCap  = 10      ; 3.2: named build constant, NOT an MCM surface
+                                 ; [REV-174a A46] fixed at 10 (the Wide 20-per-fire
+                                 ; inflation retired with the option)
+Actor[] _akLaneRoster  = None    ; the in-flight target roster (proximity order)
+Int   _iLaneRosterN    = 0
+Bool  _bLanePending    = False   ; single-in-flight (the retired REV-145 Mephala-pending pattern's discipline)
+Float _fLanePendingStamp = 0.0   ; [REV-178a Leg 7] ask-time stamp (>30s real-time = lost callback -> reclaim)
+Int _i178aTargetSkips = 0   ; [REV-178a Leg 2] unresolvable-target skip tally (runbook metric)
+Int _i178aSubjectSkips = 0   ; [REV-178a Leg 2] unresolvable-subject skip tally (runbook metric)
+Actor _akLaneSubject   = None
+String _sLaneMode      = ""
+; [REV-174 D3 4.5] REACT pass-through: the unified answer sets these JUST
+; before _DaemonDispatchAction so the dispatch-side lane fan-out (which also
+; serves the random legs, all-enabled) can arbitrate on the LLM's REACT pick.
+String _sLaneReact     = ""
+Bool   _bLaneLLM       = False   ; True = this fire carries an LLM REACT pick
+String _sLaneDescPass  = ""      ; desc pre-composed by the LLM path (4.5.5)
+
+; [REV-174 D3 / A17] raw arousal read (mirrors _DaemonArousalTier's chain;
+; -1 = no framework read). A17: the subject block renders band + RAW VALUE
+; side by side -- the band reads fast, the value disambiguates band edges.
+Int Function _DaemonArousalRaw(Actor ak)
+    Int arousal = -1
+    If SKSE.GetPluginVersion("OSLAroused") > 0
+        arousal = OSLArousedNative.GetArousalNoSideEffects(ak) as Int
+    Else
+        slaFrameworkScr kNG = Quest.GetQuest("sla_Framework") as slaFrameworkScr
+        If kNG
+            arousal = kNG.GetActorArousal(ak)
         EndIf
     EndIf
-    String[] pool = _DaemonActionPool(3)
-    String sAction = pool[Utility.RandomInt(0, pool.Length - 1)]
-    _Log("[SNBaka] daemon MolagBal pick: " + sAction + " (" + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", random, no LLM) -- REV-145")
-    _DaemonDispatchAction(akInitiator, akTarget, sAction, "MolagBal")
+    Return arousal
 EndFunction
 
-;  3.5: MEPHALA ASK -- the consideration pattern (ONE call picks the
-; action AND seeds the thought; the gsanim_muse_consideration precedent). The
-; prompt = pending-approvals entry 30b DRAFT (snbaka_muse_consideration.prompt,
-; staged draft-flagged in-tree): the user's install ruling = their 30b ruling;
-; with the prompt absent the LLM call fails and the attempt is refused named
-; (prompt-absent) -- no silent degradation.
-Function _DaemonMuseAsk(Actor akInitiator, Actor akTarget)
-    Int iBand = _DaemonArousalTier(akInitiator)
-    _bMephalaPending = True
-    _akMephalaInitiator = akInitiator
-    _akMephalaTarget = akTarget
-    _iMephalaBand = iBand
-    String sPack = _DaemonPackContext(akInitiator, akTarget, iBand)
-    _Log("[SNBaka] daemon Mephala consideration asked: " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " (band " + iBand + ") -- REV-145")
-    Int sent = SkyrimNetApi.SendCustomPromptToLLM("snbaka_muse_consideration", "", sPack, Self as Quest, "SkyrimNet_BakaIntegration", "OnBakaMuseConsideration")
-    If sent != 1
-        _bMephalaPending = False
-        _akMephalaInitiator = None
-        _akMephalaTarget = None
-        _iMephalaBand = 0
-        _Log("[SNBaka] daemon refuse: prompt-absent/not-sent (rc=" + sent + ", snbaka_muse_consideration; Mephala lane REQUIRES the 30b prompt) -- ")
+; [REV-174 D3 / A17] band word for a tier (1/2/3 -> mild/warm/burning; the
+; 3.3 prompt legend words). FACTS ONLY (A17b) -- no disposition steering.
+String Function _DaemonArousalBandWord(Int aiTier)
+    If aiTier == 3
+        Return "burning"
+    ElseIf aiTier == 2
+        Return "warm"
     EndIf
+    Return "mild"
 EndFunction
 
-;  3.5: the context pack -- candidate pair (names, sexes, arousal band),
-; mode, target-sex level, player-target policy state, place/hour, drunk/tavern
-; signals. Everything Papyrus can verify at ask time (the GS _MusePackContext
-; discipline).
-String Function _DaemonPackContext(Actor akInitiator, Actor akTarget, Int aiBand)
-    String sSexI = "unknown"
-    Int iSexI = _SexOf(akInitiator)
-    If iSexI == 0
-        sSexI = "male"
-    ElseIf iSexI == 1
-        sSexI = "female"
+; [REV-174 D3 / A17] the A17 side-by-side subject-arousal render value:
+; "warm (band 2), 58". Unknown raw degrades to the bare band form (never a
+; silent empty render -- the S199/S200 lesson).
+String Function _DaemonArousalBandRaw(Actor ak, Int aiTier)
+    Int iRaw = _DaemonArousalRaw(ak)
+    If iRaw < 0
+        Return _DaemonArousalBandWord(aiTier) + " (band " + aiTier + ")"
     EndIf
-    String sSexT = "unknown"
-    Int iSexT = _SexOf(akTarget)
-    If iSexT == 0
-        sSexT = "male"
-    ElseIf iSexT == 1
-        sSexT = "female"
+    Return _DaemonArousalBandWord(aiTier) + " (band " + aiTier + "), " + iRaw
+EndFunction
+
+; [REV-174 D3] relationship-rank gloss to the SUBJECT (3.2: "where the
+; existing gloss machinery supplies one" -- GetRelationshipRank is the only
+; in-tree gloss source). Register DRAFT (facts-only wording; the user's pen).
+; Empty when no meaningful rank.
+String Function _DaemonRelGloss(Actor akSubject, Actor akC)
+    Int iRank = akC.GetRelationshipRank(akSubject)
+    If iRank >= 4
+        Return "lover of " + akSubject.GetDisplayName()
+    ElseIf iRank == 3
+        Return "holds " + akSubject.GetDisplayName() + " dear"
+    ElseIf iRank == 2
+        Return "a friend of " + akSubject.GetDisplayName()
+    ElseIf iRank == 1
+        Return "a passing acquaintance of " + akSubject.GetDisplayName()
+    EndIf
+    Return ""
+EndFunction
+
+; [REV-174 D3 / A17] the roster entry STATE line -- one-line facts (arousal
+; band + raw per A17's roster-consistency flag, downed, drunk). The roster
+; reports; the library constrains (3.2: downed targets stay eligible).
+String Function _DaemonLaneStateLine(Actor akC)
+    Int iTier = _DaemonArousalTier(akC)
+    String s = "arousal " + _DaemonArousalBandRaw(akC, iTier)
+    If _IsDownedAny(akC)
+        s = s + "; downed"
+    EndIf
+    If _DaemonIsDrunkTarget(akC)
+        s = s + "; drunk"
+    EndIf
+    Return s
+EndFunction
+
+; [REV-174 D3] proximity-ordered insertion into the roster (nearest first --
+; the 3.2 narrative frame: "who is within this person's reach").
+Function _LaneRosterInsert(Actor akSubject, Actor akC)
+    Float fD = akSubject.GetDistance(akC)
+    Int k = _iLaneRosterN
+    While k > 0 && akSubject.GetDistance(_akLaneRoster[k - 1]) > fD
+        _akLaneRoster[k] = _akLaneRoster[k - 1]
+        k -= 1
+    EndWhile
+    _akLaneRoster[k] = akC
+    _iLaneRosterN += 1
+EndFunction
+
+; [REV-174 D3 3.2] THE TARGET ROSTER: potential targets for THIS subject,
+; proximity-to-subject order, cap 10. Gates: target-sex level, central
+; player-target policy, child boundary, NPC reach from the SUBJECT; downed
+; targets admitted + flagged (the roster reports, the library constrains);
+; the subject themself excluded; the player admitted via the central policy
+; gates only. Returns the roster count (0 = skip tick, sentinel'd by caller).
+Int Function _DaemonLaneRosterBuild(Actor akSubject, Int aiPoolN)
+    If !_akLaneRoster || _akLaneRoster.Length < _iLaneRosterCap
+        _akLaneRoster = New Actor[20]   ; [REV-174a A46] buffer stays 20; the cap is
+                                        ; the standing 10 (Wide retired)
+    EndIf
+    _iLaneRosterN = 0
+    Int i = 0
+    While i < aiPoolN && _iLaneRosterN < _iLaneRosterCap
+        Actor akT = _daemonPool[i]
+        If akT && akT != akSubject && akSubject.GetDistance(akT) <= fNPCInteractionDistance
+            If _TargetSexAllowed(akT) && _PlayerTargetAdmitted(akSubject, akT, "lane.roster") && !_ChildBoundaryRefused(akSubject, akT, "lane.roster")
+                _LaneRosterInsert(akSubject, akT)
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    Int d = 0
+    While d < _iDaemonDownedCount && _iLaneRosterN < _iLaneRosterCap
+        Actor akD = _daemonDownedPool[d]
+        If akD && akD != akSubject && akSubject.GetDistance(akD) <= fNPCInteractionDistance
+            Bool bDup = False
+            Int q = 0
+            While q < _iLaneRosterN && !bDup
+                If _akLaneRoster[q] == akD
+                    bDup = True
+                EndIf
+                q += 1
+            EndWhile
+            If !bDup && _TargetSexAllowed(akD) && _PlayerTargetAdmitted(akSubject, akD, "lane.roster.downed") && !_ChildBoundaryRefused(akSubject, akD, "lane.roster.downed")
+                _LaneRosterInsert(akSubject, akD)
+            EndIf
+        EndIf
+        d += 1
+    EndWhile
+    If _iLaneRosterN < _iLaneRosterCap
+        If _TargetSexAllowed(PlayerRef) && _PlayerTargetAdmitted(akSubject, PlayerRef, "lane.roster") && akSubject.GetDistance(PlayerRef) <= fNPCInteractionDistance
+            _LaneRosterInsert(akSubject, PlayerRef)
+        EndIf
+    EndIf
+    Return _iLaneRosterN
+EndFunction
+
+; [REV-174 D3] the candidates[] JSON -- one entry per roster slot, keys
+; matching the consideration prompts' {{ c.* }} placeholders exactly (the
+; A16 pack-template contract: name/sex/uuid/state/relationshipGloss; the
+; summary bio renders IN-TEMPLATE from c.uuid via render_character_profile).
+String Function _DaemonLaneRosterJson()
+    String s = ""
+    Int i = 0
+    While i < _iLaneRosterN
+        Actor akC = _akLaneRoster[i]
+        If akC
+            If i > 0
+                s = s + ","
+            EndIf
+            String sSex = "male"
+            If _SexOf(akC) == 1
+                sSex = "female"
+            EndIf
+            s = s + "{\"name\":\"" + _JsonEsc(akC.GetDisplayName()) + "\",\"sex\":\"" + sSex \
+                + "\",\"uuid\":" + _UuidJsonLiteralCtx(akC) \
+                + ",\"state\":\"" + _JsonEsc(_DaemonLaneStateLine(akC)) + "\"" \
+                + ",\"relationshipGloss\":\"" + _JsonEsc(_DaemonRelGloss(_akLaneSubject, akC)) + "\"}"
+        EndIf
+        i += 1
+    EndWhile
+    Return s
+EndFunction
+
+; [REV-174 D3 3.1/3.3 / A16/A17] THE TWO-STAGE PACK: subject block (name/
+; sex/UUID/band+raw arousal -- A17) + the moment (location/tavern/timeOfDay/
+; targetSexLevel/playerTargetPolicy) + candidates[] + actionLibrary. The
+; prompt renders the subject's FULL bio and each candidate's SUMMARY bio
+; in-template from the UUIDs (Path A). Every field the templates reference is
+; supplied here -- the A16 shipped-bytes contract receipt asserts this offline.
+; JSON string values are JSON-escaped via _JsonEsc (names/glosses can carry
+; quotes); the escape helper is shared with the lane composer below.
+String Function _JsonEsc(String asIn)
+    String s = _StrReplace(asIn, "\\", "\\\\")
+    s = _StrReplace(s, "\"", "\\\"")
+    Return s
+EndFunction
+
+; manual str-replace (SKSE StringUtil has NO Replace; Find+Substring loop).
+String Function _StrReplace(String asIn, String asFind, String asWith)
+    If asFind == "" || asIn == ""
+        Return asIn
+    EndIf
+    String s = asIn
+    Int iPos = StringUtil.Find(s, asFind)
+    While iPos != -1
+        s = StringUtil.Substring(s, 0, iPos) + asWith + StringUtil.Substring(s, iPos + StringUtil.GetLength(asFind))
+        iPos = StringUtil.Find(s, asFind, iPos + StringUtil.GetLength(asWith))
+    EndWhile
+    Return s
+EndFunction
+
+String Function _DaemonTwoStagePack(Actor akSubject, Int aiRosterN, String asMode)
+    String sSex = "unknown"
+    Int iSex = _SexOf(akSubject)
+    If iSex == 0
+        sSex = "male"
+    ElseIf iSex == 1
+        sSex = "female"
     EndIf
     String sLoc = "unknown"
     If PlayerRef.GetCurrentLocation()
@@ -1609,15 +2609,10 @@ String Function _DaemonPackContext(Actor akInitiator, Actor akTarget, Int aiBand
     If _PlayerTargetPolicy() == 1
         sPolicy = "NPCs may target the player"
     EndIf
-    String sDrunk = "no"
-    If _DaemonIsDrunkTarget(akTarget)
-        sDrunk = "yes"
-    EndIf
     String sTavern = "no"
     If _DaemonIsTavernClass()
         sTavern = "yes"
     EndIf
-    ; Time-of-day register from the game clock (the GS _MusePackContext shape)
     Int iHour = (Utility.GetCurrentGameTime() * 24.0) as Int % 24
     String sTod = "midday"
     If iHour < 5 || iHour >= 21
@@ -1627,11 +2622,12 @@ String Function _DaemonPackContext(Actor akInitiator, Actor akTarget, Int aiBand
     ElseIf iHour >= 17
         sTod = "evening"
     EndIf
-    ; the action library line (the band's pool, comma-joined);  Task 8:
-    ; a DOWNED target appends the downed-family subset (the consideration may
-    ; pick from it; player-target policy + target-sex gates unchanged).
+    ; the action library: the mode pool (band-3 full set, premise-steered;
+    ; WombHit stays mode-stripped per R-5) + the downed-family subset
+    ; appended when ANY roster entry is downed (3.2: the roster reports,
+    ; the library constrains).
     String sLib = ""
-    String[] pool = _DaemonActionPool(aiBand)
+    String[] pool = _DaemonOptionsPool(asMode, akSubject, 3)
     Int a = 0
     While a < pool.Length
         If a > 0
@@ -1640,107 +2636,1213 @@ String Function _DaemonPackContext(Actor akInitiator, Actor akTarget, Int aiBand
         sLib = sLib + pool[a]
         a += 1
     EndWhile
-    String sDowned = "no"
-    If _IsDownedAny(akTarget)
-        sDowned = "yes"
+    Bool bAnyDowned = False
+    Int r = 0
+    While r < aiRosterN && !bAnyDowned
+        If _akLaneRoster[r] && _IsDownedAny(_akLaneRoster[r])
+            bAnyDowned = True
+        EndIf
+        r += 1
+    EndWhile
+    If bAnyDowned
+        String[] dpool = _DaemonDownedActionPool()
+        Int d2 = 0
+        While d2 < dpool.Length
+            sLib = sLib + ", " + dpool[d2]
+            d2 += 1
+        EndWhile
+    EndIf
+    Int iTier = _DaemonArousalTier(akSubject)
+    ; [REV-174a A36] the CONDITIONAL PROMPT SECTION (target-side steering,
+    ; DRAFT wording at the user's pen): Bio Led (1) / Relationship Priority
+    ; (2) add a targetSteer field to the pack -- facts in, trust the LLM;
+    ; the roster itself is NEVER filtered for these (A36a doctrine).
+    ; [REV-174a A43/A46 GUARD OF RECORD] targetSteer renders ONLY on the
+    ; single-target modes (sel 1/2); with Wide retired no other value can
+    ; carry it -- Random and the population filters emit no steer.
+    String sSteer = ""
+    Int iTgt = _SelectionTarget(asMode)
+    If iTgt == 1
+        sSteer = "bio-led: read the subject's own Relationships in their bio and favor a target they already know - an existing relationship suits this moment"
+    ElseIf iTgt == 2
+        sSteer = "relationship-priority: favor someone from the subject's own Relationships, and let WHY steer the pick - a disliked rival suits a hostile act, an intimate friend a warm one"
+    EndIf
+    ; [REV-178a Leg 1.2, user ruling 2026-11-06] the v23 target space has no
+    ; Bio Led/RP values, so the steer fell through EMPTY while the prompt
+    ; still guards {{ targetSteer }} -- bind the PLAYER-TARGET RULE SIGN
+    ; (mirror of playerTargetPolicy, Mephala-construction; scoped to the rule
+    ; sign: it does not and must not resolve relationship naming).
+    If sSteer == ""
+        sSteer = sPolicy
+    EndIf
+    String sSteerJson = ""
+    If sSteer != ""
+        sSteerJson = ",\"targetSteer\":\"" + _JsonEsc(sSteer) + "\""
+    EndIf
+    ; [REV-174c T2 Leg 1 / dogfood items 12+13] GS-SHAPE PARITY (the tranche-1
+    ; first-silent-link differential: the working GS pack vs the never-bound
+    ; Baka pack): (a) the LEGACY npc* KEYS return (npcName/npcUUID/npcSex --
+    ; the working GS pack carries BOTH vocabularies; if the engine's pack->
+    ; context binding is keyed/gated on the legacy vocabulary, this rebinds it)
+    ; + maxRecentEvents; (b) SEQUENTIAL ACCUMULATION per REV-167e D.1a -- the
+    ; GS 10-27 trace proved single giant Return expressions can drop runtime
+    ; pairs (Papyrus temp-overflow class); this builder WAS one giant Return;
+    ; (c) DEFENSIVE ESCAPES: actionLibrary is _JsonEsc'd (the action-pool join
+    ; is the widest free-text surface -- a runtime quote/backslash anywhere in
+    ; it would invalidate the pack JSON and silently drop the whole context,
+    ; the exact observed symptom). Roster escapes (name/state/gloss) ride the
+    ; candidates[] builder.
+    String s = "{\"npcName\":\"" + _JsonEsc(akSubject.GetDisplayName()) \
+        + "\",\"npcUUID\":" + _UuidJsonLiteralCtx(akSubject) \
+        + ",\"npcSex\":\"" + sSex + "\""
+    s = s + ",\"subjectName\":\"" + _JsonEsc(akSubject.GetDisplayName()) \
+        + "\",\"subjectSex\":\"" + sSex + "\""
+    s = s + ",\"subjectUUID\":" + _UuidJsonLiteralCtx(akSubject)
+    s = s + ",\"subjectArousalBand\":\"" + _DaemonArousalBandRaw(akSubject, iTier) + "\""
+    s = s + ",\"candidates\":[" + _DaemonLaneRosterJson() + "]"
+    s = s + ",\"location\":\"" + _JsonEsc(sLoc) + "\",\"tavern\":\"" + sTavern + "\""
+    s = s + ",\"timeOfDay\":\"" + sTod + "\",\"targetSexLevel\":\"" + _TargetSexLevel() + "\""
+    s = s + ",\"playerTargetPolicy\":\"" + sPolicy + "\"" + sSteerJson
+    s = s + ",\"actionLibrary\":\"" + _JsonEsc(sLib) + "\",\"maxRecentEvents\":12}"
+    ; [REV-178 L4] THE §6.5 ADDITIVE GROWTH: subjectPool (sticky-5 +
+    ; dialogue-priority + proximity), player (TARGET-pool constant only,
+    ; OR2), cadenceBand (V6: read at dispatch), selectionMethod. Existing
+    ; fields byte-stable above; the steer stays per A36/A43 (v23 target
+    ; space has no Bio Led/RP values, so sSteerJson is empty in practice --
+    ; kept for the transition window).
+    _NarrSubjectPoolBuild(akSubject, aiRosterN, _SelectionSubject(asMode))
+    s = StringUtil.Substring(s, 0, StringUtil.GetLength(s) - 1)   ; drop the closing brace
+    s = s + ",\"subjectPool\":[" + _NarrSubjectPoolJson() + "]"
+    String sPlayerF = _NarrPlayerField()
+    If sPlayerF != ""
+        s = s + ",\"player\":" + sPlayerF
+    EndIf
+    s = s + ",\"cadenceBand\":\"" + _NarrCadenceBand(asMode) + "\""
+    s = s + ",\"selectionMethod\":\"" + _NarrSelectionMethodWord(asMode) + "\""
+    s = s + "}"
+    ; [REV-178 L4/§6.5] the composition-level parse receipt (structural
+    ; lint on the FINAL string; devkit-side parse receipts at dogfood).
+    _JsonLintOK(s, "_DaemonTwoStagePack")
+    Return s
+EndFunction
+
+; [REV-174 D3 3.1/3.4] THE ASK: one consideration per tick on the subject +
+; roster; the answer's TARGET: resolves the pair at fire time. Callbacks stay
+; OnBakaMuseConsideration / OnMolagConsideration (both now share the unified
+; two-stage answer path). Returns False on dispatch refusal (named drop
+; sentinel, skip tick -- A1 de-randomized, no fallbacks).
+Bool Function _DaemonTwoStageAsk(String asMode, Actor akSubject, Int aiRosterN)
+    _bLanePending = True
+    _fLanePendingStamp = Utility.GetCurrentRealTime()   ; [REV-178a Leg 7]
+    _akLaneSubject = akSubject
+    _sLaneMode = asMode
+    String sPrompt = "snbaka_mephala_consideration"
+    String sCb = "OnBakaMuseConsideration"
+    If asMode == "MolagBal"
+        sPrompt = "snbaka_molagbal_consideration"
+        sCb = "OnMolagConsideration"
+    EndIf
+    String sPack = _DaemonTwoStagePack(akSubject, aiRosterN, asMode)
+    Int sent = SkyrimNetApi.SendCustomPromptToLLM(sPrompt, "", sPack, Self as Quest, "SkyrimNet_BakaIntegration", sCb)
+    ; [REV-178d Leg 1] ARM-AT-DISPATCH: the cadence slot is consumed HERE,
+    ; when an ask actually leaves. A refused dispatch (rc != 1, an API-level
+    ; failure, not an answer) arms nothing -- the tick's 5s idle re-arm
+    ; retries instead. Refused/empty ANSWERS re-arm normally: the attempt
+    ; cost its interval at dispatch (S244 ruling 1.3).
+    If sent == 1
+        If asMode == "MolagBal"
+            _fBakaDaemonNextRT = Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(None, "SNBaka.MolagBalCadence", 15.0)
+        Else
+            _fBakaDaemonNextRT = Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(None, "SNBaka.MephalaCadence", 45.0)
+        EndIf
+        _Log("[SNBaka] daemon cadence armed at dispatch (" + asMode + ", next in " + (_fBakaDaemonNextRT - Utility.GetCurrentRealTime()) + "s) -- REV-178d Leg 1")
+    EndIf
+    If sent != 1
+        _bLanePending = False
+        _akLaneSubject = None
+        _sLaneMode = ""
+        _iLaneRosterN = 0
+        _Log("[SNBaka] daemon two-stage dispatch refused (rc=" + sent + ", " + sPrompt + ") -- named drop, skip tick -- REV-174 D3")
+        Return False
+    EndIf
+    Return True
+EndFunction
+
+; [REV-178d Leg 2] BOUNDARY TRUNCATION (S244 Leg 3.1, the _GSTruncateCase
+; mirror): overflow cuts at the LAST SENTENCE TERMINATOR (. ! ?) inside the
+; window; else the LAST SPACE; only a window with neither (one uninterrupted
+; token) falls to the hard cut. Never mid-word. Receipt'd per cut.
+String Function _DaemonTruncateCase(String asCase, Int aiMax)
+    If StringUtil.GetLength(asCase) <= aiMax
+        Return asCase
+    EndIf
+    Int iCut = -1
+    Int iSpace = -1
+    Int i = aiMax - 1
+    While i >= 0
+        String c = StringUtil.GetNthChar(asCase, i)
+        If iCut == -1 && (c == "." || c == "!" || c == "?")
+            iCut = i + 1
+        EndIf
+        If iSpace == -1 && c == " "
+            iSpace = i
+        EndIf
+        If iCut != -1
+            i = -1
+        Else
+            i -= 1
+        EndIf
+    EndWhile
+    String sOut = ""
+    If iCut > 0
+        sOut = StringUtil.Substring(asCase, 0, iCut)
+    ElseIf iSpace > 0
+        sOut = StringUtil.Substring(asCase, 0, iSpace)
+    Else
+        sOut = StringUtil.Substring(asCase, 0, aiMax)
+    EndIf
+    _Log("[SNBaka] CASE boundary truncation: " + StringUtil.GetLength(asCase) + " -> " + StringUtil.GetLength(sOut) + " chars (cut mode " + iCut + "/" + iSpace + ") -- REV-178d Leg 2")
+    Return sOut
+EndFunction
+
+; ============================================================================
+; [REV-174 D3 4.3] THE DESC COMPOSITION ENGINE -- Papyrus pragmatic split
+; (design doc 5.2's expected fallback; no DevKit/DeDService native surface on
+; this machine -- the native-composition discovery leg stays flagged for the
+; DLL session). Verb phrases = desc-sentence-templates.md sec.5a/5b rows
+; VERBATIM (the user-edited source of record; fixes + the four per-mode
+; variants applied). A missing verb = named content gap sentinel + the
+; `<Subject> <action label> <Target>.` degradation for THAT fire only (4.3).
+; ============================================================================
+String Function _DaemonVerbPhrase(String asAction, String asMode)
+    ; per-mode variants first (sec.5b -- one phrase cannot serve all four)
+    If asMode == "MolagBal"
+        If asAction == "FlirtFace"
+            Return "lifted the chin of"
+        ElseIf asAction == "FrontHug"
+            Return "drew in and held in a hard, owning embrace with"
+        ElseIf asAction == "KissLove"
+            Return "pressed a claiming kiss onto the lips of"
+        EndIf
+    ElseIf asMode == "Mephala"
+        If asAction == "ForcedKiss"
+            Return "stole a kiss that was never offered from"
+        EndIf
+    EndIf
+    ; the base map (sec.5a fixes applied verbatim)
+    If asAction == "Flirt"
+        Return "let a deliberate flirtation slip toward"
+    ElseIf asAction == "FlirtFace"
+        Return "leaned in to admire the face of"
+    ElseIf asAction == "FlirtBreast"
+        Return "let their gaze and fingers drift across the chest of"
+    ElseIf asAction == "FlirtPussy"
+        Return "brushed a bold hand between the legs of"
+    ElseIf asAction == "BackHug"
+        Return "came up behind and wrapped both arms around"
+    ElseIf asAction == "FrontHug"
+        Return "drew into a close, holding embrace with"
+    ElseIf asAction == "KissLove"
+        Return "pressed a lingering kiss on the lips of"
+    ElseIf asAction == "ArmHold"
+        Return "took firm hold of the arm of"
+    ElseIf asAction == "ShowingOffBody"
+        Return "put their body shamelessly on display for"
+    ElseIf asAction == "TouchBreasts"
+        Return "reached out and cupped the breasts of"
+    ElseIf asAction == "SuckBreasts"
+        Return "lowered their mouth to the bared chest of"
+    ElseIf asAction == "ExaminePrivates"
+        Return "made a slow show of examining the bareness of"
+    ElseIf asAction == "PlayPrivates"
+        Return "toyed freely and openly with the privates of"
+    ElseIf asAction == "FondlePussy"
+        Return "lasciviously fondled the most private of places on"
+    ElseIf asAction == "Spanking"
+        Return "dealt a stinging slap to the backside of"
+    ElseIf asAction == "DrunkExploit"
+        Return "took shameless advantage of the drunken state of"
+    ElseIf asAction == "DrugFood"
+        Return "slipped something into the cup of"
+    ElseIf asAction == "OralOnTarget"
+        Return "on their knees, set to giving oral pleasure to"
+    ElseIf asAction == "Investigate"
+        Return "performed a searching, lingering inspection of"
+    ElseIf asAction == "CapturedInspect"
+        Return "held in place and inspected every inch of"
+    ElseIf asAction == "Strip"
+        Return "stripped the clothes from"
+    ElseIf asAction == "Struggle"
+        Return "groped and grappled bodily with"
+    ElseIf asAction == "ChokeHug"
+        Return "closed around in a crushing embrace, squeezing the breath out of"
+    ElseIf asAction == "ChokeHelpless"
+        Return "closed their hands on the helpless throat of"
+    ElseIf asAction == "WombHit"
+        Return "drove a rough blow into the lower abdomen of"
+    ElseIf asAction == "PinHelpless"
+        Return "pinned the helpless body of"
+    ElseIf asAction == "Subdue"
+        Return "broke the resistance of and forced submission from"
+    ElseIf asAction == "BackHugMolest"
+        Return "came up behind, wrapped close, and roamed the body of"
+    ElseIf asAction == "ApplyTattoo"
+        Return "inked a fresh tattoo onto the bare skin of"
+    ; [REV-174f Leg 4.1 -- NEUTRAL ACTION SET] base-map additions so the neutral
+    ; fanned lanes (and any random leg that fires these) compose instead of
+    ; degrading. Neutral register; NO daedric allusion (5a/5b class, DRAFT).
+    ElseIf asAction == "ForcedKiss"
+        Return "kissed without asking, taking it from"
+    ElseIf asAction == "SpankTarget"
+        Return "landed a hard slap on the backside of"
+    ElseIf asAction == "SlapFace"
+        Return "cracked an open hand across the face of"
+    ElseIf asAction == "BreastSlap"
+        Return "slapped the bared breast of"
+    ElseIf asAction == "SexSpank"
+        Return "dealt a mid-act spank to the backside of"
+    ElseIf asAction == "ForcedTattoo"
+        Return "held down and inked a tattoo onto the skin of"
+    ElseIf asAction == "RemoveTattoos"
+        Return "removed the tattoos from the skin of"
+    ElseIf asAction == "CommandTattoo"
+        Return "directed a fresh marking onto the skin of"
+    ElseIf asAction == "TieUp"
+        Return "bound the hands of"
+    ElseIf asAction == "Untie"
+        Return "unbound the hands of"
+    ElseIf asAction == "Release"
+        Return "released the hold on"
+    ElseIf asAction == "HelpUp"
+        Return "offered a helping hand to"
+    ElseIf asAction == "LapSit"
+        Return "settled into the lap of"
+    ElseIf asAction == "Capture"
+        Return "seized and carried off"
+    ElseIf asAction == "SellToSlavery"
+        Return "sold the freedom of"
+    ElseIf asAction == "EnslaveFollower"
+        Return "forced the collar of servitude onto"
+    ElseIf asAction == "Execute"
+        Return "ended the life of"
+    ElseIf asAction == "Escalate"
+        Return "took by force the body of"
+    ElseIf asAction == "InterruptScene"
+        Return "interrupted, stepping in on"
+    ElseIf asAction == "CallOff"
+        Return "called off the attack on"
+    ElseIf asAction == "CreatureEscalate"
+        Return "closed in on the helpless body of"
+    ElseIf asAction == "StripRestore"
+        Return "handed the clothes back to"
+    ElseIf asAction == "Express"
+        Return "let an unguarded expression slip in front of"
+    EndIf
+    Return ""   ; the named-gap degradation path (4.3)
+EndFunction
+
+; [REV-174 D3 4.3] the composed DESC sentence -- subject name -> semantic
+; middle -> target name, per-mode frame sentences (4.3 DRAFT register class;
+; names are composed text, NEVER template variables -- R-D8/sec.137). ASCII.
+; [REV-178c Leg 3] THE REASONING LINE (Baka mirror of the GS _GSComposeDesc
+; rider): the two-stage consideration answer's CASE sentence composes into
+; the fire-time cue desc. Desc shape becomes "<S> <phrase> <T> -- <CASE
+; sentence> Those nearby see and react to what they've just witnessed."
+; (the user's line of record rides verbatim after the CASE; composed shape
+; is engine-facing text derived from model output + the user's sentence --
+; register DRAFT at the pen). Narrative path ONLY: the neutral Action lane,
+; random legs, and mechanical fallbacks call this composer WITHOUT asCase
+; (the reasoning line is never fabricated). ASCII " -- " separator by rule.
+; Cap of record: 240 chars HARD CUT on the CASE fragment (matches the GS
+; composer cap; no ellipsis). Sentinel: one log line per with-case fire (the
+; adoption tally metric).
+String Function _DaemonComposeDesc(String asMode, Actor akInitiator, Actor akTarget, String asAction, String asCase = "")
+    String sS = akInitiator.GetDisplayName()
+    String sT = akTarget.GetDisplayName()
+    String sPhrase = _DaemonVerbPhrase(asAction, asMode)
+    String sBase = ""
+    If sPhrase == ""
+        _Log("[SNBaka] desc content GAP: no verb phrase for action '" + asAction + "' (" + asMode + ") -- degrading to label form for THIS fire (standing gap list item) -- REV-174 D3 4.3")
+        sBase = sS + " " + asAction + " " + sT + "."
+    ElseIf asMode == "Action"
+        ; [REV-174f Leg 4.1] the NEUTRAL frame -- no daedric allusion, no mode
+        ; framing: "<Subject> <verb phrase> <Target>." (5a class, DRAFT).
+        sBase = sS + " " + sPhrase + " " + sT + "."
+    ElseIf asMode == "MolagBal"
+        sBase = sS + " took what this moment offered and " + sPhrase + " " + sT + "."
+    ElseIf asMode == "Sanguine"
+        sBase = sS + " gave themselves over to the revel and " + sPhrase + " " + sT + "."
+    ElseIf asMode == "Sheogorath"
+        sBase = sS + ", on a whim, " + sPhrase + " " + sT + "."
+    Else
+        sBase = sS + " gave in to their secretly held desires and " + sPhrase + " " + sT + "."
+    EndIf
+    If asCase == ""
+        Return sBase
+    EndIf
+    ; [REV-179 Leg 2] CASE COMPOSE-TIME TOGGLE (ruling of record (c), 178d
+    ; dogfood; Baka mirror of the GS GSAnim.CaseInCue gate): SNBaka.CaseInCue,
+    ; None-keyed StorageUtil, DEFAULT ON (1). OFF = plain desc everywhere
+    ; downstream -- base sentence ONLY (no CASE fragment, no closing sentence,
+    ; no per-lane logic); read fresh per fire.
+    If StorageUtil.GetIntValue(None, "SNBaka.CaseInCue", 1) != 1
+        _Log("[SNBaka] CASE cue append OFF (plain desc, case len=" + StringUtil.GetLength(asCase) + ") -- REV-179 Leg 2")
+        Return sBase
+    EndIf
+    asCase = _DaemonTrimSpaces(asCase)
+    ; [REV-178d Leg 2] S244 Leg 3.1 (Baka mirror): boundary truncation --
+    ; last sentence terminator, else last space, NEVER mid-word.
+    asCase = _DaemonTruncateCase(asCase, 240)
+    If StringUtil.GetLength(asCase) > 0
+        String c = StringUtil.GetNthChar(asCase, StringUtil.GetLength(asCase) - 1)
+        If c != "." && c != "!" && c != "?"
+            asCase = asCase + "."
+        EndIf
+    EndIf
+    String sHead = sBase
+    If StringUtil.GetLength(sHead) > 0 && StringUtil.GetNthChar(sHead, StringUtil.GetLength(sHead) - 1) == "."
+        sHead = StringUtil.Substring(sHead, 0, StringUtil.GetLength(sHead) - 1)
+    EndIf
+    _Log("[SNBaka] reasoning line appended (case len=" + StringUtil.GetLength(asCase) + ") -- with-CASE desc -- REV-178c Leg 3")
+    Return sHead + " -- " + asCase + " Those nearby see and react to what they've just witnessed."
+EndFunction
+
+; ============================================================================
+; [REV-174 D3 4/6] REACTION LANES + REACT ARBITRATION (the emission pass,
+; 4.5 steps 2-5; fire-side, all modes incl. random legs). Lane bitmask:
+; 1=narr 2=thought 4=pspeech 8=pthought. All four lanes ON by default (A15).
+; ============================================================================
+
+; [REV-174 D3 4.6] the enabled lane set, read FRESH per fire (no caching) --
+; Baka modes read the motherboard properties; GS modes read GSAnim.* keys.
+Int Function _LaneEnabledSet(String asMode)
+    If asMode == "Action"
+        ; [REV-174f Leg 4.4] the NEW mode-agnostic keys (SNBaka.Action.Lane_*),
+        ; read FRESH per fire. Defaults mirror A15: narr/pspeech/pthought ON,
+        ; thought OFF. MCM toggles live on the Baka Interactions page (DRAFT).
+        Int m = 0
+        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_narr", 1) == 1
+            m = m + 1
+        EndIf
+        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_thought", 0) == 1
+            m = m + 2
+        EndIf
+        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 1) == 1
+            m = m + 4
+        EndIf
+        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pthought", 1) == 1
+            m = m + 8
+        EndIf
+        Return m
+    ElseIf asMode == "Mephala"
+        Int m = 0
+        If bMephalaLaneNarr
+            m = m + 1
+        EndIf
+        If bMephalaLaneThought
+            m = m + 2
+        EndIf
+        If bMephalaLanePSpeech
+            m = m + 4
+        EndIf
+        If bMephalaLanePThought
+            m = m + 8
+        EndIf
+        Return m
+    ElseIf asMode == "MolagBal"
+        Int m = 0
+        If bMolagBalLaneNarr
+            m = m + 1
+        EndIf
+        If bMolagBalLaneThought
+            m = m + 2
+        EndIf
+        If bMolagBalLanePSpeech
+            m = m + 4
+        EndIf
+        If bMolagBalLanePThought
+            m = m + 8
+        EndIf
+        Return m
+    ElseIf asMode == "Sanguine" || asMode == "Sheogorath"
+        String sPfx = "GSAnim.SanguineLane_"
+        If asMode == "Sheogorath"
+            sPfx = "GSAnim.SheogorathLane_"
+        EndIf
+        Int m = 0
+        If StorageUtil.GetIntValue(None, sPfx + "narr", 1) == 1
+            m = m + 1
+        EndIf
+        If StorageUtil.GetIntValue(None, sPfx + "thought", 1) == 1
+            m = m + 2
+        EndIf
+        If StorageUtil.GetIntValue(None, sPfx + "pspeech", 1) == 1
+            m = m + 4
+        EndIf
+        If StorageUtil.GetIntValue(None, sPfx + "pthought", 1) == 1
+            m = m + 8
+        EndIf
+        Return m
+    EndIf
+    Return 1
+EndFunction
+
+; [REV-174g A37] per-mode last-fired-lane state for the NO-REPEAT ROTATION
+; (the lane BIT last fired per mode: 1=narr 2=thought 4=pspeech 8=pthought;
+; 0 = none yet). Script-local member state; rotation never repeats the same
+; lane back-to-back within a mode while another lane is enabled.
+Int _iLastLaneMephala = 0
+Int _iLastLaneMolagBal = 0
+Int _iLastLaneSanguine = 0
+Int _iLastLaneSheogorath = 0
+Int _iLastLaneAction = 0
+
+Int Function _LaneLastGet(String asMode)
+    If asMode == "MolagBal"
+        Return _iLastLaneMolagBal
+    ElseIf asMode == "Sanguine"
+        Return _iLastLaneSanguine
+    ElseIf asMode == "Sheogorath"
+        Return _iLastLaneSheogorath
+    ElseIf asMode == "Action"
+        Return _iLastLaneAction
+    EndIf
+    Return _iLastLaneMephala
+EndFunction
+
+Function _LaneLastSet(String asMode, Int iLane)
+    If asMode == "MolagBal"
+        _iLastLaneMolagBal = iLane
+    ElseIf asMode == "Sanguine"
+        _iLastLaneSanguine = iLane
+    ElseIf asMode == "Sheogorath"
+        _iLastLaneSheogorath = iLane
+    ElseIf asMode == "Action"
+        _iLastLaneAction = iLane
+    Else
+        _iLastLaneMephala = iLane
+    EndIf
+EndFunction
+
+; [REV-174 D3 6.1] the REACT: field parse -- whitespace-normalized,
+; case-insensitive (rev-22 rider), comma/plus separated keywords from the
+; A13c four-lane set: narr, pspeech, pthought, thought, all, none.
+; Returns the picked lane bitmask (0 = the none pick -- a legitimate pick,
+; distinct from -1), or -1 for unparseable/empty/contradictory (fail-open).
+; NOTE: Papyrus has no bitwise ops -- the mask is additive with disjoint
+; powers of two; Bool params are by-value so the none pick is the 0 return.
+Int Function _ReactParseLanes(String asReact)
+    If asReact == ""
+        Return -1
+    EndIf
+    String s = _DaemonTrimSpaces(asReact)
+    s = _LowerAscii(s)
+    s = _StrReplace(s, "+", ",")
+    String[] toks = StringUtil.Split(s, ",")
+    Int mask = 0
+    Bool bAnyTok = False
+    Bool bAll = False
+    Bool bNone = False
+    Int i = 0
+    While i < toks.Length
+        String t = _DaemonTrimSpaces(toks[i])
+        If t != ""
+            bAnyTok = True
+            If t == "all"
+                bAll = True
+            ElseIf t == "none"
+                bNone = True
+            ElseIf t == "narr"
+                mask = mask + 1
+            ElseIf t == "thought"
+                mask = mask + 2
+            ElseIf t == "pspeech"
+                mask = mask + 4
+            ElseIf t == "pthought"
+                mask = mask + 8
+            Else
+                Return -1   ; unknown keyword = unparseable -> fail-open (6.2)
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    If !bAnyTok
+        Return -1
+    EndIf
+    If bAll
+        mask = 15
+    EndIf
+    If bNone && mask == 0
+        Return 0
+    EndIf
+    If bNone && mask != 0
+        Return -1   ; 'none' mixed with lane keywords = contradictory -> fail-open
+    EndIf
+    Return mask
+EndFunction
+
+; ASCII lowercase (Papyrus's StringUtil has no ToLower; letters only).
+String Function _LowerAscii(String asIn)
+    String s = ""
+    Int i = 0
+    Int len = StringUtil.GetLength(asIn)
+    While i < len
+        String c = StringUtil.GetNthChar(asIn, i)
+        Int code = StringUtil.AsOrd(c)
+        If code >= 65 && code <= 90
+            c = StringUtil.AsChar(code + 32)
+        EndIf
+        s = s + c
+        i += 1
+    EndWhile
+    Return s
+EndFunction
+
+; [REV-174f Leg 4.2] THE NEUTRAL FANNED ACTION LANES -- LLM- and player-initiated
+; fires ONLY. Daemon/mode-initiated interactions NEVER fan here: the daemon
+; dispatch sets SNBaka.DaemonFire around its executor chain and this helper
+; no-ops under it, so NO single fire ever double-fans (receipt of record). Uses
+; the SAME arbitration/cap machinery via _DaemonLaneFire("Action") with
+; abRandomLeg=True (no LLM REACT in the loop on menu/hotkey/LLM fires ->
+; all-enabled fan-out, the random-leg rule). Desc = neutral frame composed by
+; _DaemonComposeDesc("Action"). Re-entrancy/funnel dedup: same pair inside 2s =
+; one fan per fire (executor chains like Spanking -> SpankTarget).
+Int _iActFanInit = 0
+Int _iActFanTgt = 0
+Float _fActFanAt = 0.0
+
+Function _ActionLaneFire(Actor akInitiator, Actor akTarget, String asAction)
+    If !akInitiator || !akTarget || akInitiator == akTarget
+        Return
+    EndIf
+    If StorageUtil.GetIntValue(None, "SNBaka.DaemonFire", 0) == 1
+        Debug.Trace("[SNBaka] action-lane fan SUPPRESSED (daemon/mode fire -- mode-branded lanes exclusively): " + asAction)
+        Return
+    EndIf
+    Float fNow = Utility.GetCurrentRealTime()
+    If _iActFanInit == akInitiator.GetFormID() && _iActFanTgt == akTarget.GetFormID() \
+        && (fNow - _fActFanAt) < 2.0
+        Debug.Trace("[SNBaka] action-lane fan DEDUP (executor funnel, same fire): " + asAction)
+        Return
+    EndIf
+    _iActFanInit = akInitiator.GetFormID()
+    _iActFanTgt = akTarget.GetFormID()
+    _fActFanAt = fNow
+    String sDesc = _DaemonComposeDesc("Action", akInitiator, akTarget, asAction)
+    _Log("[SNBaka] neutral action-lane fan: " + asAction + " (" + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-174f Leg 4")
+    _DaemonLaneFire("Action", akInitiator, akTarget, sDesc, "", True)
+EndFunction
+
+; [REV-174 D3 4.5/6.2 -> REV-174g -> REV-174i -> REV-174j] THE ARBITRATION +
+; FAN-OUT: read the enabled set FRESH; the GENERAL cue fires unconditionally
+; first (REV-174g fact-cue floor); then AT MOST ONE fanned lane per fire.
+; REV-174i A37-v4 (user ruling 2026-11-01 v4) RESTORES LLM ARBITRATION: with
+; the master bReactArbitration toggle ON (MCM "LLM Reaction Arbitration",
+; default True) the answer's REACT: field picks the lane (intersected with
+; enabled). REV-174j A37-v5 (user ruling 2026-11-01 v5, ONE-FANNED-LANE
+; CAP): the pick is trimmed to EXACTLY ONE fanned lane -- general cue + one
+; fanned lane MAX, never 3 rendered triggers (non-narr preferred on
+; multi-lane picks; a lone narr pick still fires the fanned narr lane); the
+; NO-REPEAT rotation of REV-174g is demoted to GUARD + FALLBACK (random
+; legs, toggle OFF, invalid/off-enabled picks, and exact-mask repeats of the
+; last fire). A single-lane enabled set fires 100% in every mode (no-repeat
+; sidestepped -- user edge-case ruling).
+; Desc identical across the general cue and the fired lane; events registered
+; in the SAME tick (4.5.5).
+Function _DaemonLaneFire(String asMode, Actor akInitiator, Actor akTarget, String asDesc, String asReact, Bool abRandomLeg)
+    String sPfx = "sdb_mephala_mode_"
+    If asMode == "MolagBal"
+        sPfx = "sdb_molagbal_mode_"
+    ElseIf asMode == "Sanguine"
+        sPfx = "gsanim_sanguine_mode_"
+    ElseIf asMode == "Sheogorath"
+        sPfx = "gsanim_sheogorath_mode_"
+    ElseIf asMode == "Action"
+        ; [REV-174f Leg 4.3] the NEUTRAL fanned set (no mode branding)
+        sPfx = "sdb_baka_action_lane_"
+    EndIf
+    ; [REV-174g Leg 3, user ruling 2026-11-01 v3 -- FACT-CUE FLOOR] the
+    ; GENERAL narration cue: registered UNCONDITIONALLY on every action/mode
+    ; fire (outside the REACT mask and every lane toggle, BEFORE the
+    ; no-lanes early return below) with the full composed desc. The yaml
+    ; (sdb_baka_action_general.yaml: prob 1 / cd 0 / prio 5 / interrupt
+    ; false) renders it politely every time -- the narration floor that
+    ; survives any arbitration outcome.
+    ; [REV-178a Leg 6 -- S238 Leg 0 SUPERSEDE, user ruling 2026-11-06] the
+    ; general direct-narration cue now registers AFTER arbitration: a
+    ; narr-class lane pick SUPPRESSES the general (sentinel below); a non-narr
+    ; pick rides alongside it; all lanes off / none fired = the general alone.
+    ; The REV-174g "unconditional floor" is superseded for narr fires only.
+    Int iEnabled = _LaneEnabledSet(asMode)
+    If iEnabled == 0
+        SkyrimNetApi.RegisterEvent("sdb_baka_action_general", asDesc, akInitiator, None)
+        _Log("[SNBaka] general cue FIRED ALONE (no lanes enabled): sdb_baka_action_general (" + asMode + ", " + akInitiator.GetDisplayName() + ") -- REV-178a Leg 6")
+        _Log("[SNBaka] lane fan-out: NO LANES ENABLED (" + asMode + ") -- desc persists to the GM log + the general cue only -- REV-174 D3 6.2 / REV-174g")
+        Return
+    EndIf
+    ; [REV-174i A37-v4, user ruling 2026-11-01 v4] LLM ARBITRATION RESTORED,
+    ; NO-REPEAT DEMOTED TO GUARD: the answer's REACT: field arbitrates again
+    ; when the master bReactArbitration toggle is ON (MCM "LLM Reaction
+    ; Arbitration", default True) -- the 174g v3 ruling had demoted the pick
+    ; to evidence-only after the 174f dogfood showed the model mimicking
+    ; rendered pthought cues 53 consecutive fires; the user re-ruled for the
+    ; LLM pick. The NO-REPEAT rotation survives as FALLBACK + GUARD:
+    ; (a) random legs / toggle OFF / missing/invalid/off-enabled REACT ->
+    ; rotation (one lane per action stands, the 174g floor); (b) a pick that
+    ; exact-masks the last-fired fire rotates instead (never the same lane
+    ; twice in a row while another is enabled); (c) SINGLE-LANE ENABLED SET:
+    ; fires 100%, no-repeat SIDESTEPPED, arbitration on or off (the 6.2 rule,
+    ; user edge-case ruling 2026-11-01 v4). The general cue above is the
+    ; unconditional narration floor. (d) [REV-174j A37-v5, user ruling
+    ; 2026-11-01 v5] ONE-FANNED-LANE CAP: the pick is trimmed to EXACTLY ONE
+    ; fanned lane -- the general cue already narrates, so narr + one other
+    ; (3 rendered triggers) is NOT allowed; non-narr preferred on multi-lane
+    ; picks, a lone narr pick still fires the fanned narr lane.
+    Int iLastLane = _LaneLastGet(asMode)
+    Int iFire = 0
+    Int iEnabledCount = 0
+    Int vCnt = 1
+    While vCnt <= 8
+        If (iEnabled / vCnt) % 2 == 1
+            iEnabledCount += 1
+        EndIf
+        vCnt = vCnt * 2
+    EndWhile
+    If iEnabledCount == 1
+        iFire = iEnabled
+        _Log("[SNBaka] lane arbitration: exactly ONE lane enabled (" + asMode + ") -- fires 100%, no-repeat SIDESTEPPED -- REV-174i A37")
+    ElseIf bReactArbitration && !abRandomLeg
+        Int iPicked = _ReactParseLanes(asReact)
+        If iPicked == -1
+            _Log("[SNBaka] lane arbitration: REACT missing/invalid ('" + asReact + "') -- ROTATION FALLBACK -- REV-174i A37")
+        ElseIf iPicked == 0
+            _Log("[SNBaka] lane arbitration: REACT none pick -- no lanes fire (hollow-action watch item) -- REV-174i A37")
+            SkyrimNetApi.RegisterEvent("sdb_baka_action_general", asDesc, akInitiator, None)
+            _Log("[SNBaka] general cue FIRED ALONE (no lane fired): sdb_baka_action_general (" + asMode + ") -- REV-178a Leg 6")
+            Return
+        Else
+            Int vI = 1
+            While vI <= 8
+                If (iPicked / vI) % 2 == 1 && (iEnabled / vI) % 2 == 1
+                    iFire = iFire + vI
+                EndIf
+                vI = vI * 2
+            EndWhile
+            If iFire == 0
+                _Log("[SNBaka] lane arbitration: intersection EMPTY (picked lanes all disabled) -- ROTATION FALLBACK -- REV-174i A37")
+            Else
+                ; [REV-174j A37-v5, user ruling 2026-11-01 v5] ONE-FANNED-LANE
+                ; CAP: the general cue already narrates unconditionally; the
+                ; pick is trimmed to EXACTLY ONE fanned lane (never 3 rendered
+                ; triggers). A non-narr lane is preferred when the model names
+                ; several; a lone narr pick still fires the fanned narr lane.
+                Int iCapped = 0
+                Int vC = 2
+                While vC <= 8 && iCapped == 0
+                    If (iFire / vC) % 2 == 1
+                        iCapped = vC
+                    EndIf
+                    vC = vC * 2
+                EndWhile
+                If iCapped == 0 && (iFire % 2) == 1
+                    iCapped = 1
+                EndIf
+                If iCapped != iFire
+                    _Log("[SNBaka] lane arbitration: CAP-TRIM (ONE fanned lane only; fire " + iFire + " -> " + iCapped + ") -- REV-174j A37")
+                    iFire = iCapped
+                EndIf
+                If iFire == iLastLane
+                    _Log("[SNBaka] lane arbitration: NO-REPEAT guard (pick repeats last fire " + iLastLane + ") -- ROTATION FALLBACK -- REV-174i A37")
+                    iFire = 0
+                Else
+                    _Log("[SNBaka] lane arbitration: REACT '" + asReact + "' picked=" + iPicked + " enabled=" + iEnabled + " -> fire=" + iFire + " -- REV-174i A37")
+                EndIf
+            EndIf
+        EndIf
+    ElseIf abRandomLeg
+        _Log("[SNBaka] lane arbitration: random leg (no LLM in the loop) -- ROTATION FALLBACK -- REV-174g A37 / REV-174i")
+    Else
+        _Log("[SNBaka] lane arbitration: LLM arbitration OFF (manual) -- ROTATION FALLBACK -- REV-174g A37 / REV-174i")
+    EndIf
+    If iFire == 0
+        ; [REV-174g A37] the NO-REPEAT ROTATION (fallback master since
+        ; REV-174i): the first enabled lane after this mode's last-fired
+        ; lane, circular, never the same lane twice in a row while another
+        ; is available.
+        Int vRot = 1
+        If iLastLane == 2
+            vRot = 4
+        ElseIf iLastLane == 4
+            vRot = 8
+        ElseIf iLastLane == 8
+            vRot = 1
+        EndIf
+        Int iGuard = 0
+        While iGuard < 4 && iFire == 0
+            If vRot != iLastLane && (iEnabled / vRot) % 2 == 1
+                iFire = vRot
+            EndIf
+            vRot = vRot * 2
+            If vRot > 8
+                vRot = 1
+            EndIf
+            iGuard += 1
+        EndWhile
+        If iFire == 0
+            ; single-lane set (or only the last lane enabled) -- the
+            ; last-fired lane fires; a single enabled lane fires 100% (the
+            ; 6.2 rule, preserved).
+            iFire = iLastLane
+            _Log("[SNBaka] lane arbitration: rotation collapsed to the last-fired lane (" + asMode + ", single-lane set) -- REV-174g A37")
+        EndIf
+        If iFire == 0
+            iFire = 1   ; belt-and-braces (unreachable: iEnabled != 0 above)
+        EndIf
+        _Log("[SNBaka] lane arbitration: ONE-LANE ROTATION (REV-174g A37): mode=" + asMode + " enabled=" + iEnabled + " last=" + iLastLane + " -> fire=" + iFire)
+    EndIf
+    _LaneLastSet(asMode, iFire)
+    ; [REV-178a Leg 6] the supersede adjudication (S238 Leg 0): narr-class
+    ; pick suppresses the general; non-narr rides alongside.
+    If (iFire % 2) == 1
+        _Log("[SNBaka] general suppressed -- narr lane (" + asMode + ") -- REV-178a Leg 6")
+    Else
+        SkyrimNetApi.RegisterEvent("sdb_baka_action_general", asDesc, akInitiator, None)
+        _Log("[SNBaka] general cue FIRED alongside non-narr lane: sdb_baka_action_general (" + asMode + ", " + akInitiator.GetDisplayName() + ") -- REV-178a Leg 6")
+    EndIf
+    ; [REV-174a A38a/A38b] the FIRE RECEIPT: none existed on the REV-174
+    ; two-stage path (the old notification did not survive the rebuild --
+    ; build-fresh, not gating-surviving-code; audit receipt 2026-10-30: zero
+    ; _Notify calls on _DaemonLaneFire/_DaemonLaneAnswer fire legs). Now built
+    ; ONCE per fire (not per lane), gated by the GLOBAL Debug Notifications
+    ; toggle (Settings page, GSAnim.DebugNotify shared key, DEFAULT OFF).
+    String sModeLine = asMode
+    If asMode == "MolagBal"
+        sModeLine = "Molag Bal"
+    ElseIf asMode == "Sheogorath"
+        sModeLine = "Sheogorath"
+    ElseIf asMode == "Action"
+        sModeLine = "Action lane"
+    EndIf
+    If StorageUtil.GetIntValue(None, "GSAnim.DebugNotify", 0) == 1
+        String sFireLine = sModeLine + " Mode - " + akInitiator.GetDisplayName()
+        If akTarget
+            sFireLine = sFireLine + " -> " + akTarget.GetDisplayName()
+        EndIf
+        Debug.Notification(sFireLine)
+    EndIf
+    ; the fan-out -- same tick, desc identical across lanes (4.5.5); exactly
+    ; ONE lane per fire (REV-174i LLM arbitration+cap, REV-174g rotation
+    ; fallback -- both single-fire by construction)
+    Int v = 1
+    While v <= 8
+        If (iFire / v) % 2 == 1
+            String sLane = "narr"
+            If v == 2
+                sLane = "thought"
+            ElseIf v == 4
+                sLane = "pspeech"
+            ElseIf v == 8
+                sLane = "pthought"
+            EndIf
+            ; [REV-174a D1b] PLAYER-LANE BINDING: pspeech/pthought bind the
+            ; PLAYER as the event's target actor (DevKit pairs player-voiced
+            ; response types with player-bound events; the prior None binding
+            ; left the event NPC-attached and the renderer never surfaced it).
+            If v == 4 || v == 8
+                SkyrimNetApi.RegisterEvent(sPfx + sLane, asDesc, akInitiator, Game.GetPlayer())
+            Else
+                SkyrimNetApi.RegisterEvent(sPfx + sLane, asDesc, akInitiator, None)
+            EndIf
+            _Log("[SNBaka] lane FIRED: " + sPfx + sLane + " (" + asMode + ", " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-174 D3")
+        EndIf
+        v = v * 2
+    EndWhile
+EndFunction
+
+; [REV-174 D3 3.4] THE UNIFIED TWO-STAGE ANSWER PATH -- one lineage serving
+; both Baka modes (Mephala/MolagBal) and, via the same contract, the GS
+; callbacks pass through their own shims. Seed-time gates re-run at fire
+; time (the OnBakaMuseConsideration standard); every refusal a NAMED drop
+; (A1 de-randomized -- no dice, no silent fallback).
+Function _DaemonLaneAnswer(String response, Int success)
+    String sMode = _sLaneMode
+    Actor akSubject = _akLaneSubject
+    _bLanePending = False
+    _akLaneSubject = None
+    _sLaneMode = ""
+    If success != 1 || response == ""
+        _Log("[SNBaka] daemon two-stage answer: prompt-miss success=" + success + " (" + sMode + ") -- named drop, skip tick -- REV-174 D3 3.4")
+        _iLaneRosterN = 0
+        Return
+    EndIf
+    If StringUtil.Find(response, "REFUSE:") >= 0
+        _Log("[SNBaka] daemon two-stage answer: LLM REFUSE ('" + _MolagParseLine(response, "REFUSE:") + "') -- named drop -- REV-174 D3 3.4")
+        _iLaneRosterN = 0
+        Return
+    EndIf
+    If StringUtil.Find(response, "MISS") >= 0
+        _Log("[SNBaka] daemon two-stage answer: LLM MISS -- named drop, skip tick -- REV-174 D3 3.4")
+        _iLaneRosterN = 0
+        Return
+    EndIf
+    If !akSubject
+        _Log("[SNBaka] daemon two-stage answer: subject vanished -- named drop -- REV-174 D3 3.4")
+        _iLaneRosterN = 0
+        Return
+    EndIf
+    ; [REV-178 L5/L6] the narrative contract lines: SUBJECT (validated,
+    ; may override the mechanical subject when the mode runs Narrative) +
+    ; CASE (log-only, R10 phase 1; OR4: missing = accept + sentinel).
+    String sSubjNarr = _MolagParseLine(response, "SUBJECT:")
+    String sCaseNarr = _MolagParseLine(response, "CASE:")
+    If sCaseNarr == ""
+        _Log("[SNBaka] narrative answer CASE missing -- pick accepted (OR4 accept+sentinel) -- REV-178 L6")
+    Else
+        _Log("[SNBaka] narrative CASE: " + sCaseNarr + " -- REV-178")
+    EndIf
+    If sSubjNarr != "" && _NarrSelectionMethodWord(sMode) == "narrative"
+        Actor akNarr = _NarrResolveSubject(sMode, sSubjNarr)
+        If akNarr && !akNarr.IsDead() && !akNarr.IsInCombat()
+            _Log("[SNBaka] narrative SUBJECT override: '" + sSubjNarr + "' replaces mechanical pick " + akSubject.GetDisplayName() + " -- REV-178 L6")
+            akSubject = akNarr
+        ElseIf akNarr
+            _Log("[SNBaka] narrative SUBJECT '" + sSubjNarr + "' resolved but guard-failed at fire time -- degrading to mechanical pick (§7.2) -- REV-178 L6")
+        Else
+            _Log("[SNBaka] narrative SUBJECT invalid -- degrading to mechanical pick (§7.2) -- REV-178 L6")
+        EndIf
+    EndIf
+    ; [REV-178 L4] stickiness (§6.1.4): recorded after the pair resolves
+    ; below (subject + target) at the fire site.
+    ; ---- STAGE 2a: TARGET resolve -- exact-name roster match at fire time
+    String sTgt = _MolagParseLine(response, "TARGET:")
+    Actor akTarget = None
+    Int r = 0
+    While r < _iLaneRosterN && !akTarget
+        If _akLaneRoster[r] && _akLaneRoster[r].GetDisplayName() == sTgt
+            akTarget = _akLaneRoster[r]
+        EndIf
+        r += 1
+    EndWhile
+    ; [REV-178a Leg 2] CASE-FOLDED PASS ONLY (user ruling 2026-11-06): exact
+    ; first (the loop above), then ONE folded roster re-walk. NOTHING else --
+    ; no gloss, no role, no relationship inference script-side, ever.
+    If !akTarget && sTgt != ""
+        String sLowT = _AsciiILower(sTgt)
+        r = 0
+        While r < _iLaneRosterN && !akTarget
+            If _akLaneRoster[r] && _AsciiILower(_akLaneRoster[r].GetDisplayName()) == sLowT
+                akTarget = _akLaneRoster[r]
+                _Log("[SNBaka] daemon two-stage answer: TARGET '" + sTgt + "' resolved by CASE-FOLD -> " + akTarget.GetDisplayName() + " -- REV-178a Leg 2")
+            EndIf
+            r += 1
+        EndWhile
+    EndIf
+    String sTgtRes = "OFF-ROSTER"
+    If akTarget
+        sTgtRes = akTarget.GetDisplayName()
+    EndIf
+    _Log("[SNBaka] daemon two-stage answer: TARGET '" + sTgt + "' -> " + sTgtRes + " (roster n=" + _iLaneRosterN + ") -- REV-174 D3 3.4")
+    If !akTarget
+        ; [REV-178a Leg 2] UNRESOLVABLE = skip-with-receipt (a paired action
+        ; cannot fire targetless in these modes; the skip tally is a
+        ; first-class runbook metric). NEVER a guess, never silent.
+        _i178aTargetSkips += 1
+        _Log("[SNBaka] unresolvable-target: '" + sTgt + "' (skip-tally=" + _i178aTargetSkips + ") -- skip, no dice, no gloss -- REV-178a Leg 2")
+        _iLaneRosterN = 0
+        Return
+    EndIf
+    _iLaneRosterN = 0
+    ; [REV-178 L4] stickiness (§6.1.4): the resolved pair is next tick's
+    ; sticky pair (recorded once the pair passes the fire-time gates).
+    _NarrStickyRemember(akSubject, akTarget)
+    ; ---- fire-time gate re-run (subject level: standard guard set)
+    If PlayerRef.IsInCombat()
+        _Log("[SNBaka] daemon suspend-player-combat: two-stage pick dropped at fire time (" + sMode + ") -- REV-174 D3")
+        Return
+    EndIf
+    If akSubject.IsDead() || akSubject.IsInCombat() || akTarget.IsDead() || akTarget.IsInCombat()
+        _Log("[SNBaka] daemon refuse: busy (combat/death at fire time, " + akSubject.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-174 D3 3.4")
+        Return
+    EndIf
+    If StorageUtil.GetIntValue(akSubject, "SNBaka.Locked", 0) == 1 || StorageUtil.GetIntValue(akTarget, "SNBaka.Locked", 0) == 1
+        _Log("[SNBaka] daemon refuse: ongoing-action lock (locked at fire time, " + akSubject.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-174 D3 3.4")
+        Return
+    EndIf
+    If !_TargetSexAllowed(akTarget) || !_PlayerTargetAdmitted(akSubject, akTarget, "twostage." + sMode) || _ChildBoundaryRefused(akSubject, akTarget, "twostage." + sMode)
+        _Log("[SNBaka] daemon refuse: gate refused at fire time (" + akSubject.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", " + sMode + ") -- REV-174 D3 3.4")
+        Return
+    EndIf
+    ; ---- STAGE 2b: ACTION resolve -- exact allowlist (fire-time pool + downed)
+    String sAction = _MolagParseLine(response, "ACTION:")
+    Int iTierFire = _DaemonArousalTier(akSubject)
+    String[] pool = _DaemonOptionsPool(sMode, akSubject, iTierFire)
+    Bool bInPool = False
+    Int a = 0
+    While a < pool.Length && !bInPool
+        If pool[a] == sAction
+            bInPool = True
+        EndIf
+        a += 1
+    EndWhile
+    If !bInPool && _IsDownedAny(akTarget)
         String[] dpool = _DaemonDownedActionPool()
         Int d = 0
-        While d < dpool.Length
-            sLib = sLib + ", " + dpool[d]
+        While d < dpool.Length && !bInPool
+            If dpool[d] == sAction
+                bInPool = True
+            EndIf
             d += 1
         EndWhile
     EndIf
-    ; JSON with keys matching snbaka_muse_consideration.prompt placeholders
-    ; (the SendCustomPromptToLLM context channel renders {{ key }} fields).
-    ;  Task 8: targetDowned + downedActionLibrary fields added.
-    Return "{\"initiatorName\":\"" + akInitiator.GetDisplayName() + "\",\"initiatorSex\":\"" + sSexI + "\",\"arousalBand\":\"" + aiBand + "\",\"targetName\":\"" + akTarget.GetDisplayName() + "\",\"targetSex\":\"" + sSexT + "\",\"targetDrunk\":\"" + sDrunk + "\",\"targetDowned\":\"" + sDowned + "\",\"location\":\"" + sLoc + "\",\"tavern\":\"" + sTavern + "\",\"timeOfDay\":\"" + sTod + "\",\"targetSexLevel\":\"" + _TargetSexLevel() + "\",\"playerTargetPolicy\":\"" + sPolicy + "\",\"actionLibrary\":\"" + sLib + "\"}"
+    ; [REV-178a Leg 4] ACTION CANONICALIZATION (the 0/11 killer; user ruling
+    ; 2026-11-06): exact allowlist first (unchanged above), then ONE
+    ; case-folded pass, then a containment rung (the folded answer containing
+    ; a folded pool entry of >= 6 chars). Every mapping sentinels
+    ; ("ACTION '<answer>' -> <id>"); below both rungs = today's degrade
+    ; (named drop). POSE/CLIP untouched -- exact picks still fire exact.
+    If !bInPool && sAction != ""
+        String sLowA = _AsciiILower(sAction)
+        a = 0
+        While a < pool.Length && !bInPool
+            If _AsciiILower(pool[a]) == sLowA
+                _Log("[SNBaka] ACTION '" + sAction + "' -> '" + pool[a] + "' (case-fold) -- REV-178a Leg 4")
+                sAction = pool[a]
+                bInPool = True
+            EndIf
+            a += 1
+        EndWhile
+        If !bInPool
+            a = 0
+            While a < pool.Length && !bInPool
+                String sLowP = _AsciiILower(pool[a])
+                If StringUtil.GetLength(sLowP) >= 6 && StringUtil.Find(sLowA, sLowP) >= 0
+                    _Log("[SNBaka] ACTION '" + sAction + "' -> '" + pool[a] + "' (fuzzy containment) -- REV-178a Leg 4")
+                    sAction = pool[a]
+                    bInPool = True
+                EndIf
+                a += 1
+            EndWhile
+        EndIf
+    EndIf
+    ; [REV-178c-hotfix Leg 1, user ruling 2026-11-0X -- the Mephala/Molag
+    ; 0-fire killer; S242 Leg 4 verdict] ONE-RUNG DEGRADE below both mapping
+    ; rungs: an off-pool paraphrase that no mapping clears degrades to a
+    ; POOL-LEGAL random draw (the GS dice-draw precedent, D-5/4.3 family),
+    ; sentinel'd -- the fire happens, the LLM narrative intent survives as
+    ; the REACT/CASE lines, and the paraphrase ledger stays countable.
+    ; EMPTY answers (contract-legal MISS) keep today's named drop.
+    If !bInPool && sAction != ""
+        Int iDraw = Utility.RandomInt(0, pool.Length - 1)
+        _Log("[SNBaka] ACTION '" + sAction + "' -> '" + pool[iDraw] + "' (one-rung degrade, pool draw " + (iDraw + 1) + "/" + pool.Length + ") -- REV-178c-hotfix Leg 1")
+        sAction = pool[iDraw]
+        bInPool = True
+    EndIf
+    If !bInPool || sAction == ""
+        _Log("[SNBaka] daemon two-stage answer: off-pool action '" + sAction + "' (" + sMode + ", tier re-read=" + iTierFire + ") -- named drop -- REV-174 D3 3.4")
+        Return
+    EndIf
+    ; ---- the fire: dispatch (the dispatch-side fan-out carries the REACT)
+    String sReact = _MolagParseLine(response, "REACT:")
+    _bLaneLLM = True
+    _sLaneReact = sReact
+    String sDesc = _DaemonComposeDesc(sMode, akSubject, akTarget, sAction, sCaseNarr) ; [REV-178c Leg 3] with-CASE desc (the reasoning line rides the cue)
+    _sLaneDescPass = sDesc   ; composed ONCE, identical across lanes (4.5.5)
+    _Log("[SNBaka] daemon two-stage FIRE: " + sAction + " (" + akSubject.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", " + sMode + ", REACT='" + sReact + "') -- REV-174 D3 3.4")
+    _DaemonDispatchAction(akSubject, akTarget, sAction, sMode)
 EndFunction
 
-;  3.5: the SendCustomPromptToLLM callback (the OnMuseConsideration
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] _DaemonMolagPick + the
+; _bMolagPending/_bMolagPendingBioLed/_akMolagInitiator/_akMolagTarget
+; pair state REMOVED -- superseded by _DaemonTwoStageAsk/_bLanePending.
+; Absence proof: rev174d3_leg4_absence.ps1.
+
+; REV-167 (entry 44, §7.3) the consideration callback. Output contract: the
+; action name ALONE (the §7.3 prompt). Armed -> answered -> dispatched (or
+; refused with reason) chain sentinel'd end to end; every seed-time gate
+; re-verified (the OnBakaMuseConsideration standard), plus the §15.5
+; ongoing-action lock leg on BOTH actors (SNBaka.Locked -- the shipped busy
+; flag, set on every action path, cleared on every end path).
+; [REV-174 D1] line parser for the AGGRESSOR/ACTION contract lines.
+String Function _MolagParseLine(String asResp, String asKey)
+    Int k = StringUtil.Find(asResp, asKey)
+    If k < 0
+        Return ""
+    EndIf
+    String s = StringUtil.Substring(asResp, k + StringUtil.GetLength(asKey))
+    Int e = StringUtil.Find(s, "\n")
+    If e >= 0
+        s = StringUtil.Substring(s, 0, e)
+    EndIf
+    Return _DaemonTrimSpaces(s)
+EndFunction
+
+; [REV-174 D3 LEG 4] _MolagBioNearestTarget REMOVED with the Bio Led family.
+
+Function OnMolagConsideration(String response, Int success)
+    ; [REV-174 D3 3.4] the unified two-stage answer router -- the two-stage
+    ; ask shares this callback; one lineage, both modes.
+    If _bLanePending
+        _DaemonLaneAnswer(response, success)
+        Return
+    EndIf
+    ; [REV-174 D3 LEG 4] the pre-picked-pair + Bio Led lineages are RETIRED
+    ; (_DaemonMolagPick / _DaemonMolagBioLedAsk removed) -- no ask arms this
+    ; callback outside _bLanePending; a stray answer is a NAMED DROP.
+    _Log("[SNBaka] daemon MolagBal answer dropped: no pending lineage (stale ask) -- REV-174 D3 leg 4")
+EndFunction
+
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] _DaemonMuseAsk REMOVED (the
+; pre-picked-pair Mephala ask) -- superseded by _DaemonTwoStageAsk (both
+; Baka modes, one lineage). Absence proof: rev174d3_leg4_absence.ps1.
+
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] _DaemonPackContext REMOVED --
+; the pre-picked-pair context pack; the two-stage pack is
+; _DaemonTwoStagePack (both modes). Only retiring callers remained.
+; Absence proof: rev174d3_leg4_absence.ps1.
+; REV-167e D.1b: hex -> DECIMAL string math for the 64-bit entity UUID
+; (mirror of SkyrimNet_AnimationsGS._UuidDecimal). uuid_mappings.uuid is a
+; 64-bit INTEGER and the render contract matches the decimal digits (JSON
+; number); Papyrus Int is 32-bit, so pure string arithmetic. Returns "" on
+; any non-hex input -- callers fall back to the 167d quoted-hex form.
+String Function _UuidDecimal(String asHex)
+    If asHex == ""
+        Return ""
+    EndIf
+    Int n = StringUtil.GetLength(asHex)
+    String sHex = ""
+    Int i = 0
+    Bool bLead = True
+    While i < n
+        String c = StringUtil.GetNthChar(asHex, i)
+        If bLead && c == "0"
+            ; skip leading zeros
+        Else
+            bLead = False
+            sHex = sHex + c
+        EndIf
+        i += 1
+    EndWhile
+    If sHex == ""
+        Return "0"
+    EndIf
+    String sDec = "0"
+    i = 0
+    n = StringUtil.GetLength(sHex)
+    While i < n
+        Int dv = _HexDigitVal(StringUtil.GetNthChar(sHex, i))
+        If dv < 0
+            Return ""
+        EndIf
+        sDec = _DecMulAdd(sDec, 16, dv)
+        i += 1
+    EndWhile
+    Return sDec
+EndFunction
+
+Int Function _HexDigitVal(String asChar)
+    Int k = StringUtil.Find("0123456789ABCDEF", asChar)
+    If k >= 0
+        Return k
+    EndIf
+    k = StringUtil.Find("0123456789abcdef", asChar)
+    If k >= 0
+        Return k
+    EndIf
+    Return -1
+EndFunction
+
+String Function _DecMulAdd(String asDec, Int aiMul, Int aiAdd)
+    Int i = StringUtil.GetLength(asDec) - 1
+    String sOut = ""
+    Int iCarry = aiAdd
+    While i >= 0
+        Int d = _HexDigitVal(StringUtil.GetNthChar(asDec, i))
+        Int v = d * aiMul + iCarry
+        sOut = StringUtil.GetNthChar("0123456789", v % 10) + sOut
+        iCarry = v / 10
+        i -= 1
+    EndWhile
+    While iCarry > 0
+        sOut = StringUtil.GetNthChar("0123456789", iCarry % 10) + sOut
+        iCarry = iCarry / 10
+    EndWhile
+    Return sOut
+EndFunction
+
+; ---- REV-170 Leg 4: the Actor Context consumer rung ----
+; DeDService presence cache (one SKSE.GetPluginVersion probe, the [REV-169]
+; C5 posture: no new knob). The Actor Context natives are called ONLY when the
+; DeDService plugin is loaded; absent -> every rung falls to the [REV-169]
+; MISS tail verbatim (the ladder tail never changes).
+Int _iDeDServiceCtx = -1
+Bool Function _bDeDServiceCtx()
+    If _iDeDServiceCtx < 0
+        If SKSE.GetPluginVersion("DeDService") > 0
+            _iDeDServiceCtx = 1
+        Else
+            _iDeDServiceCtx = 0
+            _Log("[SNBaka] actor-context DeDService absent -> [REV-169] tails only -- REV-170")
+        EndIf
+    EndIf
+    Return _iDeDServiceCtx == 1
+EndFunction
+
+; REV-170 Leg 4: the uuidForm fact is the FIRST rung of the UUID ladder.
+; DeDService.GetActorContext(ak, "uuidForm") HIT returns
+; {"value":"<dec>,0xHEX","source":"native:uuid",...}; the decimal prefix is
+; the ready JSON literal (the same contract as _UuidDecimal: bare, unquoted,
+; the DB 64-bit INTEGER form). MISS tail = the [REV-169] path VERBATIM
+; (GetEntityUUID + _UuidDecimal + quoted-hex fallback); "" = no uuid at all.
+; Sentinels fire on every HIT and every MISS-tail per actor -- the
+; duplicate-resolve watch (leg 4b) is countable from the log alone.
+String Function _UuidJsonLiteralCtx(Actor akActor)
+    If akActor && _bDeDServiceCtx()
+        String sCtx = DeDService.GetActorContext(akActor, "uuidForm")
+        If sCtx != ""
+            Int iV = StringUtil.Find(sCtx, "\"value\":\"")
+            If iV >= 0
+                Int iS = iV + 9
+                Int iE = StringUtil.Find(sCtx, ",", iS)
+                If iE < 0 || iE <= iS
+                    iE = StringUtil.Find(sCtx, "\"", iS)
+                EndIf
+                If iE > iS
+                    _Log("[SNBaka] actor-context uuidForm HIT (" + akActor.GetDisplayName() + ") -- REV-170")
+                    Return StringUtil.Substring(sCtx, iS, iE - iS)
+                EndIf
+            EndIf
+        EndIf
+        _Log("[SNBaka] actor-context uuidForm MISS -> [REV-169] tail (" + akActor.GetDisplayName() + ") -- REV-170")
+    EndIf
+    String sUuid = SkyrimNetApi.GetEntityUUID(akActor)
+    If sUuid == ""
+        Return ""
+    EndIf
+    String sVal = _UuidDecimal(sUuid)
+    If sVal == ""
+        sVal = "\"" + sUuid + "\""
+    EndIf
+    Return sVal
+EndFunction
+
+; REV-145 3.5: the SendCustomPromptToLLM callback (the OnMuseConsideration
 ; template; guards RE-CHECKED at seed time -- the moment between ask and answer
 ; can change everything; a failed guard is a dropped pick, never a fire).
 ; Output contract: "ACTION: <name> | THOUGHT: <one-sentence grounded thought>",
 ; "REFUSE: <reason>", or "MISS".
 Function OnBakaMuseConsideration(String response, Int success)
-    Actor akInitiator = _akMephalaInitiator
-    Actor akTarget = _akMephalaTarget
-    Int iBand = _iMephalaBand
-    _bMephalaPending = False
-    _akMephalaInitiator = None
-    _akMephalaTarget = None
-    _iMephalaBand = 0
-    If !akInitiator || !akTarget
-        _Log("[SNBaka] daemon Mephala pick dropped: pending pair vanished at seed time -- REV-145")
+    ; [REV-174 D3 3.4] the unified two-stage answer router (see OnMolagConsideration)
+    If _bLanePending
+        _DaemonLaneAnswer(response, success)
         Return
     EndIf
-    If PlayerRef.IsInCombat()
-        _Log("[SNBaka] daemon suspend-player-combat: Mephala pick dropped at seed time -- REV-145")
-        Return
-    EndIf
-    If akInitiator.IsDead() || akInitiator.IsInCombat() || akTarget.IsDead() || akTarget.IsInCombat()
-        _Log("[SNBaka] daemon refuse: busy (combat/death at seed time, " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-145")
-        Return
-    EndIf
-    If StorageUtil.GetIntValue(akInitiator, "SNBaka.Locked", 0) == 1 || StorageUtil.GetIntValue(akTarget, "SNBaka.Locked", 0) == 1
-        _Log("[SNBaka] daemon refuse: busy (locked at seed time, " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-145")
-        Return
-    EndIf
-    If success != 1 || response == ""
-        _Log("[SNBaka] daemon refuse: prompt-miss (success=" + success + ") -- REV-145")
-        Return
-    EndIf
-    Int iAct = StringUtil.Find(response, "ACTION:")
-    Int iThought = StringUtil.Find(response, "| THOUGHT:")
-    If iAct < 0 || iThought < 0 || iThought <= iAct
-        _Log("[SNBaka] daemon refuse: prompt-miss (parse) -- " + response + " -- REV-145")
-        Return
-    EndIf
-    String sAction = _DaemonTrimSpaces(StringUtil.Substring(response, iAct + 7, iThought - iAct - 7))
-    String sThought = _DaemonTrimSpaces(StringUtil.Substring(response, iThought + 10, 700))
-    If sAction == "" || sThought == ""
-        _Log("[SNBaka] daemon refuse: prompt-miss (empty fields) -- REV-145")
-        Return
-    EndIf
-    If StringUtil.Find(response, "REFUSE:") >= 0
-        _Log("[SNBaka] daemon refuse: LLM refused the pick -- " + response + " -- REV-145")
-        Return
-    EndIf
-    ;  direct-fire allowlist discipline: EXACT match against the band's
-    ; pool only (an out-of-band or hallucinated action name is refused, never
-    ; degraded to a guess).  Task 8: a DOWNED target ALSO admits the
-    ; downed-family subset (the library line offered it; the allowlist must
-    ; accept it or the consideration could never exercise the option).
-    String[] pool = _DaemonActionPool(iBand)
-    Bool bAllowed = False
-    Int p = 0
-    While p < pool.Length && !bAllowed
-        If pool[p] == sAction
-            bAllowed = True
-        EndIf
-        p += 1
-    EndWhile
-    If !bAllowed && _IsDownedAny(akTarget)
-        String[] dpool = _DaemonDownedActionPool()
-        Int q = 0
-        While q < dpool.Length && !bAllowed
-            If dpool[q] == sAction
-                bAllowed = True
-                _Log("[SNBaka] daemon Mephala downed-subset pick admitted: " + sAction + " (target downed) -- REV-146a")
-            EndIf
-            q += 1
-        EndWhile
-    EndIf
-    If !bAllowed
-        _Log("[SNBaka] daemon refuse: anim-reject (out-of-band pick '" + sAction + "', band " + iBand + ") -- REV-145")
-        Return
-    EndIf
-    _Log("[SNBaka] daemon Mephala pick accepted: " + sAction + " (" + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ") -- REV-145")
-    Int rc = SkyrimNetApi.GenerateNPCThought(akInitiator, sThought)
-    _Log("[SNBaka] daemon Mephala thought seeded (rc=" + rc + "): " + sThought + " -- REV-145")
-    _DaemonDispatchAction(akInitiator, akTarget, sAction, "Mephala")
+    ; [REV-174 D3 LEG 4] the pre-picked-pair lineage (_DaemonMuseAsk) is
+    ; RETIRED -- no ask arms this callback outside _bLanePending; a stray
+    ; answer (stale dispatch across a save/reload) is a NAMED DROP.
+    _Log("[SNBaka] daemon Mephala answer dropped: no pending lineage (stale ask) -- REV-174 D3 leg 4")
 EndFunction
 
-; Leading/trailing space trim (the  trailing-space lesson; Papyrus has no Trim()).
+; Leading/trailing space trim (the REV-21 trailing-space lesson; Papyrus has no Trim()).
 String Function _DaemonTrimSpaces(String s)
     While StringUtil.GetLength(s) > 0 && StringUtil.GetNthChar(s, 0) == " "
         s = StringUtil.Substring(s, 1, StringUtil.GetLength(s) - 1)
@@ -1751,43 +3853,16 @@ String Function _DaemonTrimSpaces(String s)
     Return s
 EndFunction
 
-;  5.1: the per-mode direct-narration trigger (user-ruled at the
-; dogfood; the 134f Follow-up Prompt pattern applied to the MODE-ACTION
-; execution). Fired at dispatch time with the live actor names + the picked
-; action, so the narration event's desc says WHAT JUST HAPPENED; the yaml
-; (sdb_mephala_mode_narr.yaml / sdb_molagbal_mode_narr.yaml, register entry
-; 37 DRAFTs) matches the event type ONLY and asks surrounding NPCs to react
-; (direct_narration, audience nearby_npcs). DEFAULT OFF (the motherboard
-; properties bMephalaModeNarration / bMolagBalModeNarration, MCM-gated).
-; MOLAG BAL: narration YES, thoughts still NO -- both user rulings; no
-; GenerateNPCThought call is added on the Molag Bal leg under any setting.
-; Silent-with-sentinel on the OFF leg per the 134f precedent.
-Function _DaemonModeNarration(String asMode, Actor akInitiator, Actor akTarget, String sAction)
-    If !akInitiator || !akTarget
-        Return
-    EndIf
-    Bool bOn = False
-    String sEvent = ""
-    If asMode == "MolagBal" && bMolagBalModeNarration
-        bOn = True
-        sEvent = "sdb_molagbal_mode_narr"
-    ElseIf asMode == "Mephala" && bMephalaModeNarration
-        bOn = True
-        sEvent = "sdb_mephala_mode_narr"
-    EndIf
-    If !bOn
-        _Log("[SNBaka] mode narration OFF (" + asMode + ") -- narration event skipped -- REV-159")
-        Return
-    EndIf
-    String sDesc = akInitiator.GetDisplayName() + " has just acted on " + akTarget.GetDisplayName() \
-        + " (" + sAction + ")."
-    SkyrimNetApi.RegisterEvent(sEvent, sDesc, akInitiator, None)
-    _Log("[SNBaka] mode narration FIRED (" + sEvent + ", " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", action " + sAction + ") -- REV-159")
-EndFunction
+; [REV-174 D3 LEG 4 RETIREMENT 2026-10-30] _DaemonModeNarration REMOVED --
+; superseded by the four-lane fan-out (REV-174 D3 4.1/4.5; the narr-lane
+; RegisterEvent descs are the composed sentence, yamls sdb_*_mode_narr*).
+; The bMephalaModeNarration / bMolagBalModeNarration properties and their
+; MCM toggles retired with it (the lane masters + per-lane toggles are the
+; live surface). Absence proof: rev174d3_leg4_absence.ps1.
 
-;  3.2/3.4: THE DISPATCH. Idle-interrupt exit first (class-aware exit ->
+; REV-145 3.2/3.4: THE DISPATCH. Idle-interrupt exit first (class-aware exit ->
 ; recheck -> the action's own hold machinery, Baka _HoldActorAI order per
-; SS161 R.2; the  2.2 hold acquired at exit-issue), then IsEligible
+; SS161 R.2; the REV-136 2.2 hold acquired at exit-issue), then IsEligible
 ; recheck, then the per-actor ACTION-START stamp (137f anchor), then the
 ; executor. Struggle-chain: the ambient seeds the INTENTION (GenerateNPCThought
 ; names the intent), the actor initiates via Struggle_Execute, the follow-up
@@ -1798,7 +3873,22 @@ Function _DaemonDispatchAction(Actor akInitiator, Actor akTarget, String sAction
     If !akInitiator || !akTarget
         Return
     EndIf
-    ; idle-interrupt: seated/marker-held initiators exit first (/136/137
+    ; [REV-174 D3 4.5] snapshot + CLEAR the lane pass-through state up front:
+    ; if any refusal below aborts the fire, the LLM REACT/desc never leaks
+    ; into the next (random-leg) fire.
+    String sReactPass = _sLaneReact
+    Bool bLLMPass = _bLaneLLM
+    String sDescPass = _sLaneDescPass
+    _sLaneReact = ""
+    _bLaneLLM = False
+    _sLaneDescPass = ""
+    ; [REV-174f Leg 4.2 -- FIRE-PATH GATING] mark this fire DAEMON-side for the
+    ; duration: every executor hooked below no-ops its NEUTRAL fan
+    ; (_ActionLaneFire) so a daemon/mode fire never double-fans (mode-branded
+    ; lanes are the ONLY fan on daemon fires -- receipt of record). Cleared at
+    ; every exit of this function.
+    StorageUtil.SetIntValue(None, "SNBaka.DaemonFire", 1)
+    ; idle-interrupt: seated/marker-held initiators exit first (REV-135/136/137
     ; service via the GS module-neutral globals; the GS presence probe gates).
     Bool bGSPresent = _GSPresent()
     If bGSPresent
@@ -1807,32 +3897,43 @@ Function _DaemonDispatchAction(Actor akInitiator, Actor akTarget, String sAction
             _Log("[SNBaka] daemon idle-svc exit: " + akInitiator.GetDisplayName() + " class=" + iIdle + " (interrupt-then-fire, ruling (d)) -- REV-145")
             If !SkyrimNet_AnimationsGS._ExitIdle(akInitiator, iIdle)
                 _Log("[SNBaka] daemon refuse: busy (idle exit FAILED, " + akInitiator.GetDisplayName() + " class=" + iIdle + ") -- REV-145")
+                StorageUtil.UnsetIntValue(None, "SNBaka.DaemonFire")
                 Return
             EndIf
         EndIf
     EndIf
-    ; the eligibility recheck ( revalidation precedent): everything can
+    ; the eligibility recheck (rev-20 revalidation precedent): everything can
     ; have changed between selection and fire
     If !IsEligible(akInitiator, akTarget)
         _Log("[SNBaka] daemon refuse: anim-reject (IsEligible failed at fire, " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ", action " + sAction + ") -- REV-145")
+        StorageUtil.UnsetIntValue(None, "SNBaka.DaemonFire")
         Return
     EndIf
     ; 137f TIMER ANCHOR: the per-actor action clock starts when the ACTION fires
     StorageUtil.SetFloatValue(akInitiator, "SNBaka.DaemonLast", Utility.GetCurrentGameTime())
-    ;  5.1: the gated per-mode direct-narration trigger (134f pattern;
-    ; DEFAULT OFF, MCM "Mephala Mode Narration" / "Molag Bal Mode Narration").
-    _DaemonModeNarration(asMode, akInitiator, akTarget, sAction)
+    ; [REV-174 D3 4.1/4.5] the REV-159 _DaemonModeNarration trigger is
+    ; SUPERSEDED by the four-lane fan-out (the narr-lane RegisterEvent DESCs
+    ; are the composed sentence; the intro drafts live yaml-side). The call is
+    ; retired HERE (dead-code sweep at leg 4). Random legs fan out all-enabled
+    ; (no LLM in the loop); the two-stage pass passes its REACT through
+    ; _sLaneReact/_bLaneLLM/_sLaneDescPass (single-in-flight, same-tick).
+    String sDescF = sDescPass
+    If sDescF == ""
+        sDescF = _DaemonComposeDesc(asMode, akInitiator, akTarget, sAction)
+    EndIf
+    _DaemonLaneFire(asMode, akInitiator, akTarget, sDescF, sReactPass, !bLLMPass)
     ; struggle-chain: seed the INTENTION, fire the struggle (or its drunk
     ; variant), the follow-up rides the outcome
     If _DaemonIsStruggleChain(sAction)
         Bool bDrunkVariant = _DaemonIsTavernClass() || _DaemonIsDrunkTarget(akTarget)
         If bDrunkVariant
-            _Log("[SNBaka] daemon fire: " + sAction + " -> drunk variant (DrunkExploit; tavern=" + _DaemonIsTavernClass() + " drunk=" + _DaemonIsDrunkTarget(akTarget) + ") -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- ")
+            _Log("[SNBaka] daemon fire: " + sAction + " -> drunk variant (DrunkExploit; tavern=" + _DaemonIsTavernClass() + " drunk=" + _DaemonIsDrunkTarget(akTarget) + ") -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-145")
             DrunkExploit_Execute(akInitiator, akTarget)
         Else
             _Log("[SNBaka] daemon fire: " + sAction + " -> struggle-chain (intention seeded, actor initiates, follow-up rides the outcome) -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-145")
             Struggle_Execute(akInitiator, akTarget)
         EndIf
+        StorageUtil.UnsetIntValue(None, "SNBaka.DaemonFire")
         Return
     EndIf
     _Log("[SNBaka] daemon fire: " + sAction + " (" + asMode + ") -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-145")
@@ -1879,7 +3980,7 @@ Function _DaemonDispatchAction(Actor akInitiator, Actor akTarget, String sAction
     ElseIf sAction == "Strip"
         _Strip_Execute(akInitiator, akTarget)
     ElseIf sAction == "ForcedTattoo"
-        ;  4.3: forced-tattoo joins the daemon dispatch (downed-family
+        ; REV-150 4.3: forced-tattoo joins the daemon dispatch (downed-family
         ; subset). The AI-AGGRESSOR lane is gated by the Execute-gate 3-level
         ; consent class (SNBaka.ForcedTattooGateLevel, default 0 = Unlimited;
         ; the player's own downed-menu tile choice 12 is NEVER gated - the
@@ -1887,18 +3988,19 @@ Function _DaemonDispatchAction(Actor akInitiator, Actor akTarget, String sAction
         ; session: the popup needs a DLL confirm-mode surface (JS/CSS-only stop
         ; condition) - surfaced gap, queued to a DLL session.
         If !_ForcedTattooGateCheck(akInitiator, akTarget)
+            StorageUtil.UnsetIntValue(None, "SNBaka.DaemonFire")
             Return
         EndIf
         _Log("[SNBaka] daemon fire: ForcedTattoo (downed-family subset) -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-150")
         _ForcedTattoo_Execute(akInitiator, akTarget)
     ElseIf sAction == "ApplyTattoo"
-        ;  Task 8: tattoo executor class joins the daemon dispatch
+        ; REV-146a Task 8: tattoo executor class joins the daemon dispatch
         ; (downed-family subset; the executor is presence-gated on SlaveTats).
         _Log("[SNBaka] daemon fire: ApplyTattoo (downed-family subset) -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-146a")
         ApplyTattoo_Execute(akInitiator, akTarget)
     ElseIf sAction == "Struggle"
         If _DaemonIsTavernClass() || _DaemonIsDrunkTarget(akTarget)
-            _Log("[SNBaka] daemon fire: Struggle -> drunk variant (DrunkExploit; tavern/drunk) -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- ")
+            _Log("[SNBaka] daemon fire: Struggle -> drunk variant (DrunkExploit; tavern/drunk) -- " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " -- REV-145")
             DrunkExploit_Execute(akInitiator, akTarget)
         Else
             Struggle_Execute(akInitiator, akTarget)
@@ -1906,6 +4008,7 @@ Function _DaemonDispatchAction(Actor akInitiator, Actor akTarget, String sAction
     Else
         _Log("[SNBaka] daemon refuse: anim-reject (unknown action '" + sAction + "') -- REV-145")
     EndIf
+    StorageUtil.UnsetIntValue(None, "SNBaka.DaemonFire")
 EndFunction
 
 ; Same technique AcheronIntegration already uses to tell creatures (Draugr, Falmer, Giant, wolves,
@@ -1964,7 +4067,7 @@ Bool Function IsInSexAnimation(Actor akActor)
 EndFunction
 
 ; ============================================================
-; Pending-scene latch () — closes the check-to-act race between the
+; Pending-scene latch (rev-22) — closes the check-to-act race between the
 ; escalation decision and SexLab's thread reaching AnimationStart (~16s window
 ; observed 09-17: run 3's Struggle passed IsEligible while run 2's PrismaUI
 ; wizard was pending; IsInSexAnimation reads False until the thread adds both
@@ -1977,7 +4080,7 @@ EndFunction
 Function _SetSceneLatch(Actor akA1, Actor akA2)
     StorageUtil.SetIntValue(akA1, "SNBaka.PendingScene", 1)
     StorageUtil.SetIntValue(akA2, "SNBaka.PendingScene", 1)
-    ;  1a: registry for the startup sweep — the latch ints persist in the cosave but
+    ; REV-24 1a: registry for the startup sweep — the latch ints persist in the cosave but
     ; the escalation VM thread that owns them does NOT survive a save-load (proven 09-17:
     ; a quit during the pinned 15-min poll left SNBaka.PendingScene stranded on both actors
     ; with no code path left to clear it). Every set is registered here so _SweepStaleSceneLatches
@@ -1999,7 +4102,7 @@ Function _ClearSceneLatch(Actor akA1, Actor akA2)
     _Log("[SNBaka] scene latch: RELEASED — " + akA1.GetDisplayName() + " <-> " + akA2.GetDisplayName())
 EndFunction
 
-;  Task 1a (user-approved  scope): startup sweep of stale scene latches.
+; REV-24 Task 1a (user-approved rev-24 scope): startup sweep of stale scene latches.
 ; Runs from Setup() — the proven load path for this quest (MCM OnGameReload calls it on
 ; every single load; OnInit covers the cold boot). At that moment ANY surviving
 ; SNBaka.PendingScene is definitionally stale: the escalation VM thread that would have
@@ -2026,8 +4129,8 @@ Function _SweepStaleSceneLatches()
         StorageUtil.FormListRemoveAt(Self, "SNBaka.LatchReg", i)
         i -= 1
     EndWhile
-    ;  Task 1b gap fix (found in the 09-18 log read): the registry only contains latches
-    ; SET after  — a stranded latch from a PRE- save (the 09-17 quit-during-pinned-
+    ; REV-25 Task 1b gap fix (found in the 09-18 log read): the registry only contains latches
+    ; SET after rev-24 — a stranded latch from a PRE-rev-24 save (the 09-17 quit-during-pinned-
     ; wait pair) has no registry entry, so the pass above is structurally blind to it (Papyrus
     ; cannot enumerate StorageUtil key owners). Legacy pass: scan loaded actors directly —
     ; the same PO3 scan the GS daemon uses. Same KEEP rule (a live scene is real). Limitation
@@ -2183,7 +4286,7 @@ Function _CueDecisionIfDowned(Actor akInitiator, Actor akVictim, Bool abResetWin
         _bResetDownWindow = True   ; keep them down for the decision — Baka's own ground window keys off this
     EndIf
     _Log("[SNBaka] _CueDecisionIfDowned: firing baka_opportunity for " + akInitiator + " -> " + akVictim + " (abResetWindow=" + abResetWindow + ")")
-    ;  Task 11 (finding 16283: the opportunity rendered in the
+    ; REV-146a Task 11 (finding 16283: the opportunity rendered in the
     ; PLAYER'S conversation; user ruling: the player is NEVER the opportunity
     ; audience -- their manual path is the lesser power). The originator arg
     ; routes through _OpportunityAudience (below): an NPC initiator binds as
@@ -2202,7 +4305,7 @@ Function _CueDecisionIfDowned(Actor akInitiator, Actor akVictim, Bool abResetWin
     EndIf
 EndFunction
 
-;  Task 11 - the baka_opportunity audience router. D8 conversation-
+; REV-146a Task 11 - the baka_opportunity audience router. D8 conversation-
 ; binding anatomy of record: the RegisterEvent actor args bind WHICH
 ; conversations the event renders in, and the trigger yaml's audience field
 ; (baka_opportunity.yaml: "nearby_npcs") filters WHO responds. Finding 16283's
@@ -2249,7 +4352,7 @@ Function _StartCooldown(Actor akInitiator = None)
     EndIf
 EndFunction
 
-; : the quest's single real-time update slot is now SHARED between the
+; REV-63: the quest's single real-time update slot is now SHARED between the
 ; player action-cooldown and the FHU inflation level poll. RegisterForSingleUpdate
 ; REPLACES a pending timer, so two independent chains on one script would silently
 ; starve each other (the poll re-arming every 10s would eat a pending cooldown and
@@ -2258,7 +4361,7 @@ EndFunction
 ; EARLIEST pending consumer, and OnUpdate re-arms only while something is pending.
 ; Cooldown logic itself is unchanged (same expiry duration, same _bCooldownActive
 ; handling); only the timer mechanics differ.
-;  Task 1.2 (ruled, rider 2.5b): the aftermath hold chain is RETIRED
+; REV-133c Task 1.2 (ruled, rider 2.5b): the aftermath hold chain is RETIRED
 ; whole (decl/mux leg/fire leg/_ArmCumAftermathHold + the OnSLAnimationEnd
 ; listener + the RegisterForModEvent arm + sdb_cum_aftermath.yaml). The
 ; two-moment structure of record STANDS: application cue at climax + ambient
@@ -2266,14 +4369,14 @@ EndFunction
 Float _fCooldownExpiresAtRT = 0.0   ; 0 = no cooldown pending
 Float _fFHUNextPollRT      = 0.0   ; 0 = poll not running
 Float _RT_POLL_INTERVAL    = 10.0  ; FHU level-poll cadence, real seconds
-Float _fBakaDaemonNextRT   = 0.0   ; : 0 = daemon tick not armed (both ambient modes off)
-Float _fStripHoldNextRT    = 0.0   ;  Task 9: strip re-equip block watch (0.5s cadence since , ruling 4.1-b)
-Float _fSTAmbientNextRT    = 0.0   ;  (dogfood 2.2): SlaveTats ambient exposure pass cadence
-Float _ST_AMBIENT_INTERVAL = 30.0  ; : DECOUPLED from the daemon ticks -- modes off no longer
+Float _fBakaDaemonNextRT   = 0.0   ; REV-145: 0 = daemon tick not armed (both ambient modes off)
+Float _fStripHoldNextRT    = 0.0   ; REV-146a Task 9: strip re-equip block watch (0.5s cadence since REV-162, ruling 4.1-b)
+Float _fSTAmbientNextRT    = 0.0   ; REV-159 (dogfood 2.2): SlaveTats ambient exposure pass cadence
+Float _ST_AMBIENT_INTERVAL = 30.0  ; REV-159: DECOUPLED from the daemon ticks -- modes off no longer
                                    ; silences the tattoo observation roll (the design fix confirmed at
                                    ; the dogfood: 35% roll + per-actor cooldown unchanged, mode-agnostic)
 
-;  F-3 (S181 finding): cached presence probes for the GS + Acheron esps.
+; REV-159 F-3 (S181 finding): cached presence probes for the GS + Acheron esps.
 ; The uncached GetFormFromFile sites logged a hard Papyrus error once per
 ; arm-pass/dispatch/delegate on the absent esp (log noise only; the
 ; cached-absence pattern applied uniformly). esp load state cannot change
@@ -2314,11 +4417,11 @@ Function _ArmRealtimeTimer()
     If _fBakaDaemonNextRT > 0.0 && _fBakaDaemonNextRT < next
         next = _fBakaDaemonNextRT
     EndIf
-    If _fSTAmbientNextRT > 0.0 && _fSTAmbientNextRT < next   ;  (dogfood 2.2)
+    If _fSTAmbientNextRT > 0.0 && _fSTAmbientNextRT < next   ; REV-159 (dogfood 2.2)
         next = _fSTAmbientNextRT
     EndIf
-    ;  Task 9: the strip re-equip block watch arms on the multiplexer
-    ; whenever a tracked strip queue exists (0.5s cadence since , ruling
+    ; REV-146a Task 9: the strip re-equip block watch arms on the multiplexer
+    ; whenever a tracked strip queue exists (0.5s cadence since REV-162, ruling
     ; 4.1-b: the engine re-dress window closes before the pop renders -- the
     ; defense wins invisibly).
     If _bStripHoldActive
@@ -2339,26 +4442,26 @@ Function _ArmRealtimeTimer()
 EndFunction
 
 Event OnUpdate()
-    ;  multiplexed real-time tick: cooldown expiry + FHU level poll.
+    ; REV-63 multiplexed real-time tick: cooldown expiry + FHU level poll.
     Float now = Utility.GetCurrentRealTime()
     If _bCooldownActive && _fCooldownExpiresAtRT > 0.0 && now >= _fCooldownExpiresAtRT
         _bCooldownActive = False
         _fCooldownExpiresAtRT = 0.0
     EndIf
     If _fFHUNextPollRT > 0.0 && now >= _fFHUNextPollRT
-        ;  Task 2: poll body extracted to SNBaka_FHUInflationModule.PollLevels
+        ; REV-96 Task 2: poll body extracted to SNBaka_FHUInflationModule.PollLevels
         ; (behavior-preserving move; this multiplexed tick chain stays on the quest).
         SNBaka_FHUInflationModule.PollLevels(Self)
         _fFHUNextPollRT = now + _RT_POLL_INTERVAL
     EndIf
-    ;  3.1: the Baka ambient daemon tick (Mephala 45s since  / Molag-Bal 15s cadences,
+    ; REV-145 3.1: the Baka ambient daemon tick (Mephala 45s since REV-146a / Molag-Bal 15s cadences,
     ; the GS arbiter pattern; combat-suspend inside the tick, stamp unspent). The tick
     ; re-stamps its own next-fire (the ACTION START anchor is separate -- per-actor
-    ; SNBaka.DaemonLast stamps written at FIRE, per 137f generalized at ).
+    ; SNBaka.DaemonLast stamps written at FIRE, per 137f generalized at REV-144).
     If _fBakaDaemonNextRT > 0.0 && now >= _fBakaDaemonNextRT
         _DaemonTick()
     EndIf
-    ;  (dogfood 2.2): the DECOUPLED SlaveTats ambient exposure pass. The
+    ; REV-159 (dogfood 2.2): the DECOUPLED SlaveTats ambient exposure pass. The
     ; roll used to ride _DaemonTick (both modes off = never called = the
     ; observed-cue never fired -- the dogfood finding). Dispatch-side silent
     ; gates (module master + observe keys, player-keyed like the module's own
@@ -2371,9 +4474,9 @@ Event OnUpdate()
             SNBaka_SlaveTatsModule.AmbientExposurePass()
         EndIf
     EndIf
-    ;  Task 9: the strip re-equip block watch leg (reverts engine-side
+    ; REV-146a Task 9: the strip re-equip block watch leg (reverts engine-side
     ; re-equips of tracked queue items while any queue lives; 0.5s cadence
-    ; since , ruling 4.1-b).
+    ; since REV-162, ruling 4.1-b).
     If _bStripHoldActive && _fStripHoldNextRT > 0.0 && now >= _fStripHoldNextRT
         _fStripHoldNextRT = now + 0.5
         _StripHoldWatch()
@@ -2381,9 +4484,9 @@ Event OnUpdate()
     _ArmRealtimeTimer()
 EndEvent
 
-; : start/stop the FHU level poll chain (multiplexed, see _ArmRealtimeTimer).
-; : idempotent arming -- called from Setup() (primary) AND the
-; OnUpdateGameTime heartbeat (self-heal).  evidence of record: Setup()
+; REV-63: start/stop the FHU level poll chain (multiplexed, see _ArmRealtimeTimer).
+; REV-65: idempotent arming -- called from Setup() (primary) AND the
+; OnUpdateGameTime heartbeat (self-heal). REV-64 evidence of record: Setup()
 ; never executed at save-load (the MCM OnGameReload chain was stale), so the
 ; poll never armed; the heartbeat demonstrably executes every ~3.3 min. A
 ; redundant call while a poll is already pending is a no-op.
@@ -2397,13 +4500,13 @@ Function _FHUStartPoll()
     If _fFHUNextPollRT > 0.0 && _fFHUNextPollRT > nowRT && (_fFHUNextPollRT - nowRT) <= _RT_POLL_INTERVAL
         Return  ; already armed, poll pending
     EndIf
-    SNBaka_FHUInflationModule.PollLevels(Self, True)   ; seed pass: records current amounts, fires no cue ( Task 2: body moved to the module; : abSeedPass keeps the arm-time pass baseline-only while LIVE ticks gained the first-sighting fire)
+    SNBaka_FHUInflationModule.PollLevels(Self, True)   ; seed pass: records current amounts, fires no cue (REV-96 Task 2: body moved to the module; REV-159: abSeedPass keeps the arm-time pass baseline-only while LIVE ticks gained the first-sighting fire)
     _fFHUNextPollRT = nowRT + _RT_POLL_INTERVAL
     _ArmRealtimeTimer()
     _Log("[SNBaka] _FHUStartPoll: level poll armed (" + _RT_POLL_INTERVAL + "s, registered-actors only)")
 EndFunction
 
-;  (dogfood 2.2): start the DECOUPLED SlaveTats ambient exposure cadence.
+; REV-159 (dogfood 2.2): start the DECOUPLED SlaveTats ambient exposure cadence.
 ; Same idempotent/self-heal posture as _FHUStartPoll: called from Setup()
 ; (primary) and the OnUpdateGameTime heartbeat (self-heal); a stale save
 ; residue next-time farther out than one interval is treated as not armed
@@ -2420,7 +4523,7 @@ EndFunction
 
 Function _FHUStopPoll()
     If _fFHUNextPollRT == 0.0
-        Return  ; : idempotent -- not armed, nothing to do (no log spam)
+        Return  ; REV-65: idempotent -- not armed, nothing to do (no log spam)
     EndIf
     _fFHUNextPollRT = 0.0
     _Log("[SNBaka] _FHUStopPoll: level poll disarmed")
@@ -2875,7 +4978,7 @@ Bool Function _InDefeatGrace(Actor akVictim)
     If !akVictim || _HasLiveCombatTarget(akVictim)
         Return False
     EndIf
-    ; [ PR#2 fold (1)] relaunch clamp: a pre-relaunch stamp never expires on its own.
+    ; [REV-161 PR#2 fold (1)] relaunch clamp: a pre-relaunch stamp never expires on its own.
     Float graceUntil = StorageUtil.GetFloatValue(akVictim, "SNBaka.DefeatGraceUntilRT", 0.0)
     If _RTStampStale(graceUntil, Utility.GetCurrentRealTime())
         Return False
@@ -2894,7 +4997,7 @@ Bool Function _DelegateDownToAcheron(Actor akVictim)
     If !akVictim || !PlayerRef
         Return False
     EndIf
-    ;  1a — bridge liveness handshake: SNAcheron.Present/Enabled are StorageUtil keys
+    ; REV-61 1a — bridge liveness handshake: SNAcheron.Present/Enabled are StorageUtil keys
     ; that persist in the cosave, so they can be STALE from an install where the bridge was
     ; loaded/enabled but is now disabled/absent (the 09-30 Frabbi incident: delegation sent
     ; SNBaka_RequestAcheronDown into a void — no listener, victim never downed, nobody owned
@@ -3059,7 +5162,7 @@ Function _PacifyActor(Actor ak, Bool on)
         Return
     EndIf
     If on
-        ; [ PR#2 fold (2) - Oldcustard credit, by-concept] CLAIM-BEFORE-READ
+        ; [REV-161 PR#2 fold (2) - Oldcustard credit, by-concept] CLAIM-BEFORE-READ
         ; + CROSS-TREE ORIGINAL REUSE: check the GS-side flag BEFORE storing an
         ; original. If the GS tree already holds the pacify, its stored original
         ; (shared key SNBaka.OrigAggr) is the true pre-pacify aggression --
@@ -3082,7 +5185,7 @@ Function _PacifyActor(Actor ak, Bool on)
         EndIf
         _Log("[SNBaka] _PacifyActor: calmed " + ak.GetDisplayName() + " (aggr->0, StopCombat, Calm cast; wasInCombat now=" + ak.IsInCombat() + ")")
     ElseIf StorageUtil.GetIntValue(ak, "SNBaka.Pacified", 0) == 1
-        ; [ PR#2 fold (2)] release only when the LAST pacify owner goes:
+        ; [REV-161 PR#2 fold (2)] release only when the LAST pacify owner goes:
         ; the GS tree still holding means the aggression restore belongs to ITS
         ; release, not ours.
         If StorageUtil.GetIntValue(ak, "GSAnim.Pacified", 0) == 0
@@ -3276,7 +5379,7 @@ Function _RecoveryPeriod(Actor akVictim, Actor akWitness, Float duration)
     EndIf
     Utility.Wait(0.3)
     If !victimIsPlayer
-        ;  Task 11: the passive down-cue routes through the same
+        ; REV-146a Task 11: the passive down-cue routes through the same
         ; audience router (the player is never the opportunity audience).
         Actor akOppAudience = _OpportunityAudience(akWitness, akVictim)
         If akOppAudience
@@ -3687,6 +5790,7 @@ EndFunction
 ; Single parameterized action replacing the old one-yaml-per-mood set (happy/angry/afraid/sad/
 ; pained/surprised/confused). _ApplyMoodExpression silently no-ops on an unrecognized mood string.
 Function Express_Execute(Actor akInitiator, Actor akTarget, String mood)
+    _ActionLaneFire(akInitiator, akTarget, "Express") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Express ENTER mood=" + mood)
     ; Same class of gap fixed in _PlaySoloHold: a bare facial expression is otherwise LLM-invisible --
     ; nothing ever told SkyrimNet this happened. Solo (matches the doc comment: "target is ignored").
@@ -3943,13 +6047,29 @@ EndFunction
 ; always free to interject or be interjected upon. Any hit that DOES land despite this (the player,
 ; or anything that slips past) still aborts the struggle/scene as normal -- this only stops OTHER
 ; actors from choosing to start something, it doesn't make the pair invulnerable.
-; [ PR#2 fold (6) - Oldcustard credit, by-concept] THREATS-ONLY MODE:
+; [REV-161 PR#2 fold (6) - Oldcustard credit, by-concept] THREATS-ONLY MODE:
 ; abFull=True (the default, the historic behavior) freezes every bystander in
 ; range; abFull=False holds ONLY actors actually hostile to the pair -- the
 ; full freeze stopped unrelated NPCs mid-life across the loaded area in
 ; NPC-grapples and creature struggles. Threaded threats-only through the
 ; struggle/QTE hold sites; release calls are unaffected (releasing a
 ; never-held actor is a no-op).
+; [REV-177 item 3 - Oldcustard credit, issue #2: targeted-threat hold]
+; True only for an actor that is an actual threat TO THE VICTIM (akCenter):
+; locked onto them, or hostile with no current target (lock just cleared).
+; Player teammates are never threats here -- the old fold's "hostile to the
+; aggressor" half matched EVERY follower fighting the aggressor (the abFull=False
+; fold diverged from the PR's intent: whole-party DoNothing freeze on every
+; NPC-only grab). A teammate flag alone is unreliable (SeverActions-managed
+; followers), so the combat-target test carries the decision instead.
+Bool Function _IsTargetedThreat(Actor a, Actor akCenter)
+    If a.IsPlayerTeammate()
+        Return False
+    EndIf
+    Actor tgt = a.GetCombatTarget()
+    Return tgt == akCenter || (!tgt && a.IsHostileToActor(akCenter))   ; locked on, or lock just cleared
+EndFunction
+
 Function _ProtectNearbyAllies(Actor akCenter, Actor akAggressor, Bool abHold, Bool abFull = True)
     If !akCenter
         Return
@@ -3965,7 +6085,7 @@ Function _ProtectNearbyAllies(Actor akCenter, Actor akAggressor, Bool abHold, Bo
     Int i = 0
     While i < loaded.Length
         Actor a = loaded[i]
-        If a && a != akCenter && a != akAggressor && a != PlayerRef && !a.IsDead() && (!abHold || a.GetDistance(akCenter) <= 3000.0) && (!abHold || abFull || a.IsHostileToActor(akCenter) || a.IsHostileToActor(akAggressor))
+        If a && a != akCenter && a != akAggressor && a != PlayerRef && !a.IsDead() && (!abHold || a.GetDistance(akCenter) <= 3000.0) && (!abHold || abFull || _IsTargetedThreat(a, akCenter))
             _HoldActorAI(a, abHold)
             ; Deliberately NO calm/pacify on bystanders — a cloak here stopped UNRELATED fights nearby
             ; (correct objection from testing). The victim-side calm in _ProtectVictimTargeting is what
@@ -4211,7 +6331,7 @@ Function PlayPairedSequence(Actor akA1, Actor akA2, \
                 _HoldAnim(akA1, akA2, animsA1[i], animsA2[i], fNPCStageTime)
                 i += 1
             EndWhile
-            ; [ PR#2 fold (7) - Oldcustard credit, by-concept] INTERRUPTED
+            ; [REV-161 PR#2 fold (7) - Oldcustard credit, by-concept] INTERRUPTED
             ; STRUGGLE = VICTIM FREED: an abort before the deciding stage used to
             ; leave BOTH outcome flags unset, and every reader defaulted to
             ; attacker-win (the interruption miscued as an overpowered defeat).
@@ -4482,15 +6602,28 @@ Function _ReassertDownedProtection(Actor ak)
     EndIf
 EndFunction
 
-; [ PR#2 fold (1) - Oldcustard credit: fix/creature-struggle-bugs, by-concept]
+; [REV-161 PR#2 fold (1) - Oldcustard credit: fix/creature-struggle-bugs, by-concept]
+; [REV-177 item 1 - Oldcustard credit, issue #2: threshold re-based 1.0 -> 600.0]
 ; RT-STAMP RELAUNCH GUARD: Utility.GetCurrentRealTime() RESETS at every game
 ; launch, but StorageUtil stamps persist across sessions -- a backoff/deadline
 ; stamp written last session reads as "far future" after relaunch and NEVER
 ; expires (the creature backoff + defeat grace went permanent after every
 ; game restart). Readers clamp: a stamp that sits in the future of the current
 ; session clock is pre-relaunch and counts as long-expired.
+; THRESHOLD ENUMERATION OF RECORD (REV-177): the deliberate future-dated
+; writes read through THIS guard are DefeatGraceUntilRT (now + up to 300 --
+; fPostDefeatGraceDuration slider 0..300, default 100) and
+; LastCreatureAttemptRT (now + 300 no-scene backoff / now + 27 LLM-gate NO).
+; Max deliberate horizon = 300s, so a 600s threshold clears every active
+; stamp with margin while still catching pre-relaunch leftovers (typically
+; thousands of seconds ahead; anything under 600 simply expires on its own).
+; NOT read through this guard (out of threshold scope, verified REV-177):
+; SNBaka.AutoGetUpDeadlineRT (now + 60..3600, compared directly, not via
+; _RTStampStale) and the GS module's own stamps (OverdriveExpire/MuseDebugEnd
+; have their own readers). Had any _RTStampStale-guarded write exceeded 600,
+; the build would have STOPPED for re-ruling per the instruction set.
 Bool Function _RTStampStale(Float afStamp, Float afNow)
-    Return afStamp > afNow + 1.0
+    Return afStamp > afNow + 600.0
 EndFunction
 
 ; The MERCY window: hold (or re-apply) the victim's ghost for fEscapeGraceDuration seconds at every
@@ -4513,7 +6646,7 @@ Function _PostEscapeGrace(Actor akWinner)
     _Log("[SNBaka] _PostEscapeGrace: " + akWinner.GetDisplayName() + " untouchable for " + fEscapeGraceDuration + "s of mercy")
     Utility.Wait(fEscapeGraceDuration)
     akWinner.SetGhost(False)
-    ; [ PR#2 fold (5) - Oldcustard credit, by-concept] FREED-VICTIM
+    ; [REV-161 PR#2 fold (5) - Oldcustard credit, by-concept] FREED-VICTIM
     ; MOVEMENT PERSISTENCE: _ReassertDownedProtection can re-apply the movement
     ; trio (SetRestrained/SetDontMove/_HoldActorAI) to an actor Acheron still
     ; holds; an escape that walks free through here used to lift only the
@@ -4550,7 +6683,7 @@ Function _UnlockAttackerOnly(Actor akA1)
     StorageUtil.SetIntValue(akA1, "SNBaka.StopRequested", 0)
 EndFunction
 
-; ──  Task 2: downed-state silence early-exit for the ABANDONED delegated hold ──
+; ── REV-17 Task 2: downed-state silence early-exit for the ABANDONED delegated hold ──
 ; The 09-14 recorded ruling ("a defeated player must stay down until the get-up key, help,
 ; or a won QTE — no unsanctioned self-recovery") left a hole its authors didn't see: an
 ; ABANDONED hold. When nobody escalates, nobody helps, and the aggressor has simply walked
@@ -4575,7 +6708,7 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
     _Log("[SNBaka] silence watch armed for " + akVictim.GetDisplayName() + " (" + fDownedSilenceSec + "s)")
     Float silence  = 0.0
     Float total    = 0.0
-    ;  1b — observed-downed state: the "no longer downed (sanctioned exit)" stand-down
+    ; REV-61 1b — observed-downed state: the "no longer downed (sanctioned exit)" stand-down
     ; is only valid if this watch actually SAW the victim downed first. The 09-30 Frabbi
     ; incident stood down 1s after arming because a dead delegation never set any downed flag
     ; — absence-of-flags was misread as a sanctioned exit and the abandoned-hold recovery
@@ -4621,7 +6754,7 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
         If bObservedDowned
             _Log("[SNBaka] silence watch: capped after " + total + "s without " + fDownedSilenceSec + "s of straight silence — standing down WITHOUT recovery, hold persists")
         Else
-            ;  1b: the watch ran its full course WITHOUT ever seeing the victim downed —
+            ; REV-61 1b: the watch ran its full course WITHOUT ever seeing the victim downed —
             ; that is the dead-delegation signature (09-30 Frabbi class). Do NOT stand down
             ; silently: log it and fire the recovery chain (safe no-op on a clean state).
             _Log("[SNBaka] silence watch: EXPIRED without observed downed state — possible dead delegation; actor: " + akVictim.GetDisplayName() + " — firing recovery chain")
@@ -4631,7 +6764,7 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
         Return
     EndIf
     ; Unconditional reason-coded sentinel (2c): the next session's log confirms the fix
-    ; from one grep — victim named, plus the three condition states.  1b: the reason
+    ; from one grep — victim named, plus the three condition states. REV-61 1b: the reason
     ; string now distinguishes a genuine silence-timeout from one where the victim was
     ; never observed downed at all (dead-delegation class).
     String sReason = "silence-timeout (" + fDownedSilenceSec + "s)"
@@ -4643,7 +6776,7 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
         + " sexthread=" + IsInSexAnimation(akVictim) \
         + " queued=" + (StorageUtil.FormListFind(PlayerRef, "SNBaka.AcheronDownQueue", akVictim) >= 0) \
         + " | firing recovery chain")
-    ;  Task 4 rider: stop any stale victim-side struggle loop before recovering.
+    ; REV-17 Task 4 rider: stop any stale victim-side struggle loop before recovering.
     ; _CleanupPair skips the victim's IdleForceDefaultState when bSkipA2Reset=True (the
     ; defeat paths pass it), so the paired struggle loop's victim half is never stopped on
     ; this path (09-15: the player's half lingered ~15s until a jump interrupted it). This
@@ -4681,7 +6814,7 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
         StorageUtil.SetIntValue(akA2, "SNBaka.OnGround",      0)
         StorageUtil.SetStringValue(akA2, "SNBaka.DownPose",   "")
         StorageUtil.SetFormValue(akA2, "SNBaka.GroundWindowAggressor", None)
-        ;  Task 3: delegated victims never received the downed DECISION event — this
+        ; REV-17 Task 3: delegated victims never received the downed DECISION event — this
         ; branch returns below, before the fallback window's baka_defeat registration
         ; (the two RegisterEvent calls further down), so on Acheron-held victims the
         ; Escalate / HelpUp / Release trio was only ever reachable through Acheron's own
@@ -4702,7 +6835,7 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
             akA1, akA2)
         _Log("[SNBaka] _DefeatGroundWindow: baka_defeat registered for delegated victim " + akA2.GetDisplayName() + " (aggressor " + akA1.GetDisplayName() + ")")
         _StartCooldown(akA1)
-        ;  Task 2: this branch previously returned straight into Acheron's hold with
+        ; REV-17 Task 2: this branch previously returned straight into Acheron's hold with
         ; no bounded exit of its own — the 09-15 session's abandoned hold. Run the silence
         ; watch here: it resolves the delegated hold through the sanctioned recovery chain
         ; when the aggressor has disengaged and no action claimed the victim.
@@ -4771,7 +6904,7 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
     ; (Flags were already cleared at the top, before OnGround=1 — do NOT clear them again here,
     ; or a downed-menu pick made during this settle would be lost.)
     _Log("[SNBaka] _DefeatGroundWindow: escalate window open (" + fEscalationWindow + "s)")
-    ;  SlaveTats module: user-chosen degradation set rides the defeat/downed event
+    ; REV-72 SlaveTats module: user-chosen degradation set rides the defeat/downed event
     ; (module checks its own Enabled/ApplyOnDefeat/set-config gates; extend-not-duplicate).
     SNBaka_SlaveTatsModule.OnDefeat(akA2)
     If _bDruggedEscalation
@@ -5204,7 +7337,7 @@ EndFunction
 ; Plays the strangle animation on the downed victim, then starts an aggressive scene.
 ; No second QTE — escalation goes directly to the configured sex framework.
 Function _DoEscalation(Actor akA1, Actor akA2)
-    ;  Task 2: child boundary - the shared human-escalation gate.
+    ; REV-146a Task 2: child boundary - the shared human-escalation gate.
     If _ChildBoundaryRefused(akA1, akA2, "DoEscalation")
         Return
     EndIf
@@ -5217,7 +7350,7 @@ Function _DoEscalation(Actor akA1, Actor akA2)
         _Log("[SNBaka] _DoEscalation: blocked — creature actor")
         Return
     EndIf
-    ;  4.2: central player-target admission -- this funnel carries EVERY human
+    ; REV-144 4.2: central player-target admission -- this funnel carries EVERY human
     ; escalation lane (Escalate_Execute's ours/external branches + _DispatchDownedAction's
     ; external branch), so the policy is consulted once here and the downed-player case
     ; (which bypasses IsEligible by design) is finally gated by it. Player-own escalations
@@ -5245,7 +7378,7 @@ Function _DoEscalation(Actor akA1, Actor akA2)
         Return
     EndIf
     _Log("[SNBaka] _DoEscalation: A1=" + akA1.GetDisplayName() + " A2=" + akA2.GetDisplayName())
-    ;  SlaveTats module: user-chosen degradation set rides the escalation handoff
+    ; REV-72 SlaveTats module: user-chosen degradation set rides the escalation handoff
     ; (module checks its own Enabled/ApplyOnEscalation/set-config gates; default OFF).
     SNBaka_SlaveTatsModule.OnEscalation(akA2)
     ; Lock BOTH — not just the attacker. The victim must be Locked too, or (when the victim is the
@@ -5332,7 +7465,7 @@ Function _DoEscalation(Actor akA1, Actor akA2)
 
     _Log("[SNBaka] _DoEscalation: SexLab installed=" + SkyrimNet_BakaSL.Installed() + " drugged=" + _bDruggedEscalation)
 
-    ; Pending-scene latch (): from here until _EscalationCleanup confirms scene
+    ; Pending-scene latch (rev-22): from here until _EscalationCleanup confirms scene
     ; end, this pair is busy even though IsInSexAnimation still reads False (wizard
     ; open / thread in setup). Both dispatch paths below run through a cleanup that
     ; releases it.
@@ -5439,7 +7572,7 @@ Function _EscalationCleanup(Actor akA1, Actor akA2)
     ; BEFORE the invalid-actor guard so the override never outlives the scene even if the rest of
     ; the cleanup aborts; the guard's early-exit below therefore cannot strand it.
     SkyrimNet_BakaSL.ClearVictimOverride(akA2)
-    ; Pending-scene latch (): scene over (or fell through) — release the pair.
+    ; Pending-scene latch (rev-22): scene over (or fell through) — release the pair.
     ; Placed BEFORE the invalid-actor guard so the latch never outlives the
     ; escalation even if the rest of the cleanup aborts (_ClearSceneLatch tolerates
     ; None/disabled actors itself).
@@ -5789,7 +7922,7 @@ Function _LogPair(String sFn, Actor akAtk, Actor akVic, Float wantX, Float wantY
         + "  ATK=" + akAtk.GetDisplayName() + "  VIC=" + akVic.GetDisplayName())
 EndFunction
 
-;  Task 7 — THE APPROACH WINDOW (user ruling 2026-10-23: "walk, not
+; REV-146a Task 7 — THE APPROACH WINDOW (user ruling 2026-10-23: "walk, not
 ; teleport; timeout safety; teleport as backup"). Pair-action positioning
 ; gains the SitOnLap-precedent pattern BEFORE _SetupPair's snap: the NPC
 ; actor PATHS toward its partner when out of snap range, arrival is polled,
@@ -5800,7 +7933,7 @@ EndFunction
 Float fApproachSnapDist   = 300.0   ; inside this, the snap teleport is invisible (a step, not a jump)
 Float fApproachWalkRadius = 150.0   ; PathToReference stop radius
 Float fApproachTimeout    = 8.0     ; real-time budget before the teleport fallback
-Float fApproachWalkCeiling = 2000.0 ;  Task 7: manual (player-initiated) pairs admitted from this far
+Float fApproachWalkCeiling = 2000.0 ; REV-146a Task 7: manual (player-initiated) pairs admitted from this far
 Function _ApproachWindow(Actor akAtk, Actor akVic, String sFn)
     If !akAtk || !akVic || akAtk == PlayerRef || akVic == PlayerRef
         Return
@@ -5848,7 +7981,7 @@ EndFunction
 ; mk1/mk2 are pre-placed XMarkers used to vehicle-pin the attacker/victim. sFn = label for the log.
 Function _SetupPair(Actor akAtk, Actor akVic, Float xLocal, Float yLocal, Float rotOffset, \
         Bool bDisableCollision, ObjectReference mk1, ObjectReference mk2, String sFn)
-    ;  Task 7: the approach window runs BEFORE the hard AI stop -- an
+    ; REV-146a Task 7: the approach window runs BEFORE the hard AI stop -- an
     ; NPC actor out of snap range WALKS to its partner first (bounded ~8s real-
     ; time, arrival polled), and the unchanged MoveTo snap below is then a short
     ; final step, not a cross-room jump; on timeout/failure the snap is also
@@ -6021,6 +8154,7 @@ EndFunction
 ; Role anims: A1=BaboBackHugStartM/LoopM, A2=BaboBackHugStartF/LoopF
 ; Works on any gender combination.
 Function BackHug_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "BackHug") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] BackHug ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6051,6 +8185,7 @@ EndFunction
 ; A1=BaboBackHugMolestStartM/LoopM, A2=BaboBackHugMolestStartF/LoopF
 ; Works on any gender combination.
 Function BackHugMolest_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "BackHugMolest") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] BackHugMolest ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6060,7 +8195,7 @@ Function BackHugMolest_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "BackHugMolest", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "BackHugMolest", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " wrapped " + akTarget.GetDisplayName() + " from behind and helped themselves - roaming hands, no invitation offered.", \
         akInitiator, akTarget)
@@ -6100,6 +8235,7 @@ EndFunction
 ; A1=BaboFrontHugStartM/LoopM, A2=BaboFrontHugStartF/LoopF
 ; Works on any gender combination.
 Function FrontHug_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "FrontHug") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] FrontHug ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6130,6 +8266,7 @@ EndFunction
 ; Affectionate: the initiator takes the target by the arm and holds them close. Gendered M/F
 ; parts like the hugs (M = initiator, F = target). Single loopable clip — no separate start/loop.
 Function ArmHold_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ArmHold") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] ArmHold ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6157,6 +8294,7 @@ EndFunction
 ; A1=BaboKissLoveS01/S02_A1, A2=BaboKissLoveS01/S02_A2
 ; Works on any gender combination.
 Function KissLove_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "KissLove") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] KissLove ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6199,6 +8337,7 @@ EndFunction
 ; Uses action-specific resist/stop anims: SLAPForcedKiss01_A1/A2_Resist and _Stop.
 ; Works on any gender combination.
 Function ForcedKiss_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ForcedKiss") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] ForcedKiss ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6208,7 +8347,7 @@ Function ForcedKiss_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "ForcedKiss", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "ForcedKiss", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " pressed their lips to " + akTarget.GetDisplayName() + "'s mouth mid-word - the kiss taken, not offered.", \
         akInitiator, akTarget)
@@ -6245,6 +8384,7 @@ EndFunction
 ; --- TouchBreasts --- [FEMALE TARGET REQUIRED]
 ; A1=Babo_TouchingBreasts_A01, A2=Babo_TouchingBreasts_A02
 Function TouchBreasts_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "TouchBreasts") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] TouchBreasts ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6276,6 +8416,7 @@ EndFunction
 ; --- SuckBreasts --- [FEMALE TARGET REQUIRED]
 ; A1=Babo_SuckingBreasts_A01, A2=Babo_SuckingBreasts_A02
 Function SuckBreasts_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "SuckBreasts") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] SuckBreasts ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6288,7 +8429,7 @@ Function SuckBreasts_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "SuckBreasts", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "SuckBreasts", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " bent to " + akTarget.GetDisplayName() + "'s chest, licking and suck at their breasts.", \
         akInitiator, akTarget)
@@ -6308,6 +8449,7 @@ EndFunction
 ; --- ExaminePrivates --- [FEMALE TARGET REQUIRED] [bResistable]
 ; A1=BaboExaminePussyA1, A2=BaboExaminePussyA2
 Function ExaminePrivates_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ExaminePrivates") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] ExaminePrivates ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6345,6 +8487,7 @@ EndFunction
 ; --- PlayPrivates --- [FEMALE TARGET REQUIRED] [bResistable]
 ; A1=BaboPlayingPussyA1, A2=BaboPlayingPussyA2
 Function PlayPrivates_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "PlayPrivates") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] PlayPrivates ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6375,6 +8518,7 @@ EndFunction
 ; --- OralOnTarget --- [FEMALE TARGET REQUIRED]
 ; A1=BaboSuckingPussyA01, A2=BaboSuckingPussyA02
 Function OralOnTarget_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "OralOnTarget") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] OralOnTarget ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6387,7 +8531,7 @@ Function OralOnTarget_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "OralOnTarget", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "OralOnTarget", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " dropped to their knees for " + akTarget.GetDisplayName() + " - sucking at their privates.", \
         akInitiator, akTarget)
@@ -6408,6 +8552,7 @@ EndFunction
 ; A1=BaboSpankingM, A2=BaboSpankingF
 ; Works on any gender combination.
 Function Spanking_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Spanking") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Spanking ENTER")
     If IsInSexAnimation(akInitiator) || IsInSexAnimation(akTarget)
         SpankTarget_Execute(akInitiator, akTarget, True)
@@ -6451,6 +8596,7 @@ EndFunction
 ; A1=BaboWombHitM (single shot), A2=BaboWombHit (start) + BaboWombHitLoop
 ; Works on any gender combination.
 Function WombHit_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "WombHit") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] WombHit ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6460,7 +8606,7 @@ Function WombHit_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "WombHit", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "WombHit", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " drove a low, punishing blow into " + akTarget.GetDisplayName() + "'s lower belly - they double over in pain.", \
         akInitiator, akTarget)
@@ -6487,6 +8633,7 @@ EndFunction
 ; A1=Babo_Flirt_A02/A02D (performer — the one flirting), A2=Babo_Flirt_A01 (observer)
 ; Works on any gender combination.
 Function Flirt_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Flirt") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Flirt ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6565,16 +8712,19 @@ EndFunction
 ; Initiator plays the _A02 (toucher) role; target plays _A01. Caress = face-to-face (rot 180);
 ; tease breasts/below = same direction (rot 0), with the initiator behind for "below".
 Function FlirtFace_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "FlirtFace") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] FlirtFace ENTER")
     _FlirtEscalate(akInitiator, akTarget, "Babo_FlirtFace_A02", "Babo_FlirtFace_A01", "tenderly caresses the face of", 180.0)
 EndFunction
 
 Function FlirtBreast_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "FlirtBreast") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] FlirtBreast ENTER")
     _FlirtEscalate(akInitiator, akTarget, "Babo_FlirtBreast_A02", "Babo_FlirtBreast_A01", "playfully fondles the breasts of", 0.0)
 EndFunction
 
 Function FlirtPussy_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "FlirtPussy") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] FlirtPussy ENTER")
     _FlirtEscalate(akInitiator, akTarget, "Babo_FlirtPussy_A02", "Babo_FlirtPussy_A01", "slips a hand between the legs of", 0.0)
 EndFunction
@@ -6603,6 +8753,7 @@ EndFunction
 ; --- CapturedInspect --- [FEMALE TARGET REQUIRED] [bResistable]
 ; Sequence includes CapturedBoob and CapturedPussy stages — requires female A2.
 Function CapturedInspect_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "CapturedInspect") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] CapturedInspect ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6643,6 +8794,7 @@ EndFunction
 ; --- Investigate --- [FEMALE TARGET REQUIRED] [bResistable]
 ; Thorough 3-stage inspection — requires female A2.
 Function Investigate_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Investigate") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Investigate ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -6690,6 +8842,7 @@ EndFunction
 ; against Struggle_Execute's 3, silently failing to dispatch for every LLM/NPC-initiated call. Two-
 ; parameter wrapper gives both YAML actions an exact signature match instead.
 Function PinHelpless_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "PinHelpless") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     Struggle_Execute(akInitiator, akTarget, False)
 EndFunction
 
@@ -6700,6 +8853,7 @@ EndFunction
 ; fight it off). One static hold via PlayPairedSimpleAnim, not a 5-stage sequence -- both faster on
 ; its own merits and immune to PlayPairedSequence's per-stage pacing entirely.
 Function Subdue_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = False)
+    _ActionLaneFire(akInitiator, akTarget, "Subdue") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Subdue ENTER")
     If !IsEligible(akInitiator, akTarget, abFromHit)
         Return
@@ -6718,7 +8872,7 @@ Function Subdue_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = Fals
     EndIf
     RecordAnimation(akInitiator, "Subdue", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "Subdue", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " pinned " + akTarget.GetDisplayName() + " flat and kept them there - not allowing them to rise.", \
         akInitiator, akTarget)
@@ -6789,6 +8943,7 @@ EndFunction
 ; combat hit is mid-combat by definition. YAML invocations go through PinHelpless_Execute above
 ; instead (SkyrimNet's own dispatcher needs an exact parameter-count match, see that function).
 Function Struggle_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = False)
+    _ActionLaneFire(akInitiator, akTarget, "Struggle") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Struggle ENTER")
     If !IsEligible(akInitiator, akTarget, abFromHit)
         Return
@@ -6806,7 +8961,7 @@ Function Struggle_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = Fa
     EndIf
     RecordAnimation(akInitiator, "Struggle", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "Struggle", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " grappled " + akTarget.GetDisplayName() + " into a struggle - the stronger will decides the terms.", \
         akInitiator, akTarget)
@@ -6873,12 +9028,14 @@ EndFunction
 ; already fixed once this session for PinHelpless/Struggle (see that wrapper's own comment). Both
 ; YAMLs now point here instead.
 Function ChokeHelpless_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ChokeHelpless") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     ChokeHug_Execute(akInitiator, akTarget, False)
 EndFunction
 
 ; --- ChokeHug --- [bResistable]
 ; 5-stage chokehold. Works on any gender combination.
 Function ChokeHug_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = False)
+    _ActionLaneFire(akInitiator, akTarget, "ChokeHug") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] ChokeHug ENTER")
     If !IsEligible(akInitiator, akTarget, abFromHit)
         Return
@@ -6898,7 +9055,7 @@ Function ChokeHug_Execute(Actor akInitiator, Actor akTarget, Bool abFromHit = Fa
     EndIf
     RecordAnimation(akInitiator, "ChokeHug", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "ChokeHug", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + " caught " + akTarget.GetDisplayName() + " in a choke-held embrace - possessively holing them much too tightly for comfort.", \
         akInitiator, akTarget)
@@ -6977,6 +9134,7 @@ EndFunction
 ; 5-stage. S05 = liberation (star pattern). Attacker behind victim, same facing direction.
 ; Works on any gender combination.
 Function DrunkExploit_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "DrunkExploit") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] DrunkExploit ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -7033,6 +9191,7 @@ EndFunction
 ; context passed to SkyrimNet and SexLab.
 ; Works on any gender combination.
 Function DrugFood_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "DrugFood") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] DrugFood ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -7063,8 +9222,8 @@ Function DrugFood_Execute(Actor akInitiator, Actor akTarget)
     _DefeatGroundWindow(akInitiator, akTarget)
 EndFunction
 
-; --- ShowingOffBody ---  [ UI label: "Ogle Body"; YAML name/id unchanged]
-; OBSERVED BEHAVIOR (dogfood-verified ): the INITIATOR ogles; the TARGET poses
+; --- ShowingOffBody ---  [REV-84 UI label: "Ogle Body"; YAML name/id unchanged]
+; OBSERVED BEHAVIOR (dogfood-verified REV-84): the INITIATOR ogles; the TARGET poses
 ; ostentatiously and the beat ends with a slap. Anim names are doubly role-inverted
 ; (Babo A1/A2 naming vs. who performs): the initiator (first arg) plays
 ; BaboShowingOffBodyA2 = the OGLER; the target (second arg) plays BaboShowingOffBodyA1
@@ -7073,6 +9232,7 @@ EndFunction
 ; either side.
 ; (HasFemaleBody on the player is unreliable with RaceMenu presets — male base, female appearance.)
 Function ShowingOffBody_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ShowingOffBody") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] ShowingOffBody ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -7103,6 +9263,7 @@ EndFunction
 ; Non-resistable variant — used for consensual or subdued contexts.
 ; Use PlayPrivates_Execute for the resistable version.
 Function FondlePussy_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "FondlePussy") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] FondlePussy ENTER")
     If !IsEligible(akInitiator, akTarget)
         Return
@@ -7115,7 +9276,7 @@ Function FondlePussy_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     RecordAnimation(akInitiator, "FondlePussy", akTarget.GetDisplayName())
     RecordAnimation(akTarget,    "FondlePussy", akInitiator.GetDisplayName())
-    ;  4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
+    ; REV-150 4.4: register entry 31 reworded line of record (user's 2026-10-24 pen)
     _CueOngoing("baka_forced", \
         akInitiator.GetDisplayName() + "'s hand reached between " + akTarget.GetDisplayName() + "'s legs, fondling their privates.", \
         akInitiator, akTarget)
@@ -7143,6 +9304,7 @@ EndFunction
 ; akTarget is any actor currently in an active animation (victim or initiator).
 ; If they are not in a scene, does nothing.
 Function InterruptScene_Execute(Actor akIntervenor, Actor akTarget)
+    _ActionLaneFire(akIntervenor, akTarget, "InterruptScene") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] InterruptScene ENTER")
     If !akIntervenor || !akTarget
         Return
@@ -7160,6 +9322,7 @@ EndFunction
 ; The scene initiator voluntarily ends their own ongoing animation.
 ; akInitiator must currently be locked (in an active animation).
 Function CallOff_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "CallOff") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] CallOff ENTER")
     If !akInitiator
         Return
@@ -7190,8 +9353,8 @@ EndFunction
 ;     SNBaka_InteractMenuAggPhysical: relabel to Sexual actions: Forced Kiss/Spank/Touch Breasts/Examine/Cancel
 ;     SNBaka_InteractMenuAggSexual:   relabel to Devious actions: Ogle Body/Drunk Exploit/Drug Food/Fondle/Cancel
 ;     SNBaka_InteractMenuAffectionate: NO CHANGE
-;  Feature A: the no-target panel open. The interact power with nobody on
-; the crosshair routes here (the  blocked sentinel becomes the panel-open
+; REV-147 Feature A: the no-target panel open. The interact power with nobody on
+; the crosshair routes here (the REV-61 blocked sentinel becomes the panel-open
 ; path - user ruling). The bridge re-resolves the crosshair itself; when it also
 ; finds nobody it opens the panel with the "no target selected" overlay: all
 ; target-actions greyed, the two ambient-mode footer buttons live, their state
@@ -7200,7 +9363,7 @@ EndFunction
 Function Interact_NoTargetPanel(Actor akCaster)
     _Log("[SNBaka][PANEL] no-target panel open (REV-147)")
     SNBakaUI.ShowInteractMenu(akCaster, None)
-    _PushModeStates()   ;  Feature B: initial button state at panel open
+    _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
 EndFunction
 
 Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
@@ -7209,9 +9372,9 @@ Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
         Return
     EndIf
 
-    ;  Feature A: the no-target panel open lives in Interact_NoTargetPanel
+    ; REV-147 Feature A: the no-target panel open lives in Interact_NoTargetPanel
     ; (below) - the user ruling that a power press with nobody on the crosshair opens
-    ; the panel instead of doing nothing. The  blocked sentinel path in
+    ; the panel instead of doing nothing. The REV-61 blocked sentinel path in
     ; SkyrimNet_BakaInteractEffect routes there. This function keeps its null guard:
     ; it requires a real target; the null-target session is the separate entry point.
 
@@ -7231,7 +9394,7 @@ Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
         _pendingCaster = akCaster
         _pendingTarget = akTarget
         SNBakaUI.ShowDownedMenu(akCaster, akTarget)
-        _PushModeStates()   ;  Feature B: initial button state at panel open
+        _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
         Return
     EndIf
 
@@ -7258,7 +9421,7 @@ Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
         _pendingCaster = akCaster
         _pendingTarget = akTarget
         SNBakaUI.ShowMidCombatMenu(akCaster, akTarget)
-        _PushModeStates()   ;  Feature B: initial button state at panel open
+        _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
         Return
     EndIf
 
@@ -7276,7 +9439,7 @@ Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
         ; longer leave us with the wrong actors.
         _Log("[SNBaka] interact menu: opening PrismaUI interact menu (" + akCaster.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ")")
         SNBakaUI.ShowInteractMenu(akCaster, akTarget)
-        _PushModeStates()   ;  Feature B: initial button state at panel open
+        _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
         Return  ; result arrives via _DispatchInteractActionWithActors
     EndIf
 
@@ -7355,13 +9518,13 @@ EndFunction
 Event OnSNBakaMenuChoice(String eventName, String strArg, Float numArg, Form sender)
     Int choice = numArg as Int
     If strArg == "execconfirm"
-        ;  Task 2.3: Execute-gate popup answer (DLL ExecuteConfirm mode -> normal-path
+        ; REV-92 Task 2.3: Execute-gate popup answer (DLL ExecuteConfirm mode -> normal-path
         ; SendEvent). 0 = accept, -1 = decline/timeout/moot close.
         _ExecuteGateAnswer(choice == 0, "popup")
     ElseIf strArg == "sexspank"
         _DispatchSexSpankAction(choice)
     ElseIf strArg == "mephalatoggle"
-        ;  3.6: the SNBaka_Menu footer mode button (GS footer-button
+        ; REV-145 3.6: the SNBaka_Menu footer mode button (GS footer-button
         ; pattern -> SNBaka.* keys; Papyrus arbitrates).
         _MephalaToggle()
     ElseIf strArg == "molagbaltoggle"
@@ -7385,7 +9548,7 @@ Function _DispatchInteractAction(Int choice)
     Actor cst = _pendingCaster
     _pendingTarget = None
     _pendingCaster = None
-    ;  2.3: the reserved mode ids route FIRST, unconditionally - a no-target
+    ; REV-147 2.3: the reserved mode ids route FIRST, unconditionally - a no-target
     ; panel session keeps the footer mode buttons live, so 900/901 must not fall
     ; through the null-target refusal below. (The live path is the DLL's own
     ; keep-open _MenuModeButton dispatch; this ordering is the defense-in-depth
@@ -7400,7 +9563,7 @@ Function _DispatchInteractAction(Int choice)
     If choice < 0
         Return
     EndIf
-    ;  2.3: every target-action choice from a null-target session refuses
+    ; REV-147 2.3: every target-action choice from a null-target session refuses
     ; with a reason-coded sentinel (the user ruling: such a panel is ambient-only -
     ; the JS grey-out makes this unreachable by pointer events, so reaching here
     ; means a keyboard/bypass path; the refusal is explicit and logged).
@@ -7480,7 +9643,7 @@ Function _DispatchSexSpankAction(Int choice)
     If choice < 0 || !caster
         Return
     EndIf
-    ;  4.2: Prisma mode buttons (900/901) also arrive here when the
+    ; REV-146a 4.2: Prisma mode buttons (900/901) also arrive here when the
     ; sex-spank panel is open -- same routing as the interact dispatcher.
     If choice == 900
         _MephalaToggle()
@@ -7506,10 +9669,49 @@ Function _DispatchSexSpankAction(Int choice)
     EndIf
 EndFunction
 
+; [REV-177b item 7 / R-177b — Oldcustard shape (issue #2 item 7, credit
+; Oldcustard)]: spared enemies used to re-engage the instant recovery stood them
+; up. DECIDE the spare BEFORE recovery (was the victim an enemy of the initiator
+; or the player?), then immediately AFTER recovery force them to stand down:
+; Aggression 0 + Confidence 0 + StopCombatAlarm + StopCombat +
+; _ClearStaleCombatLocks. User framing of record: too injured to flee, forced to
+; face you — stays present as scene material. NO wait-for-standup anywhere on
+; these synchronous paths (the victims are already recovered when these run).
+; FUTURE ITEM, deliberately NOT built here: wary-enemy ~10-min optional hostility
+; restore (original Aggression/Confidence on a timestamp, narrated as strength
+; returning) — revisit after this easy fix lands.
+Bool Function _SpareEnemyDecided(Actor akInitiator, Actor akVictim)
+    If !akVictim
+        Return False
+    EndIf
+    Bool enemy = False
+    If akInitiator && akInitiator != akVictim
+        enemy = akVictim.IsHostileToActor(akInitiator)
+    EndIf
+    If !enemy && PlayerRef
+        enemy = akVictim.IsHostileToActor(PlayerRef)
+    EndIf
+    _Log("[SNBaka] spare-enemy decision (R-177b): " + akVictim.GetDisplayName() + " hostile=" + enemy)
+    Return enemy
+EndFunction
+
+Function _SparePacifyEnemy(Actor akVictim)
+    If !akVictim || akVictim == PlayerRef
+        Return
+    EndIf
+    akVictim.SetActorValue("Aggression", 0.0)
+    akVictim.SetActorValue("Confidence", 0.0)
+    akVictim.StopCombatAlarm()
+    akVictim.StopCombat()
+    _ClearStaleCombatLocks(akVictim)
+    _Log("[SNBaka] spare-enemy pacify applied (R-177b): " + akVictim.GetDisplayName() + " Aggression/Confidence 0, combat stopped, stale locks cleared")
+EndFunction
+
 ; --- Release ---
 ; Called during the ground window to free the downed victim immediately without escalating.
 ; The attacker steps back — the moment passes. Works for both NPC and player initiators.
 Function Release_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Release") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Release ENTER")
     If !akTarget || !akInitiator
         Return
@@ -7529,7 +9731,7 @@ Function Release_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     _bReleaseRequested = True
     _Log("[SNBaka] Release_Execute: " + akInitiator.GetDisplayName() + " releases " + akTarget.GetDisplayName())
-    ;  Task 4 — removal-on-release (MCM "Remove Marks On Release", default ON): strip the
+    ; REV-74 Task 4 — removal-on-release (MCM "Remove Marks On Release", default ON): strip the
     ; module's degradation marks when a captive is genuinely freed. Service-delegated, one line,
     ; absence-safe (module no-ops without SlaveTats / without marks applied).
     If StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.RemoveOnRelease", 1) == 1
@@ -7537,8 +9739,14 @@ Function Release_Execute(Actor akInitiator, Actor akTarget)
     EndIf
     ; If they were defeated by something other than our ground window (Acheron combat bleedout), free
     ; them directly — the ground-window flag alone won't be read by anyone.
+    ; [REV-177b item 7 / R-177b] spare decision BEFORE recovery; enemy victims are
+    ; stood down immediately after (Oldcustard shape) — no wait-for-standup.
+    Bool spareEnemy = _SpareEnemyDecided(akInitiator, akTarget)
     If external
         _ForceRecover(akTarget)
+        If spareEnemy
+            _SparePacifyEnemy(akTarget)
+        EndIf
     EndIf
     SkyrimNetApi.RegisterEvent("baka_release", \
         akInitiator.GetDisplayName() + " steps back, letting " + akTarget.GetDisplayName() + " go free.", \
@@ -7764,6 +9972,7 @@ EndFunction
 ; OR an external Acheron bleedout — so it ALSO rescues a player who got stuck on the ground after a
 ; scene. The helper briefly crouches over the victim ("check downed") before lifting them.
 Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "HelpUp") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] HelpUp ENTER")
     If !akInitiator || !akTarget
         Return
@@ -7776,6 +9985,7 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
         _Log("[SNBaka] HelpUp_Execute: blocked — initiator is downed")
         Return
     EndIf
+    Bool helpUpPierce = False   ; [REV-181 fix 1] gate-pierce receipt flag (function-level: Papyrus block scoping)
     If !_IsDownedAny(akTarget)
         ; Two confirmed races land a HelpUp on a victim who is "down" to the eye but not to _IsDownedAny:
         ; (a) native bleedout whose Acheron defeat/adoption hasn't finished landing yet, and (b) a
@@ -7788,10 +9998,24 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
             settle += 0.5
         EndWhile
         If !_IsDownedAny(akTarget)
-            _Log("[SNBaka] HelpUp_Execute: target not downed (waited " + settle + "s) — nothing to do")
-            Return
+            ; [REV-181 Leg 2 — FIX 1, HELUP FULL CIRCUMVENTION] The always-available release
+            ; valve (user ruling of record, S255): if Acheron still tracks the target as
+            ; DEFEATED, the helper's intent pierces the downed gate regardless of whether our
+            ; local flags agree — the orphan-defeat class (Acheron defeated, but Held/adoption
+            ; never landed on our side) used to no-op here, leaving an actor no local recovery
+            ; path could unlock. The initiator requirement above is unchanged (a standing NPC
+            ; or the player — the designed lanes), and this circumvention is HELUP ONLY: every
+            ; other action's gates stand exactly as they were.
+            If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 && Acheron.IsDefeated(akTarget)
+                helpUpPierce = True
+                _Log("[SNBaka] HelpUp_Execute: target not downed locally but Acheron-defeated — piercing the downed gate (fix 1 circumvention)")
+            Else
+                _Log("[SNBaka] HelpUp_Execute: target not downed (waited " + settle + "s) — nothing to do")
+                Return
+            EndIf
+        Else
+            _Log("[SNBaka] HelpUp_Execute: down state landed after " + settle + "s — proceeding")
         EndIf
-        _Log("[SNBaka] HelpUp_Execute: down state landed after " + settle + "s — proceeding")
     EndIf
     _Log("[SNBaka] HelpUp_Execute: " + akInitiator.GetDisplayName() + " helps up " + akTarget.GetDisplayName())
     SkyrimNetApi.RegisterEvent("baka_release", \
@@ -7820,7 +10044,24 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
         Utility.Wait(2.0)
         Debug.SendAnimationEvent(akInitiator, "IdleForceDefaultState")
     EndIf
+    ; [REV-177b item 7 / R-177b] spare decision BEFORE recovery; enemy victims are
+    ; stood down immediately after (Oldcustard shape) — no wait-for-standup.
+    Bool spareEnemy = _SpareEnemyDecided(akInitiator, akTarget)
     _ForceRecover(akTarget)
+    ; [REV-181 Leg 2 item 2 — FIX 1] THE FULL FUNERAL, the SAME shared helper every bridge-side
+    ; recovery path runs (one helper, both paths — the bridge global _AcheronHoldFuneral).
+    ; Clearing the complete hold-state table (deadline, re-down arm, cue clocks, soft keys)
+    ; means nothing on the Acheron-bridge side can re-hold or re-down this actor after a
+    ; deliberate HelpUp. First deliberate Baka->bridge global call: both scripts ship in the
+    ; same package, the function is Global + StorageUtil-only (no quest-instance dependency),
+    ; and the presence gate keeps it a no-op when the Acheron integration is absent.
+    If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
+        SkyrimNet_AcheronIntegration._AcheronHoldFuneral(akTarget)
+        _Log("[SNBaka] HelpUp_Execute: hold funeral complete — gate pierced (helpUpPierce=" + helpUpPierce + "), hold fully cleared (fix 1)")
+    EndIf
+    If spareEnemy
+        _SparePacifyEnemy(akTarget)
+    EndIf
     ; Help Up is a deliberate caring act — Calm the target so they don't immediately re-enter combat
     ; the moment they're back on their feet (same Calm-archetype pattern used elsewhere in this file,
     ; e.g. _CalmForAnim/_PacifyActor). No-op if SNBakaCalm was never assigned, or target isn't fighting.
@@ -7831,15 +10072,16 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
     EndIf
 EndFunction
 
-;  (roadmap item 3 / INDEX row 14): EXECUTE — the LLM-facing killing blow on a downed
+; REV-90 (roadmap item 3 / INDEX row 14): EXECUTE — the LLM-facing killing blow on a downed
 ; victim. A pure delegation to _DispatchDownedAction's choice-5 leg (the same guaranteed-
 ; alternative execute the interact menu offers): no gate-stack rewrite, the dispatch's own
 ; ours/external bookkeeping + release-then-Kill sequence runs unmodified. The downed recheck
 ; lives HERE (LLM decisions are a snapshot; the state can change before this runs) — same
 ; settle-wait pattern as HelpUp_Execute for the two late-landing races. Target-down is
 ; deliberately NOT an eligibilityRules decorator — same ruling as HelpUp (helpup.yaml): the
-; executor is the enforcement point.  sentinels: the _Log lines below fire unconditionally.
+; executor is the enforcement point. §5 sentinels: the _Log lines below fire unconditionally.
 Function Execute_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Execute") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Execute ENTER")
     If !akInitiator || !akTarget
         Return
@@ -7848,12 +10090,22 @@ Function Execute_Execute(Actor akInitiator, Actor akTarget)
         _Log("[SNBaka] Execute_Execute: blocked — creature actor (use CreatureEscalate)")
         Return
     EndIf
+    ; [REV-177b item 8 / R-177c — Oldcustard issue #2 item 8] TIED self-execution
+    ; guard: self-execution is otherwise a deliberate, legal, rare choice (defeat
+    ; over capture — "takes their own life rather than be taken"), but a TIED
+    ; actor physically cannot (bound hands don't swing the blade). Allowed except
+    ; when tied. (akInitiator == akTarget is the self-variant; other-execute by a
+    ; tied prisoner stays blocked by the downed checks below as before.)
+    If akInitiator == akTarget && StorageUtil.GetIntValue(akInitiator, "SNBaka.Tied", 0) == 1
+        _Log("[SNBakaEXEC] Execute refused: self-execution while TIED — bound prisoners cannot take their own life (R-177c)")
+        Return
+    EndIf
     If _IsDownedAny(akInitiator)
-        ;  Task 1.1 (user-approved 2026-10-11; scoping of record: LENIENT
+        ; REV-94 Task 1.1 (user-approved 2026-10-11; scoping of record: LENIENT
         ; initiator, STRICT target): an Acheron-DEFEATED initiator is pacified,
         ; not helpless - when the ONLY "downed" signal is the Acheron hold (no
         ; local SNBaka.OnGround window, no vanilla bleedout), the initiator may
-        ; execute (the  J'zargo dogfood block, class (ii)). A genuinely
+        ; execute (the REV-93 J'zargo dogfood block, class (ii)). A genuinely
         ; locally-downed initiator (OnGround/bleedout) stays blocked. Presence-
         ; gated like _DelegateDownToAcheron (bridge quest 0x800 probe): inert
         ; without Acheron, per the planner's without-Acheron requirement.
@@ -7873,8 +10125,8 @@ Function Execute_Execute(Actor akInitiator, Actor akTarget)
         _Log("[SNBaka] Execute_Execute: blocked — the player is never the execute target")
         Return
     EndIf
-    ;  fix (a): SCENE-ACTIVE GUARD — the  incident (2026-10-09 19:36:58,
-    ; PROJECT_STATE ) proved this lane inherited NONE of IsEligible's IsInSexAnimation
+    ; REV-100 fix (a): SCENE-ACTIVE GUARD — the REV-99 incident (2026-10-09 19:36:58,
+    ; PROJECT_STATE §105) proved this lane inherited NONE of IsEligible's IsInSexAnimation
     ; class (psc L628/L694; ~20 other lanes carry it). BOTH frameworks, ONE refusal
     ; semantics: IsInSexAnimation reads SexLab AnimatingFaction + the OStim scene faction
     ; (OStimActorCountFaction) + the BakaSL bridge fallback, ours OR another mod's scene.
@@ -7899,7 +10151,7 @@ Function Execute_Execute(Actor akInitiator, Actor akTarget)
         EndIf
         _Log("[SNBaka] Execute_Execute: down state landed after " + settle + "s — proceeding")
     EndIf
-    ;  Task 2.2: execution gate - MCM "Execution Action Use" levels checked BEFORE the
+    ; REV-92 Task 2.2: execution gate - MCM "Execution Action Use" levels checked BEFORE the
     ; dispatch (the LLM path's only entry point; the player's own downed-menu choice-5 leg is
     ; never gated). All refusal narration + sentinels fire inside _ExecuteGateCheck.
     If !_ExecuteGateCheck(akInitiator, akTarget)
@@ -7913,7 +10165,7 @@ Function Execute_Execute(Actor akInitiator, Actor akTarget)
     EndIf
 EndFunction
 
-;  Task 2.2/2.3 - EXECUTION GATE (state + helpers). The gate runs INSIDE Execute_Execute
+; REV-92 Task 2.2/2.3 - EXECUTION GATE (state + helpers). The gate runs INSIDE Execute_Execute
 ; for every LLM-originated fire, before the dispatch. Levels (MCM "Execution Action Use", key
 ; SNBaka.ExecuteGateLevel, default 0 = Unlimited): level 2 refuses ALL LLM fires outright;
 ; level 1 refuses NON-companion fires outright and asks the player (popup) for companion fires -
@@ -7924,9 +10176,9 @@ Int _execGatePending = 0          ; 0 = idle, 1 = popup open, 2 = answered-accep
 Actor _execGateInitiator = None
 Actor _execGateTarget = None
 
-; Sync/async determination of record ( Task 2.3a): the framework CANNOT hold a YAML
+; Sync/async determination of record (REV-92 Task 2.3a): the framework CANNOT hold a YAML
 ; action result open - the fire is a one-way Papyrus call from SkyrimNet's pipeline with no
-; return channel the executor could block on. Designed as PAUSE-AND-WAIT instead (/78
+; return channel the executor could block on. Designed as PAUSE-AND-WAIT instead (rev-77/78
 ; menu precedent): the popup Focus()-pauses the world, the executor polls for the answer with
 ; a hard 30s timeout -> deny-on-timeout is the fallback shape; never a hang. MOOT (target
 ; recovered/died) auto-closes as moot.
@@ -8018,8 +10270,8 @@ Function _ExecuteGateRefuse(Actor akInitiator, Actor akTarget, String asWhy)
         akInitiator, akTarget)
 EndFunction
 
-;  fix (a): scene-active refusal narration (register entry 12a - user-edited
-; wording of record, ): same baka_execute_refused cue shape as _ExecuteGateRefuse
+; REV-100 fix (a): scene-active refusal narration (register entry 12a - user-edited
+; wording of record, REV-101): same baka_execute_refused cue shape as _ExecuteGateRefuse
 ; so the LLM never claims a kill that was refused because either actor was mid
 ; SexLab/OStim scene. ASCII-only per the v8 checklist rider.
 Function _ExecuteSceneRefuse(Actor akInitiator, Actor akTarget)
@@ -8056,6 +10308,7 @@ EndFunction
 ; down/bleedout state, and a captive relationship is recorded for SkyrimNet to roleplay (captor =
 ; master, victim = prisoner/slave). Works for both a Baka ground-window down AND an Acheron bleedout.
 Function Capture_Execute(Actor akCaptor, Actor akVictim)
+    _ActionLaneFire(akCaptor, akVictim, "Capture") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Capture ENTER")
     If !akCaptor || !akVictim
         Return
@@ -8138,6 +10391,7 @@ EndFunction
 ; Plus (the "SSLV Entry" mod event). OPTIONAL: no-ops cleanly if Simple Slavery isn't installed or the
 ; MCM toggle is off. NPC victims just get a narrative beat (Simple Slavery only auctions the player).
 Function SellToSlavery_Execute(Actor akSeller, Actor akVictim)
+    _ActionLaneFire(akSeller, akVictim, "SellToSlavery") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] SellToSlavery ENTER")
     If !akSeller || !akVictim
         Return
@@ -8204,6 +10458,7 @@ EndFunction
 ; player-TEAMMATE (never the player); and the player must be either downed themselves or farther
 ; than fSlaveryPlayerDistance — you only lose a follower you couldn't defend.
 Function EnslaveFollower_Execute(Actor akCaptor, Actor akFollower)
+    _ActionLaneFire(akCaptor, akFollower, "EnslaveFollower") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] EnslaveFollower ENTER")
     If !bEnabled || !bFollowerSlavery || !akCaptor || !akFollower
         Return
@@ -8277,12 +10532,14 @@ EndFunction
 ; Player-as-sitter is blocked on this path; the interact menu's own entry goes through
 ; LapSitPlayer_Execute below instead.
 Function LapSit_Execute(Actor akSitter, Actor akSeated)
+    _ActionLaneFire(akSitter, akSeated, "LapSit") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _DoLapSit(akSitter, akSeated, False)
 EndFunction
 
 ; Interact-menu entry (menu id 25, "Sit on Lap"): the PLAYER sits on the seated target's lap.
 ; Menu path notifies on failure -- a clicked button that silently does nothing reads as broken.
 Function LapSitPlayer_Execute(Actor akCaster, Actor akTarget)
+    _ActionLaneFire(akCaster, akTarget, "LapSit") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     If akCaster != PlayerRef
         Return
     EndIf
@@ -8514,6 +10771,7 @@ EndFunction
 ; helped (HelpUp unties and lifts them) or until the binding lapses, at which point they fall back to
 ; a NORMAL down with a fresh timer. Built for keeping prisoners around to interrogate.
 Function TieUp_Execute(Actor akBinder, Actor akTarget)
+    _ActionLaneFire(akBinder, akTarget, "TieUp") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] TieUp ENTER")
     If !bEnabled || !akBinder || !akTarget
         Return
@@ -8577,6 +10835,7 @@ Function TieUp_Execute(Actor akBinder, Actor akTarget)
 EndFunction
 
 Function Untie_Execute(Actor akCutter, Actor akTarget)
+    _ActionLaneFire(akCutter, akTarget, "Untie") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Untie ENTER")
     If !bEnabled || !akCutter || !akTarget
         Return
@@ -8626,8 +10885,9 @@ EndFunction
 ; block no longer silently drops the call -- it enters _EscalateRetryWindow (bounded
 ; settle, one fresh full-gate revalidation, slipped cue on expiry/permanent failure).
 Function Escalate_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "Escalate") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] Escalate ENTER")
-    ;  Task 2: child boundary - escalation entry point.
+    ; REV-146a Task 2: child boundary - escalation entry point.
     If _ChildBoundaryRefused(akInitiator, akTarget, "Escalate")
         Return
     EndIf
@@ -8665,7 +10925,7 @@ String Function _EscalateValidate(Actor akInitiator, Actor akTarget)
         _Log("[SNBaka] Escalate_Execute: blocked — creature actor (use CreatureEscalate instead)")
         Return "creature actor"
     EndIf
-    ;  4.2: central player-target admission rides the shared Escalate gate chain so
+    ; REV-144 4.2: central player-target admission rides the shared Escalate gate chain so
     ; the retry window revalidates it identically (absolute revalidation discipline).
     If !_PlayerTargetAdmitted(akInitiator, akTarget, "EscalateValidate")
         Return "player-target policy off"
@@ -8810,13 +11070,13 @@ Function _DispatchMidCombatAction(Int choice, Actor akCaster, Actor akTarget)
     EndIf
 EndFunction
 
-; ---  SlaveTats set-picker dispatch ---
+; --- REV-72 SlaveTats set-picker dispatch ---
 ; Called by the DLL (SlaveTats menu mode) when the player picks a degradation set in the
 ; SNSlaveTats_Menu PrismaUI view. asSlot = "spank"/"defeat"/"escalation"; empty section/name
 ; clears the slot. Thin dispatcher only — all state lives in SNBaka_SlaveTatsModule.
 Function _ST_MenuChoice(String asSlot, String asSection, String asName)
     _Log("[SNBaka] _ST_MenuChoice: slot=" + asSlot + " section=" + asSection + " name=" + asName)
-    ;  Task 3 — the picker's name subfields ride here untouched (name|loc|color); the
+    ; REV-74 Task 3 — the picker's name subfields ride here untouched (name|loc|color); the
     ; module owns the parsing. Slot "picker" routes the pick to the actor-bound picker flow
     ; (downed-menu Apply Tattoo), not the MCM set-slot flow.
     If asSlot == "picker"
@@ -8826,29 +11086,36 @@ Function _ST_MenuChoice(String asSlot, String asSection, String asName)
     EndIf
 EndFunction
 
-; ---  SlaveTats LLM actions (external YAML: apply_tattoo / remove_tattoos) ---
+; --- REV-72 SlaveTats LLM actions (external YAML: apply_tattoo / remove_tattoos) ---
 ; Thin executors — the module owns all state/gating. RemoveTattoos strips everything
-; the MODULE applied (never Baka's own "SkyrimNet Spank" heat marks). : bookkeeping
+; the MODULE applied (never Baka's own "SkyrimNet Spank" heat marks). REV-74: bookkeeping
 ; and the sdb_tattoo_applied/removed event fires now live INSIDE the module
 ; (single-entry rule — these thin calls no longer duplicate the bookkeeping here).
 ;
-;  (Issue #3, user ruling + why-trace verdict): the LLM apply lane gains the
+; REV-164 (Issue #3, user ruling + why-trace verdict): the LLM apply lane gains the
 ; DOWNED-GATE (target must be downed; the standing-NPC lane is CommandTattoo per
-;  4.5), and is DECOUPLED from the MCM spank-set requirement. WHY-TRACE: the
+; REV-156 4.5), and is DECOUPLED from the MCM spank-set requirement. WHY-TRACE: the
 ; retired Force Tattoo tile's executor (SNBaka_SlaveTatsModule.ForcedTattoo) refuses
 ; [noset] when neither Defeat nor Spank set is configured (module L716-718), and this
 ; executor's own SpankSet read was the same configured-set coupling as a SILENT no-op —
 ; the invisible refuser behind the tile failures (and behind any LLM apply attempt
 ; with no set configured). Per the 156 spec the lane selects from the TARGET's
 ; available set; the spank-set requirement scopes to the spank-HOOK path only.
-; Pick order: configured spank set (kept as the preferred pick when present) ->
-; module curated fallback from the target's available packs (ValidatePick, the 156
-; class) -> reason-coded refuse [nopacks].
+;
+; [REV-178e] user ruling (SUPERSEDES the REV-164 configured-spank-set preference):
+; the spank set is EVENT MAKEUP — the spank-hook lane's escalating redness — and an
+; agent-initiated "brand them with a tattoo" resolving to a slightly-red bum is a
+; narration/visual mismatch. The configured-set preference is removed outright:
+; pick order is now module curated pick from the target's available packs with
+; EVENT SECTIONS EXCLUDED (Baka's hardcoded "SkyrimNet Spank" + the three MCM
+; degradation-set slots, CuratedLLMPick) -> reason-coded refuse [nopacks]/
+; [noeligible] when nothing non-event exists.
 Function ApplyTattoo_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ApplyTattoo") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     If !akTarget || !SNBaka_SlaveTatsModule.Installed()
         Return
     EndIf
-    ;  downed-gate (user ruling): the LLM apply lane requires the target
+    ; REV-164 downed-gate (user ruling): the LLM apply lane requires the target
     ; to be downed.
     If !_IsDownedAny(akTarget)
         _Log("[SNBaka] ApplyTattoo REFUSE [notdowned]: " + akTarget.GetDisplayName() + " is not downed -- LLM apply lane gated (REV-164)")
@@ -8857,33 +11124,39 @@ Function ApplyTattoo_Execute(Actor akInitiator, Actor akTarget)
     If _ChildBoundaryRefused(akInitiator, akTarget, "ApplyTattoo")
         Return
     EndIf
-    Actor p = Game.GetPlayer()
-    String section = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetSection", "")
-    String name = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetName", "")
-    If section != "" && name != ""
-        _Log("[SNBaka] ApplyTattoo APPLY (lane=llm_action, who picked: configured spank set '" + name + "' (" + section + ")) on " + akTarget.GetDisplayName() + " -- REV-164")
-        SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, section, name, -1, True, "llm_action")
+    ; [REV-178e] event-makeup exclusion (see header): pack-curated pick only.
+    ; [REV-178e rider 2] body-compat (male whitelist) pre-screened in the pick.
+    ; [REV-178e rider 4 / S250] SELECTION ASK (default ON): instead of picking
+    ; locally, the director LLM is shown the target's real curated roster
+    ; (CuratedPackText) + scene context and CHOOSES. Params are none here
+    ; (llm_action). Fail paths all fail-open (ruling 1: random curated pick,
+    ; never a silent no-op). OFF = the rider-2 local pick below verbatim.
+    If bTattooSelectAsk
+        If _TattooSelectAsk(akInitiator, akTarget, "llm_action", "", "")
+            Return    ; dispatched - the callback owns apply/degrade
+        EndIf
+        _Log("[SNBaka] ApplyTattoo ask DISPATCH-REFUSED - fail-open degrade (ruling 1) -- REV-178e rider 4")
+        _TattooAskDegrade(akTarget, "llm_action", "", "")
         Return
     EndIf
-    ;  decouple: no set configured -- pick from the target's available
-    ; packs instead of the historic silent no-op.
-    String[] pick = SNBaka_SlaveTatsModule.ValidatePick("", "")
+    String[] pick = SNBaka_SlaveTatsModule.CuratedLLMPick(akTarget)
     If pick.Length < 2 || pick[0] == "" || pick[1] == ""
-        _Log("[SNBaka] ApplyTattoo REFUSE [nopacks]: no spank set configured and no usable pack entry -- REV-164")
+        _Log("[SNBaka] ApplyTattoo REFUSE [nopacks/noeligible]: no usable non-event body-compatible pack entry (SkyrimNet Spank + configured degradation sets excluded) -- REV-178e")
         Return
     EndIf
-    _Log("[SNBaka] ApplyTattoo APPLY (lane=llm_action, who picked: module curated fallback '" + pick[1] + "' (" + pick[0] + ")) on " + akTarget.GetDisplayName() + " -- REV-164")
+    _Log("[SNBaka] ApplyTattoo APPLY (lane=llm_action, who picked: module curated pick '" + pick[1] + "' (" + pick[0] + ")) on " + akTarget.GetDisplayName() + " -- REV-178e")
     SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, pick[0], pick[1], -1, True, "llm_action")
 EndFunction
 
 Function RemoveTattoos_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "RemoveTattoos") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     If !akTarget || !SNBaka_SlaveTatsModule.Installed()
         Return
     EndIf
     SNBaka_SlaveTatsModule.RemoveAllFromActor(akTarget, "llm_action")
 EndFunction
 
-; --- [ 4.5] DIALOGUE-INITIATED APPLICATION (planner: "apply a
+; --- [REV-156 4.5] DIALOGUE-INITIATED APPLICATION (planner: "apply a
 ; tattoo to an NPC who you have a dominant relationship with... they
 ; would need to feel intimidated and/or submissive toward you") ---
 ; STANDING-NPC lane (NOT the downed tile — _ForcedTattoo owns downed).
@@ -8893,14 +11166,17 @@ EndFunction
 ; OR Confidence AV <= 1 ("intimidated"; 0=cowardly, 1=cautious) — both
 ; vanilla-cheap natives (rank precedent L~2996 rank==4; AV precedent
 ; L~2916 Aggression read). Body-compat rides the module's ApplyTattoo
-; choke point ([male-not-curated], the .1 class) — the 3.4-class
+; choke point ([male-not-curated], the REV-150.1 class) — the 3.4-class
 ; guard. The LLM picks section/name/color from the target's available
 ; set (the pack cache); invalid picks fall back in-cache
-; (ValidatePick, sentinel'd). Player-initiated via dialogue = the player
+; (ValidatePickCurated since REV-178e rider 2: event-makeup sections
+; excluded + body-compat pre-screened at the pick). Player-initiated via
+; dialogue = the player
 ; commands it — NOT gated by the player-target policy (the Execute
 ; pattern). Cue: sdb_tattoo_applied fires from the module on EVERY
-; application path (the  design). Mode = "dialogue".
+; application path (the REV-82 design). Mode = "dialogue".
 Function CommandTattoo_Execute(Actor akInitiator, Actor akTarget, String asSection, String asName, String asColor)
+    _ActionLaneFire(akInitiator, akTarget, "CommandTattoo") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBaka] CommandTattoo ENTER: initiator=" + akInitiator + " target=" + akTarget + " pick=" + asSection + "/" + asName + " color=" + asColor + " -- REV-156")
     If !akInitiator || !akTarget || !SNBaka_SlaveTatsModule.Installed()
         _Log("[SNBaka] CommandTattoo REFUSE [null]: null actor or SlaveTats absent -- REV-156")
@@ -8920,9 +11196,39 @@ Function CommandTattoo_Execute(Actor akInitiator, Actor akTarget, String asSecti
         _Log("[SNBaka] CommandTattoo REFUSE [dialogue-gate-refused]: " + akTarget.GetDisplayName() + " is neither submissive toward (rank=" + iRank + ") nor intimidated by (confidence=" + fConf + ") " + akInitiator.GetDisplayName() + " -- REV-156 3.4 gate")
         Return
     EndIf
-    String[] pick = SNBaka_SlaveTatsModule.ValidatePick(asSection, asName)
+    ; [REV-178e rider 3 / S249] PLAYER-SUGGESTS PANEL ROUTE (user ruling):
+    ; when the player is the initiator, the dominance gate passing = the target
+    ; "agrees" (submissive or cowed) -- hand the actual design choice to the
+    ; PLAYER: open the actor-bound picker (the downed-menu Apply Tattoo flow;
+    ; the pick applies via PickerChoice, mode "picker"). NPC-initiated keeps
+    ; the auto-apply leg. Degrade: picker unavailable -> fall through to the
+    ; LLM-parameter auto-apply below.
+    If akInitiator == PlayerRef && SNBaka_SlaveTatsModule.PickerAvailable()
+        _Log("[SNBaka] CommandTattoo PANEL (lane=dialogue, player-initiated): dominance gate passed by " + akTarget.GetDisplayName() + " - opening actor-bound picker (player picks the design) -- REV-178e rider 3")
+        SNBaka_SlaveTatsModule.OpenPickerFor(akTarget, akInitiator)
+        Return
+    EndIf
+    ; [REV-178e rider 4 / S250] SELECTION ASK on the AUTO-APPLY leg (NPC
+    ; commands a design, or player-initiated but the picker was unavailable):
+    ; the action's (section, name) params become HINTS surfaced to the
+    ; director ask instead of being applied directly; the director picks a
+    ; real design from the target's installed curated roster. Degrades keep
+    ; the rider-2 shape (ValidatePickCurated on the hints). The
+    ; player-initiated PICKER route above is untouched (no LLM in that lane).
+    If bTattooSelectAsk
+        If _TattooSelectAsk(akInitiator, akTarget, "dialogue", asSection, asName)
+            Return    ; dispatched - the callback owns apply/degrade
+        EndIf
+        _Log("[SNbaka] CommandTattoo ask DISPATCH-REFUSED - rider-2 degrade -- REV-178e rider 4")
+        _TattooAskDegrade(akTarget, "dialogue", asSection, asName)
+        Return
+    EndIf
+    ; [REV-178e rider 2] curated validation replaces raw ValidatePick: event
+    ; sections (SkyrimNet Spank + configured degradation sets) are excluded and
+    ; body-compat is pre-screened (curate-before-pick; the choke point remains).
+    String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, asSection, asName)
     If pick.Length < 2 || pick[0] == "" || pick[1] == ""
-        _Log("[SNBaka] CommandTattoo REFUSE [nopacks]: no usable pack entry -- REV-156")
+        _Log("[SNBaka] CommandTattoo REFUSE [nopacks/noeligible]: no usable non-event body-compatible pack entry -- REV-178e")
         Return
     EndIf
     Int iColor = -1
@@ -8933,7 +11239,7 @@ Function CommandTattoo_Execute(Actor akInitiator, Actor akTarget, String asSecti
     SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, pick[0], pick[1], iColor, True, "dialogue")
 EndFunction
 
-; --- [ 4.6] NPC-ON-PLAYER APPLICATION (the planner ownership/
+; --- [REV-156 4.6] NPC-ON-PLAYER APPLICATION (the planner ownership/
 ; humiliation row: "if the NPC feels like humiliating or marking
 ; ownership of the player") ---
 ; Target = the PLAYER, always. The central player-target policy IS the
@@ -8968,9 +11274,24 @@ Function MarkPlayer_Execute(Actor akInitiator, String asSection, String asName, 
         _Log("[SNBaka] MarkPlayer REFUSE [policy-refused]: central player-target policy OFF (the L~1452 daemon precedent class) -- REV-156")
         Return
     EndIf
-    String[] pick = SNBaka_SlaveTatsModule.ValidatePick(asSection, asName)
+    ; [REV-178e rider 4 / S250] SELECTION ASK on the ownership lane: the
+    ; NPC's (section, name) params become HINTS to the director ask; the
+    ; director picks a real design from the player's installed curated roster
+    ; (event-makeup + body-compat excluded by the packList builder). Degrade
+    ; = rider-2 ValidatePickCurated on the hints. OFF = rider-2 below verbatim.
+    If bTattooSelectAsk
+        If _TattooSelectAsk(akInitiator, PlayerRef, "ownership", asSection, asName)
+            Return    ; dispatched - the callback owns apply/degrade
+        EndIf
+        _Log("[SNbaka] MarkPlayer ask DISPATCH-REFUSED - rider-2 degrade -- REV-178e rider 4")
+        _TattooAskDegrade(PlayerRef, "ownership", asSection, asName)
+        Return
+    EndIf
+    ; [REV-178e rider 2] curated validation replaces raw ValidatePick: event
+    ; sections excluded + body-compat pre-screened (curate-before-pick).
+    String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(PlayerRef, asSection, asName)
     If pick.Length < 2 || pick[0] == "" || pick[1] == ""
-        _Log("[SNBaka] MarkPlayer REFUSE [nopacks]: no usable pack entry -- REV-156")
+        _Log("[SNBaka] MarkPlayer REFUSE [nopacks/noeligible]: no usable non-event body-compatible pack entry -- REV-178e")
         Return
     EndIf
     Int iColor = -1
@@ -8981,11 +11302,169 @@ Function MarkPlayer_Execute(Actor akInitiator, String asSection, String asName, 
     SNBaka_SlaveTatsModule.ApplyTattoo(PlayerRef, pick[0], pick[1], iColor, True, "ownership")
 EndFunction
 
+; --- [REV-178e rider 4 / S250] THE TATTOO SELECTION ASK ---------------------
+; One SendCustomPromptToLLM round-trip (the snbaka_escalation_gate precedent,
+; ~L12900; the muse two-stage precedent ~L2728): the director LLM sees the
+; scene (Situation + recent events) + the target's REAL curated roster
+; (CuratedPackText: names-only compact, rider-2 curation rides in) and picks
+; the design. The answer is STILL LLM output: ValidatePickCurated re-checks
+; it in-cache (the belt stays), the moment is re-checked in the callback
+; (dead/downed-change/lock - the gate precedent), and every fail path
+; degrades per-lane instead of refusing (rulings 1/3/4). Color is NEVER the
+; LLM's: applies on these lanes are the BLACK constant 0x000000 (ruling 3).
+; One pending slot, 30s expiry, duplicates degrade immediately.
+; ----------------------------------------------------------------------------
+
+; Per-lane degrade (ruling 1: llm_action FAILS OPEN RANDOM via CuratedLLMPick;
+; dialogue/ownership keep the rider-2 named-hint shape via ValidatePickCurated;
+; [nopacks]/[noeligible] still refuses - nothing installed IS nothing).
+Function _TattooAskDegrade(Actor akTarget, String asLane, String asHintSection, String asHintName)
+    String[] pick
+    If asLane == "llm_action"
+        pick = SNBaka_SlaveTatsModule.CuratedLLMPick(akTarget)
+    Else
+        pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, asHintSection, asHintName)
+    EndIf
+    If pick.Length < 2 || pick[0] == "" || pick[1] == ""
+        _Log("[SNbaka] tattoo-select degrade REFUSE [nopacks/noeligible] (lane=" + asLane + ") -- REV-178e rider 4")
+        Return
+    EndIf
+    _Log("[SNbaka] tattoo-select DEGRADE APPLY (lane=" + asLane + ", who picked: fallback '" + pick[1] + "' (" + pick[0] + "), color=black 0x000000) on " + akTarget.GetDisplayName() + " -- REV-178e rider 4")
+    SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, pick[0], pick[1], 0x000000, True, asLane)
+EndFunction
+
+; Dispatch. Returns True when the ask is in flight (caller Returns; the
+; callback owns the lane); False when it could not be sent (caller degrades
+; inline). Duplicates (pending slot live) degrade the NEW lane immediately -
+; no queueing (the gate precedent).
+Bool Function _TattooSelectAsk(Actor akInitiator, Actor akTarget, String asLane, String asHintSection, String asHintName)
+    If !akTarget
+        Return False
+    EndIf
+    Float now = Utility.GetCurrentRealTime()
+    If _bTattooAskPending && (now - _fTattooAskSentRT) < 30.0
+        _Log("[SNbaka] tattoo-select ask already PENDING (lane=" + _sTattooAskLane + ") - duplicate lane=" + asLane + " degrades immediately -- REV-178e rider 4")
+        Return False
+    EndIf
+    _bTattooAskPending = False    ; stale slot (>=30s, callback lost): reclaim
+    String sWhy = "forced onto a downed, helpless character"
+    If asLane == "dialogue"
+        sWhy = "commanded in conversation on a submissive or cowed character"
+    ElseIf asLane == "ownership"
+        sWhy = "an NPC asserting ownership by marking the player"
+    EndIf
+    String sHint = "none"
+    If asHintSection != ""
+        sHint = asHintSection + " / " + asHintName
+    EndIf
+    String sSex = "female"
+    If akTarget.GetActorBase().GetSex() == 0
+        sSex = "male"
+    EndIf
+    String sWear = SNBaka_SlaveTatsModule.CuratedAppliedText(akTarget)
+    If sWear == ""
+        sWear = "nothing (this module)"
+    EndIf
+    String sPack = SNBaka_SlaveTatsModule.CuratedPackText(akTarget)
+    If sPack == ""
+        _Log("[SNbaka] tattoo-select ask REFUSED [nopacks]: CuratedPackText empty - nothing to show the director -- REV-178e rider 4")
+        Return False
+    EndIf
+    String ctx = "{\"initiatorName\":\"" + akInitiator.GetDisplayName() + "\",\"targetName\":\"" + akTarget.GetDisplayName() + "\",\"targetSex\":\"" + sSex + "\",\"why\":\"" + sWhy + "\",\"hint\":\"" + sHint + "\",\"currentlyWearing\":\"" + sWear + "\",\"packList\":\"" + sPack + "\",\"maxRecentEvents\":20}"
+    _JsonLintOK(ctx, "_TattooSelectAsk ctx")
+    _bTattooAskPending = True
+    _fTattooAskSentRT = now
+    _akTattooAskInitiator = akInitiator
+    _akTattooAskTarget = akTarget
+    _sTattooAskLane = asLane
+    _sTattooAskHintSection = asHintSection
+    _sTattooAskHintName = asHintName
+    Int sent = SkyrimNetApi.SendCustomPromptToLLM("snbaka_tattoo_select", "", ctx, Self as Quest, "SkyrimNet_BakaIntegration", "OnTattooSelectResponse")
+    _Log("[SNbaka] tattoo-select ASK SENT (lane=" + asLane + ", target=" + akTarget.GetDisplayName() + ", hint=" + sHint + ", packLen=" + StringUtil.GetLength(sPack) + ", sent=" + sent + ") -- REV-178e rider 4")
+    If sent != 1
+        _bTattooAskPending = False
+        _akTattooAskInitiator = None
+        _akTattooAskTarget = None
+        _sTattooAskLane = ""
+        Return False
+    EndIf
+    Return True
+EndFunction
+
+; Trim ASCII spaces from both ends (the answer-parse helper).
+String Function _TrimSP(String asS)
+    Int a = 0
+    Int b = StringUtil.GetLength(asS) - 1
+    While a <= b && StringUtil.GetNthChar(asS, a) == " "
+        a += 1
+    EndWhile
+    While b >= a && StringUtil.GetNthChar(asS, b) == " "
+        b -= 1
+    EndWhile
+    If b < a
+        Return ""
+    EndIf
+    Return StringUtil.Substring(asS, a, b - a + 1)
+EndFunction
+
+; The callback (the escalation-gate OnEscalationGateResponse shape). Parses
+; "SECTION | NAME" / "NONE", re-validates via ValidatePickCurated (the belt
+; stays), moment-rechecks, applies BLACK (ruling 3). Every fail path
+; degrades per-lane; a junk-bearing name simply misses the cache and takes
+; ValidatePickCurated's in-section wearable degrade (never a silent no-op).
+Function OnTattooSelectResponse(String response, Int success)
+    Actor akTarget = _akTattooAskTarget
+    String sLane = _sTattooAskLane
+    String sHintS = _sTattooAskHintSection
+    String sHintN = _sTattooAskHintName
+    _bTattooAskPending = False
+    _fTattooAskSentRT = 0.0
+    _akTattooAskInitiator = None
+    _akTattooAskTarget = None
+    _sTattooAskLane = ""
+    _sTattooAskHintSection = ""
+    _sTattooAskHintName = ""
+    If !akTarget
+        _Log("[SNbaka] tattoo-select callback DROP: no stashed target -- REV-178e rider 4")
+        Return
+    EndIf
+    ; MOMENT-RECHECK (the gate precedent): the answer took real seconds.
+    If akTarget.IsDead()
+        _Log("[SNbaka] tattoo-select callback DROP [dead]: " + akTarget.GetDisplayName() + " -- REV-178e rider 4")
+        Return
+    EndIf
+    If IsActorLocked(akTarget)
+        _Log("[SNbaka] tattoo-select callback DROP [locked]: " + akTarget.GetDisplayName() + " -- REV-178e rider 4")
+        Return
+    EndIf
+    If sLane == "llm_action" && !_IsDownedAny(akTarget)
+        _Log("[SNbaka] tattoo-select callback DROP [notdowned]: " + akTarget.GetDisplayName() + " recovered while the ask was in flight -- REV-178e rider 4")
+        Return
+    EndIf
+    If success == 1 && StringUtil.Find(response, "NONE") < 0
+        Int sep = StringUtil.Find(response, "|")
+        If sep > 0
+            String sSec = _TrimSP(StringUtil.Substring(response, 0, sep))
+            String sName = _TrimSP(StringUtil.Substring(response, sep + 1, StringUtil.GetLength(response) - sep - 1))
+            If sSec != "" && sName != ""
+                String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, sSec, sName)
+                If pick.Length >= 2 && pick[0] != "" && pick[1] != ""
+                    _Log("[SNbaka] tattoo-select APPLY (lane=" + sLane + ", who picked: director '" + sName + "' (" + sSec + ") -> resolved '" + pick[1] + "' (" + pick[0] + "), color=black 0x000000) on " + akTarget.GetDisplayName() + " -- REV-178e rider 4")
+                    SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, pick[0], pick[1], 0x000000, True, sLane)
+                    Return
+                EndIf
+            EndIf
+        EndIf
+    EndIf
+    _Log("[SNbaka] tattoo-select callback UNUSABLE (success=" + success + ", answer='" + response + "') - per-lane degrade -- REV-178e rider 4")
+    _TattooAskDegrade(akTarget, sLane, sHintS, sHintN)
+EndFunction
+
 ; --- Downed-victim menu dispatch ---
-; [ Strip] ============================================================
-; The Strip action (baka-module.md  spec; rulings (i)(a) own-inventory,
+; [REV-144 Strip] ============================================================
+; The Strip action (baka-module.md REV-134e spec; rulings (i)(a) own-inventory,
 ; (ii)(b) stays-off + "All to Dress" restore tile, (iii) SexLab-primary undress,
-; all ruled ). Gear is NEVER removed from the actor: SexLab StripActor
+; all ruled REV-136). Gear is NEVER removed from the actor: SexLab StripActor
 ; keeps it in the victim's own inventory (tracked re-equip context); the vanilla
 ; fallback unequips per worn slot (inventory stays theirs either way). OUR OWN
 ; queue (StorageUtil FormList "SNBaka.StripQueue" keyed on the victim) is the
@@ -8999,12 +11478,12 @@ EndFunction
 ; gate in _DispatchDownedAction is the only day-one gate.
 ; ============================================================================
 
-; --- [ 4.3] Forced-tattoo action (slavetats.md  6.3) ---------
+; --- [REV-150 4.3] Forced-tattoo action (slavetats.md REV-134e 6.3) ---------
 ; Downed-menu tile (choice 12, beside Strip 10 / Allow to Dress 11) + the
-; gated AI-aggressor daemon lane. The cue is CUE-ONLY (the  anatomy:
+; gated AI-aggressor daemon lane. The cue is CUE-ONLY (the REV-134d anatomy:
 ; RegisterEvent desc only, NO response.content YAML) with register entry
 ; 28's USER-APPROVED wording of record, actor names interpolated at fire
-; time (the D8/137 lesson). Body-compatibility gate = .1 FLIP of the
+; time (the D8/137 lesson). Body-compatibility gate = REV-150.1 FLIP of the
 ; 3.4 verdict: male-class victims no longer refuse-all; they ride the
 ; module's curation screen (pack sections carry NO body/race metadata -
 ; probed read-only, anal.json + Femboy.json field sets cited - so the
@@ -9013,17 +11492,18 @@ EndFunction
 ; Composes with Strip: post-strip skin is the exposed canvas.
 
 Function _ForcedTattoo_Execute(Actor akCaster, Actor akVictim)
+    _ActionLaneFire(akCaster, akVictim, "ForcedTattoo") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBaka] ForcedTattoo: caster=" + akCaster + " victim=" + akVictim)
     If !akCaster || !akVictim
         _Log("[SNBaka] ForcedTattoo REFUSE [null]: null actor leg")
         Return
     EndIf
-    ; Child boundary (the  Task 2 class - gates every module action).
+    ; Child boundary (the REV-146a Task 2 class - gates every module action).
     If _ChildBoundaryRefused(akCaster, akVictim, "ForcedTattoo")
         Return
     EndIf
-    ; Body-compatibility gate — .1 FLIP: the [malebody] refuse-all
-    ; ( 3.4 verdict) is RETIRED. Male-class victims now ride the
+    ; Body-compatibility gate — REV-150.1 FLIP: the [malebody] refuse-all
+    ; (REV-150 3.4 verdict) is RETIRED. Male-class victims now ride the
     ; module's curation screen (Gay - */Femboy auto-whitelist + the
     ; female-anatomy keyword denylist on section+name), applied at the
     ; ApplyTattoo choke point for EVERY module avenue. The service layer
@@ -9041,8 +11521,8 @@ Function _ForcedTattoo_Execute(Actor akCaster, Actor akVictim)
     EndIf
     If SNBaka_SlaveTatsModule.ForcedTattoo(akCaster, akVictim)
         ; Register entry 28 wording of record (USER-APPROVED 2026-10-22,
-        ;  instruction set 4.4; registered ; slavetats.md
-        ;  subsection holds the verbatim text), names interpolated:
+        ; REV-136 instruction set 4.4; registered REV-134e; slavetats.md
+        ; REV-136 subsection holds the verbatim text), names interpolated:
         SkyrimNetApi.RegisterEvent("sdb_forced_tattoo", \
             akCaster.GetDisplayName() + " forces a tattoo onto the downed " + akVictim.GetDisplayName() + ", marking their skin where everyone can see.", \
             akCaster, akVictim)
@@ -9052,7 +11532,7 @@ Function _ForcedTattoo_Execute(Actor akCaster, Actor akVictim)
     EndIf
 EndFunction
 
-; [ 4.3] The Execute-gate 3-level MCM consent class as the ruling
+; [REV-150 4.3] The Execute-gate 3-level MCM consent class as the ruling
 ; template for AI-AGGRESSOR forced-inking (SNBaka.ForcedTattooGateLevel,
 ; player-keyed, default 0):
 ;   0 = Unlimited - every daemon fire proceeds.
@@ -9062,7 +11542,7 @@ EndFunction
 ;       lenient reading FLAGGED here + at the gate report).
 ;   2 = Always-refuse (the "Always ask" class): ALL daemon fires refused.
 ; The player's own downed-menu tile NEVER passes through this gate.
-; Refusals are  trace sentinels only - refusal NARRATION would be new
+; Refusals are §5 trace sentinels only - refusal NARRATION would be new
 ; section-7 text (STOP condition: new cue wording = register draft).
 Bool Function _ForcedTattooGateCheck(Actor akInitiator, Actor akTarget)
     Int level = StorageUtil.GetIntValue(PlayerRef, "SNBaka.ForcedTattooGateLevel", 0)
@@ -9082,12 +11562,13 @@ Bool Function _ForcedTattooGateCheck(Actor akInitiator, Actor akTarget)
 EndFunction
 
 Function _Strip_Execute(Actor akCaster, Actor akVictim)
+    _ActionLaneFire(akCaster, akVictim, "Strip") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBaka] Strip: caster=" + akCaster + " victim=" + akVictim)
     If !akCaster || !akVictim
         _Log("[SNBaka] Strip REFUSE [null]: null actor leg")
         Return
     EndIf
-    ;  Task 2: child boundary (engine-true IsChild) - no module action.
+    ; REV-146a Task 2: child boundary (engine-true IsChild) - no module action.
     If _ChildBoundaryRefused(akCaster, akVictim, "Strip")
         Return
     EndIf
@@ -9133,15 +11614,15 @@ Function _Strip_Execute(Actor akCaster, Actor akVictim)
         Return
     EndIf
     ; (ii)(b): restore stays OFF here -- nothing re-equips until the All to Dress
-    ; tile (id 11) is clicked. Cue-only event per the  applied pattern
+    ; tile (id 11) is clicked. Cue-only event per the REV-134d applied pattern
     ; (RegisterEvent desc only, NO response.content yaml); entry-27 wording of
     ; record, actor names interpolated at fire time (D8/137 lesson).
     String sDesc = akCaster.GetDisplayName() + " strips the downed " + akVictim.GetDisplayName() + " of their clothes and armor, leaving them exposed and helpless on the ground."
     SkyrimNetApi.RegisterEvent("sdb_stripped", sDesc, akCaster, akVictim)
     _Log("[SNBaka] Strip: APPLIED " + nTaken + " item(s) -> sdb_stripped cue fired")
-    ;  Task 9.3: the RE-EQUIP BLOCK WINDOW (the 9.1 verdict: the re-equip
+    ; REV-146a Task 9.3: the RE-EQUIP BLOCK WINDOW (the 9.1 verdict: the re-equip
     ; is engine-side AI outfit re-evaluation, traceless in Papyrus/native logs).
-    ; Keyed to OUR tracked queue: every 0.5s (the OnUpdate multiplexer; 
+    ; Keyed to OUR tracked queue: every 0.5s (the OnUpdate multiplexer; REV-162
     ; ruling 4.1-b) the watch
     ; re-unequips any queued item the engine put back on, sentinel'd, until the
     ; queue is cleared by Allow to Dress (id 11) or the victim's down-window
@@ -9149,10 +11630,10 @@ Function _Strip_Execute(Actor akCaster, Actor akVictim)
     ; victim is skipped entirely - their system owns re-dress).
     _bStripHoldActive = True
     _ArmRealtimeTimer()
-    _Log("[SNBaka] strip-hold armed: " + akVictim.GetDisplayName() + " (re-equip block window, queue=" + nTaken + "; 0.5s watch since  4.1-b) -- ")
+    _Log("[SNBaka] strip-hold armed: " + akVictim.GetDisplayName() + " (re-equip block window, queue=" + nTaken + "; 0.5s watch since REV-162 4.1-b) -- REV-146a")
 EndFunction
 
-;  Task 9 - THE STRIP RE-EQUIP BLOCK WATCH (multiplexer leg, 0.5s cadence since  4.1-b).
+; REV-146a Task 9 - THE STRIP RE-EQUIP BLOCK WATCH (multiplexer leg, 0.5s cadence since REV-162 4.1-b).
 ; 9.1 VERDICT (dogfood Papyrus.0.log 10-23 13:22:51-55, Vorstag): our Strip
 ; fired at 13:22:51-52 (SexLab StripActorImpl took 3 items); NO Papyrus or DLL
 ; line re-equipped the items (Papyrus.0.log lines 6364-6534 hold zero equip
@@ -9170,7 +11651,7 @@ EndFunction
 ; keep-stripped guarantee, held by OUR queue instead of a scene thread.
 ; SeverActions victims are SKIPPED entirely (their lock, their rules - the
 ; 6.0 pre-check, read-only). The watch disarms itself when no queues remain.
-Bool _bStripHoldActive = False   ;  Task 9: at least one tracked strip queue exists
+Bool _bStripHoldActive = False   ; REV-146a Task 9: at least one tracked strip queue exists
 Function _StripHoldWatch()
     Actor[] akHeld = PO3_SKSEFunctions.GetActorsByProcessingLevel(0)
     Int i = 0
@@ -9214,12 +11695,12 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
     If !akCaster || !akVictim
         Return
     EndIf
-    ;  Task 2: child boundary gates EVERY downed-menu dispatch (all
+    ; REV-146a Task 2: child boundary gates EVERY downed-menu dispatch (all
     ; tiles: Down-tab, Strip/restore, and the +100 paired tabs).
     If _ChildBoundaryRefused(akCaster, akVictim, "DownedDispatch")
         Return
     EndIf
-    ;  4.2: Prisma mode buttons (numeric ids 900/901) arrive on the
+    ; REV-146a 4.2: Prisma mode buttons (numeric ids 900/901) arrive on the
     ; downed dispatcher too -- handle them BEFORE the +100 paired-tab reroute
     ; (900-100=800 would otherwise collide in the interact dispatcher).
     If choice == 900
@@ -9275,9 +11756,9 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
         If akVictim == PlayerRef || akVictim.IsDead()
             Return
         EndIf
-        ;  fix (a): SCENE-ACTIVE GUARD at the convergence point — choice-5 serves BOTH
+        ; REV-100 fix (a): SCENE-ACTIVE GUARD at the convergence point — choice-5 serves BOTH
         ; the LLM lane (Execute_Execute delegates here) and the player's own downed-menu click,
-        ; so the  hazard is guarded here too, not just upstream. Same one-refusal-semantics
+        ; so the REV-99 hazard is guarded here too, not just upstream. Same one-refusal-semantics
         ; check as Execute_Execute: either actor mid SexLab/OStim scene refuses the kill.
         If IsInSexAnimation(akCaster) || IsInSexAnimation(akVictim)
             _Log("[SNBakaEXEC] Execute refused: scene active — " + akCaster.GetDisplayName() + " / " + akVictim.GetDisplayName() + " mid SexLab/OStim scene (choice-5 convergence guard)")
@@ -9290,10 +11771,10 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
         ; rejects it in some stance, the kill still lands, just without the flourish.
         Debug.SendAnimationEvent(akCaster, "attackStart")
         Utility.Wait(0.6)
-        ;  fix (b): KILL-TIME RECHECK — the 0.6s flourish wait above is a real race
-        ; window (the  incident chain: fire -> flourish -> state changed underneath).
-        ;  recheck precedent, extended: re-validate BOTH actor refs and every state
-        ; assumption IMMEDIATELY before Actor.Kill. Each refusal reason gets its own 
+        ; REV-100 fix (b): KILL-TIME RECHECK — the 0.6s flourish wait above is a real race
+        ; window (the REV-99 incident chain: fire -> flourish -> state changed underneath).
+        ; Rev-20 recheck precedent, extended: re-validate BOTH actor refs and every state
+        ; assumption IMMEDIATELY before Actor.Kill. Each refusal reason gets its own §5
         ; sentinel; the success narration is registered only AFTER the recheck passes so
         ; a refused kill never narrates as landed.
         If !akCaster || !akVictim
@@ -9318,12 +11799,21 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
             _ExecuteGateRefuse(akCaster, akVictim, "the moment passed - the victim is no longer helpless")
             Return
         EndIf
-        SkyrimNetApi.RegisterEvent("baka_execution", \
-            akCaster.GetDisplayName() + " finishes the helpless " + akVictim.GetDisplayName() + " with a deliberate killing blow.", \
-            akCaster, akVictim)
+        ; [REV-177b item 8 / R-177c] self-variant narration: a self-execution reads
+        ; "takes their own life rather than be taken" (defeat over capture), not
+        ; "finishes the helpless X" (which would require a second actor).
+        If akCaster == akVictim
+            SkyrimNetApi.RegisterEvent("baka_execution", \
+                akVictim.GetDisplayName() + " takes their own life rather than be taken.", \
+                akCaster, akVictim)
+        Else
+            SkyrimNetApi.RegisterEvent("baka_execution", \
+                akCaster.GetDisplayName() + " finishes the helpless " + akVictim.GetDisplayName() + " with a deliberate killing blow.", \
+                akCaster, akVictim)
+        EndIf
         StorageUtil.SetIntValue(akVictim, "SNAcheron.Held", 0)
         StorageUtil.SetIntValue(akVictim, "SNBaka.OnGround", 0)
-        ; [ fix 2.1] Post-execution lock release: a downed victim stays
+        ; [REV-161 fix 2.1] Post-execution lock release: a downed victim stays
         ; SNBaka.Locked=1 for the entire ground window (SNBakaInteractEffect
         ; exception). The kill closes that window for good, but the lock was
         ; never cleared here -- it lingered on the corpse and, worse, survived
@@ -9343,7 +11833,7 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
         Untie_Execute(akCaster, akVictim)
         Return
     ElseIf choice == 8
-        ;  rider 1 — "Apply Tattoo" button on the downed menu. Unconditional affordance
+        ; REV-74 rider 1 — "Apply Tattoo" button on the downed menu. Unconditional affordance
         ; (ruling ②B, recorded as ARCHITECTURE): the DLL-built button list is host surface and
         ; stays module-ignorant; absence-handling is the SERVICE's job. The call below is a pure
         ; service delegation — zero tattoo logic lives in this quest (presence-gated via the
@@ -9351,22 +11841,22 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
         SNBaka_SlaveTatsModule.OpenPickerFor(akVictim, akCaster)
         Return
     ElseIf choice == 9
-        ;  rider 1 — "Remove Tattoos" on the downed menu, same service-delegation contract.
+        ; REV-74 rider 1 — "Remove Tattoos" on the downed menu, same service-delegation contract.
         SNBaka_SlaveTatsModule.RemoveAllFromActor(akVictim, "downedmenu")
         Return
     ElseIf choice == 10
-        ; [ Strip] Down-tab "Strip" tile (baka-module.md  +  rulings
+        ; [REV-144 Strip] Down-tab "Strip" tile (baka-module.md REV-134e + REV-136 rulings
         ; (i)(a)/(ii)(b)/(iii)). Player-clicked, UNGATED (player-initiated, the Execute pattern):
         ; the downed-gate above is the only day-one gate. Runs for BOTH ours/external lanes
         ; (top-level Return, same shape as choices 6-9).
         _Strip_Execute(akCaster, akVictim)
         Return
     ElseIf choice == 11
-        ; [ Strip] "All to Dress" restore tile (ruling (ii)(b): restore is OFF by default
+        ; [REV-144 Strip] "All to Dress" restore tile (ruling (ii)(b): restore is OFF by default
         ; after a strip; only this tile activates it; restores ONLY our tracked queue).
         _StripRestore_Execute(akCaster, akVictim)
         Return
-    ;  (Issue #3, user ruling): the "Force Tattoo" tile (choice 12) is
+    ; REV-164 (Issue #3, user ruling): the "Force Tattoo" tile (choice 12) is
     ; RETIRED from the downed panel + this dispatcher -- the LLM lane
     ; (ApplyTattoo, now downed-gated + decoupled per the why-trace verdict)
     ; and the gated AI-aggressor daemon lane (_ForcedTattoo_Execute via
@@ -9411,7 +11901,13 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
             ; Stand Back is "we step back and let them get up," not "we rescued them" — the earlier fix
             ; called the same full-rescue path as Help Up, which made Stand Back visibly/mechanically
             ; indistinguishable from it (Acheron's own RescueActor "saved" treatment firing either way).
+            ; [REV-177b item 7 / R-177b] spare decision BEFORE recovery; enemy victims are
+            ; stood down immediately after (Oldcustard shape) — no wait-for-standup.
+            Bool spareEnemy = _SpareEnemyDecided(akCaster, akVictim)
             _ForceRecover(akVictim, False)
+            If spareEnemy
+                _SparePacifyEnemy(akVictim)
+            EndIf
             _Log("[SNBaka] _DispatchDownedAction: external stand-back — recovered directly (no Acheron rescue)")
         ElseIf choice == 4
             HelpUp_Execute(akCaster, akVictim)
@@ -9421,7 +11917,7 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
     EndIf
 EndFunction
 
-; [ Strip] "All to Dress" (id 11) -- the ONLY restore surface (ruling
+; [REV-144 Strip] "All to Dress" (id 11) -- the ONLY restore surface (ruling
 ; (ii)(b): stays off after strip until this tile). Restores ONLY our tracked
 ; queue; when SexLab is present its UnstripActor handles the re-equip (silently,
 ; worn-slot aware); the vanilla fallback is a plain EquipItem loop. Never touches
@@ -9429,12 +11925,13 @@ EndFunction
 ; SeverOutfit_LockActive says the victim's outfit is under their lock system.
 
 Function _StripRestore_Execute(Actor akCaster, Actor akVictim)
+    _ActionLaneFire(akCaster, akVictim, "StripRestore") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBaka] Allow to Dress: caster=" + akCaster + " victim=" + akVictim)
     If !akCaster || !akVictim
         _Log("[SNBaka] All to Dress REFUSE [null]: null actor leg")
         Return
     EndIf
-    ;  Task 2: child boundary - no module action on children, restore
+    ; REV-146a Task 2: child boundary - no module action on children, restore
     ; included (the tile would hand a child actor's outfit back; same boundary).
     If _ChildBoundaryRefused(akCaster, akVictim, "StripRestore")
         Return
@@ -9646,19 +12143,22 @@ EndFunction
 ; SkyrimNet entry: the LLM (or the player's power) invokes this with the creature + the victim in
 ; either order. We sort out which is the creature and escalate. Creatures are ESCALATE-ONLY.
 Function CreatureEscalate_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "CreatureEscalate") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] CreatureEscalate ENTER")
     If !bCreatureEscalation || !akInitiator || !akTarget
         Return
     EndIf
-    ;  Task 2: child boundary - creature lane (a child victim is
+    ; REV-146a Task 2: child boundary - creature lane (a child victim is
     ; never a valid creature-escalation target).
     If _ChildBoundaryRefused(akInitiator, akTarget, "CreatureEscalate")
         Return
     EndIf
     Actor creature = akInitiator
     Actor victim   = akTarget
-    If _CreatureAnimKey(creature) == ""
-        If _CreatureAnimKey(akTarget) != ""
+    ; [REV-177b / R-177d] NoAnim fallback accepted at entry (NPC-only enforced inside
+    ; _DoCreatureEscalation via _CreatureStruggleKey's victim check).
+    If _CreatureStruggleKey(creature, True) == ""
+        If _CreatureStruggleKey(akTarget, True) != ""
             creature = akTarget
             victim   = akInitiator
         Else
@@ -9715,6 +12215,86 @@ Bool Function _PlayCreatureStruggleNPC(Actor akCreature, Actor akVictim, String[
     _CleanupPair(akCreature, akVictim, marker1, marker2, False, False)
     ; Same post-escape grace the player QTE path gets (see PlayPairedSequence) -- an NPC victim who
     ; broke free was equally getting instantly re-hit the moment the cleanup un-ghosted her.
+    If escaped
+        _PostEscapeGrace(akVictim)
+    EndIf
+    Return escaped
+EndFunction
+
+; [REV-177b / R-177d — Oldcustard issue #2 feature, credit Oldcustard]
+; NoAnim_<creature> placeholder registry for SCENE-ONLY creatures: races with
+; OStim scenes but no dedicated struggle clip (Dwarven Sphere: 27 scenes, zero
+; struggle anims — the motivating report). The placeholder key lets the
+; escalation pipeline run its normal gates while the struggle itself is ANIMLESS
+; (see _PlayCreatureStruggleAnimless). NPC VICTIMS ONLY — every caller passes
+; abAllowNoAnim=False when the victim is the player, so the placeholder never
+; widens the player lane.
+; RETIREMENT LEDGER (first customer of the retirement-checklist rider, register
+; entry 49.4): each placeholder below RETIRES when a dedicated struggle animation
+; lands for that creature — remove the entry here, verify _PlayCreatureStruggleAnimless
+; no longer fires for the race (§5 sentinel), and receipt the funeral in the rev's
+; PROJECT_STATE section. First entry: NoAnim_Sphere (Dwarven Sphere). Expansion
+; may never come; the ledger is cheap intent.
+String Function _CreatureNoAnimKey(Actor akCreature)
+    If !akCreature
+        Return ""
+    EndIf
+    String n = MiscUtil.GetActorRaceEditorID(akCreature) + "|" + akCreature.GetDisplayName()
+    If n == "|"
+        Return ""
+    EndIf
+    ; Dwarven Sphere (DwarvenSphereRace) — Centurions are explicitly excluded (they
+    ; have their own real QTE key in _CreatureAnimKey; match order there catches them).
+    If (StringUtil.Find(n, "Sphere") >= 0) && (StringUtil.Find(n, "Centurion") < 0)
+        Return "NoAnim_Sphere"
+    EndIf
+    Return ""
+EndFunction
+
+; Unified struggle eligibility key: the real anim key when one exists; the NoAnim
+; placeholder when the creature is scene-only AND animless struggle is allowed for
+; this victim (NPC victims only, enforced by every caller via abAllowNoAnim).
+String Function _CreatureStruggleKey(Actor akCreature, Bool abAllowNoAnim)
+    String k = _CreatureAnimKey(akCreature)
+    If k == "" && abAllowNoAnim
+        Return _CreatureNoAnimKey(akCreature)
+    EndIf
+    Return k
+EndFunction
+
+; [REV-177b / R-177d] ANIMLESS struggle: GENERIC fallback for scene-only
+; creatures (NoAnim_<creature> placeholders). Same hold/duration/abort/roll rules
+; as _PlayCreatureStruggleNPC, but NO _SetupPair repositioning and NO animation
+; events — nobody teleports, no markers spawn; the creature is pacified + AI-held
+; where it stands over the victim for fCreatureStruggleDuration, then the SAME
+; escape roll (iCreatureSuccessPct) decides. Aborts (creature death, victim death,
+; pair separated > 600 units — no anim events exist to signal the mid-hold breaks
+; _HoldAnim relies on) count as escapes, same rule as the paired path. NPC
+; VICTIMS ONLY (callers enforce). No group companions in this lane
+; (_FindGroupCompanions matches on the real key only) — recorded honestly in S216.
+Bool Function _PlayCreatureStruggleAnimless(Actor akCreature, Actor akVictim)
+    _Log("[SNBaka] _PlayCreatureStruggleAnimless: " + akCreature.GetDisplayName() + " holds " + akVictim.GetDisplayName() + " in place (NoAnim fallback, R-177d)")
+    _ProtectNearbyAllies(akVictim, akCreature, True, False)
+    _PacifyActor(akCreature, True)
+    _HoldActorAI(akCreature, True)
+    Bool aborted = False
+    Float held = 0.0
+    While held < fCreatureStruggleDuration && !aborted
+        Utility.Wait(0.5)
+        held += 0.5
+        If !akCreature || akCreature.IsDead() || !akVictim || akVictim.IsDead() || akCreature.GetDistance(akVictim) > 600.0
+            aborted = True
+        EndIf
+    EndWhile
+    Bool escaped = True
+    If aborted
+        _Log("[SNBaka] _PlayCreatureStruggleAnimless: aborted mid-hold (death/distance) -- counts as escaped")
+    Else
+        escaped = Utility.RandomInt(1, 100) > iCreatureSuccessPct
+        _Log("[SNBaka] _PlayCreatureStruggleAnimless: struggle held " + fCreatureStruggleDuration + "s, escaped=" + escaped)
+    EndIf
+    _HoldActorAI(akCreature, False)
+    _ProtectNearbyAllies(akVictim, akCreature, False, False)
     If escaped
         _PostEscapeGrace(akVictim)
     EndIf
@@ -9816,11 +12396,11 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         _Log("[SNBaka] CreatureEscalate: blocked — escOff/none (esc=" + bCreatureEscalation + ")")
         Return
     EndIf
-    ;  Task 2: child boundary - creature lane.
+    ; REV-146a Task 2: child boundary - creature lane.
     If _ChildBoundaryRefused(akCreature, akVictim, "DoCreatureEscalation")
         Return
     EndIf
-    ;  4.2: central player-target policy consulted ALONGSIDE the creature-specific
+    ; REV-144 4.2: central player-target policy consulted ALONGSIDE the creature-specific
     ; bCreatureOnPlayer toggle (AND -- the toggle stays live; the policy blankets the module).
     If akVictim == PlayerRef && (!bCreatureOnPlayer || !_PlayerTargetAdmitted(akCreature, akVictim, "CreatureEscalate"))
         _Log("[SNBaka] CreatureEscalate: blocked — player victim, bCreatureOnPlayer OFF or REV-144 policy OFF")
@@ -9832,9 +12412,10 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         _Log("[SNBaka] CreatureEscalate: blocked — victim sex not allowed by MCM (iCreatureVictimSex=" + iCreatureVictimSex + " victimFemale=" + vFemale + ")")
         Return
     EndIf
-    String base = _CreatureAnimKey(akCreature)
+    String base = _CreatureStruggleKey(akCreature, akVictim != PlayerRef)
+    Bool noAnim = base != "" && _CreatureAnimKey(akCreature) == ""
     If base == ""
-        _Log("[SNBaka] CreatureEscalate: blocked — no creature anim key for " + akCreature.GetDisplayName())
+        _Log("[SNBaka] CreatureEscalate: blocked — no creature anim key (and no NoAnim fallback, or player victim) for " + akCreature.GetDisplayName())
         Return
     EndIf
     ; Mid-sex-scene actors are untouchable for paired animations — OStim/SexLab threads from ANY mod
@@ -9923,7 +12504,13 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         ; already-downed case used to skip this for an instant roll + one ~1.5s stage — explicit
         ; feedback: "gets decided within seconds", hold the struggle 10-20s like the mid-combat case
         ; before deciding. Same roll odds as the old quick path (escaped = roll > pct ≡ succeed = roll <= pct).
-        Bool escaped = _PlayCreatureStruggleNPC(akCreature, akVictim, a1, a2)
+        Bool escaped
+        If noAnim
+            ; [REV-177b / R-177d] scene-only creature: animless hold (no repositioning).
+            escaped = _PlayCreatureStruggleAnimless(akCreature, akVictim)
+        Else
+            escaped = _PlayCreatureStruggleNPC(akCreature, akVictim, a1, a2)
+        EndIf
         ; A TIED victim cannot break free — bound hands don't win struggles. The pin plays out the
         ; same, but the outcome is always a claim (this was the one path that could "suddenly free"
         ; a tied prisoner: winning an escape roll they physically shouldn't be able to attempt).
@@ -10039,7 +12626,7 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         ; packs often ship PAIR scenes for a creature type but nothing bigger — confirmed live with
         ; rieklings: the 4-actor pick found nothing, the scene was refused, and the retry pipeline
         ; re-grabbed the same victims every ~20s forever. Shrink until a scene exists.
-        ; [ PR#2 fold (3) - Oldcustard credit, by-concept] GROUP-FALLBACK
+        ; [REV-161 PR#2 fold (3) - Oldcustard credit, by-concept] GROUP-FALLBACK
         ; BACKEND GATE: resolve the backend first -- the raw iCreatureBackend == 2
         ; test never ran the shrink on the default 0 (auto -> OStim), so the
         ; 4->3->2 fallback + the permanent-gap backoff were dead code on auto.
@@ -10135,10 +12722,10 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         _Log("[SNBaka] CreatureEscalate(" + akVictim.GetDisplayName() + "): STARTING creature sex scene (backend=" + iCreatureBackend + ", group size=" + sexActors.Length + ", victimStillDowned=" + _IsDownedAny(akVictim) + ")")
         ; Narrative parity for NPC victims (confirmed feedback: "for other npcs, llm do not get as many
         ; cues as with the player... sometimes it's a bit lost"): the LLM heard the pin start but NOT
-        ; that the claim actually proceeded to a scene. Same eventType the pin cue used.
-        SkyrimNetApi.RegisterEvent("baka_forced", \
-            akCreature.GetDisplayName() + " overpowers the helpless " + akVictim.GetDisplayName() + " completely and claims them right there on the ground.", \
-            akCreature, akVictim)
+        ; that the claim actually proceeded to a scene. Same eventType the pin cue used. Sent only once
+        ; the scene has really started (below) -- sent before, a refused scene still told the LLM it
+        ; happened. [REV-177 item 5 - Oldcustard credit, issue #2 / GS Poses fork PR fa1fcdb shape:
+        ; truth standard of record -- no event before the fact.]
         Int stid = _StartSexScene(sexActors, akVictim, akCreature, "", "aggressive", iCreatureBackend)
         If stid < 0
             ; Scene never started (CTD-guard refusal or OStim failure). This return value used to be
@@ -10166,6 +12753,11 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
             UnlockBoth(akCreature, akVictim)
             Return
         EndIf
+        ; [REV-177 item 5 - Oldcustard credit: the claims event now fires AFTER the
+        ; refuse-guard above -- only a scene that actually started gets narrated.]
+        SkyrimNetApi.RegisterEvent("baka_forced", \
+            akCreature.GetDisplayName() + " overpowers the helpless " + akVictim.GetDisplayName() + " completely and claims them right there on the ground.", \
+            akCreature, akVictim)
         _Log("[SNBaka] CreatureEscalate(" + akVictim.GetDisplayName() + "): _StartSexScene returned, entering wait loop")
         ; Wait for the scene to actually END before touching anything — this used to fall straight
         ; through to UnlockBoth the instant the scene was merely KICKED OFF, releasing the lock while
@@ -10274,6 +12866,20 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
             If downed && _IsDownedAny(akVictim)
                 _ClearAcheronHold(akVictim)
             EndIf
+            ; [REV-177 item 2 - Oldcustard credit, issue #2 / GS Poses fork PR f0698a3
+            ; (fold-regression class: the piece was in the PR but lost in the fold)]
+            ; A DOWNED victim's struggle cleanup ran _ReassertDownedProtection (still
+            ; Acheron-held at that point) -- restrain + DontMove + AI hold. Release them
+            ; like _ForceRecover does, or the freed victim plays her walk cycle stuck in
+            ; place forever (confirmed: Jordis/Mjoll after escaping downed chaurus
+            ; struggles; DontMove persists in the save). ALREADY-BROKEN SAVES keep the
+            ; frozen state (no migration by design) -- the MCM panic button remains the
+            ; documented workaround for saves already carrying the stuck flag.
+            If akVictim != PlayerRef
+                akVictim.SetRestrained(False)
+                akVictim.SetDontMove(False)
+                _HoldActorAI(akVictim, False)
+            EndIf
             _PacifyActor(akVictim, False)
             ; Revert every "lover"-rank anti-re-aggro link touching this victim — the current pair's
             ; AND stale ones left by past cycles (they were never reverted anywhere, so past victims
@@ -10288,6 +12894,14 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
             SkyrimNetApi.RegisterEvent("baka_release", \
                 akVictim.GetDisplayName() + " breaks free of " + akCreature.GetDisplayName() + "'s grip and struggles back to their feet — shaken, but free and ready to fight.", \
                 akVictim, akCreature)
+            ; [REV-177 item 6 (minor) - Oldcustard credit, GS Poses fork PR fa1fcdb
+            ; shape: escape-cue overwrite.] The live "pins ... cannot get away" scene
+            ; cue (same per-aggressor ID, 25s TTL) stays live after baka_release
+            ; otherwise -- for ~10s the LLM sees both. Overwrite the SAME event ID
+            ; with a short break-free cue so there is no dual-cue window.
+            SkyrimNetApi.RegisterShortLivedEvent("baka_scene_" + akCreature.GetFormID(), "baka_release", \
+                akVictim.GetDisplayName() + " has broken free of " + akCreature.GetDisplayName() + " and is no longer held.", \
+                "", 10000, akVictim, akCreature)
             _Log("[SNBaka] CreatureEscalate(" + akVictim.GetDisplayName() + "): victim broke free — fully liberated, fight may resume after the grace window")
             ; Creature LOST the struggle (victim broke free) -- explicitly make sure it's actually back
             ; on its feet and free to act, rather than just trusting PlayPairedSequence's own _CleanupPair
@@ -10314,7 +12928,7 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
             akCreature.EvaluatePackage()
             _Log("[SNBaka] CreatureEscalate(" + akVictim.GetDisplayName() + "): " + akCreature.GetDisplayName() + " lost the struggle -- explicit liberation (stagger + AI released, pose reset)")
         EndIf
-        ; [ PR#2 fold (4) - Oldcustard credit, by-concept] ESCAPE NOT
+        ; [REV-161 PR#2 fold (4) - Oldcustard credit, by-concept] ESCAPE NOT
         ; OVERPOWERED: the overpowered cue used to fire unconditionally after
         ; the If/Else, so a victim who BROKE FREE also got "X overpowered Y" --
         ; the escape branch already emits baka_release. Gate the overpowered
@@ -10330,7 +12944,9 @@ EndFunction
 ; Returns True if akCreature was a supported creature (i.e. we handled the power press), so the
 ; effect script knows to stop and not fall through to the normal interact menu.
 Bool Function TryCreatureEscalateFromPower(Actor akCreature)
-    If !bCreatureEscalation || !akCreature || _CreatureAnimKey(akCreature) == ""
+    ; [REV-177b / R-177d] NoAnim fallback accepted here; NPC-victim-only is enforced
+    ; inside _DoCreatureEscalation (player victims with a placeholder key are refused there).
+    If !bCreatureEscalation || !akCreature || _CreatureStruggleKey(akCreature, True) == ""
         Return False
     EndIf
     Actor victim = _FindCreatureVictim(akCreature)
@@ -10381,7 +12997,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
         _Log("[SNBaka] creature: victim none/dead/locked (locked=" + IsActorLocked(akVictim) + ")")
         Return
     EndIf
-    ;  Task 2: child boundary - creature on-downed lane.
+    ; REV-146a Task 2: child boundary - creature on-downed lane.
     If _ChildBoundaryRefused(None, akVictim, "CreatureOnDowned")
         Return
     EndIf
@@ -10392,7 +13008,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
         _Log("[SNBaka] creature: victim is in a sex scene — never a pounce candidate mid-scene")
         Return
     EndIf
-    ;  4.2: central player-target policy blankets the creature pounce lane too;
+    ; REV-144 4.2: central player-target policy blankets the creature pounce lane too;
     ; the aggressor is not resolved at this scan stage, so the initiator slot is None
     ; (any NPC/creature source -- the function only exempts the player as initiator).
     If akVictim == PlayerRef && (!bCreatureOnPlayer || !_PlayerTargetAdmitted(None, akVictim, "CreatureOnDowned"))
@@ -10437,7 +13053,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
     ; (initial pounce, the "loop" re-check, or this kind of immediate re-trigger) to once per few seconds.
     Float now = Utility.GetCurrentRealTime()
     Float lastAttempt = StorageUtil.GetFloatValue(akVictim, "SNBaka.LastCreatureAttemptRT", 0.0)
-    If _RTStampStale(lastAttempt, now)      ; [ PR#2 fold (1)] pre-relaunch stamp = expired
+    If _RTStampStale(lastAttempt, now)      ; [REV-161 PR#2 fold (1)] pre-relaunch stamp = expired
         lastAttempt = 0.0
     EndIf
     If (now - lastAttempt) < 3.0
@@ -10463,7 +13079,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
         ; so _IsCreatureActor(falmer) reads False. _CreatureAnimKey matches by actual race name and isn't
         ; fooled by that; a race-name match here means it's a supported creature no matter what keyword
         ; it carries.
-        If _CreatureAnimKey(threat) != ""
+        If _CreatureStruggleKey(threat, akVictim != PlayerRef) != ""
             If threat != PlayerRef && !IsActorLocked(threat)
                 best     = threat
                 bestDist = akVictim.GetDistance(threat)
@@ -10485,7 +13101,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
     While i < total
         Actor a = loaded[i]
         If a && a != akVictim && a != PlayerRef && !a.IsDead()
-            String ck = _CreatureAnimKey(a)
+            String ck = _CreatureStruggleKey(a, akVictim != PlayerRef)
             If ck != ""
                 ; Log every nearby beast we recognise, so we can see what's around when testing.
                 _Log("[SNBaka] nearby creature: '" + a.GetDisplayName() + "' key=" + ck + " inCombat=" + a.IsInCombat() + " locked=" + IsActorLocked(a) + " dist=" + a.GetDistance(akVictim))
@@ -10619,7 +13235,7 @@ Event OnCreatureHitFollower(string eventName, string strArg, float numArg, Form 
         Return
     EndIf
     Bool victimIsPlayer = (victim == PlayerRef)
-    ;  4.2: central policy consulted alongside the creature toggle; the aggressor
+    ; REV-144 4.2: central policy consulted alongside the creature toggle; the aggressor
     ; is resolved later in this handler, so the initiator slot is None at this check.
     If victimIsPlayer && (!bCreatureOnPlayer || !_PlayerTargetAdmitted(None, victim, "CreatureHitFollower"))
         _Log("[SNBaka] OnCreatureHitFollower: blocked — player victim, bCreatureOnPlayer OFF or REV-144 policy OFF")
@@ -10652,7 +13268,7 @@ Event OnCreatureHitFollower(string eventName, string strArg, float numArg, Form 
     ; Which pipeline handles this aggressor? A supported creature takes the creature path below; a
     ; HUMANOID takes the human on-hit path (own MCM toggle/chance, dispatches to the ordinary Struggle
     ; action); an unsupported creature type (horker, rabbit...) takes neither.
-    String aggKey = _CreatureAnimKey(aggressor)
+    String aggKey = _CreatureStruggleKey(aggressor, victim != PlayerRef)
     Bool humanPath = False
     If aggKey == ""
         If !bHumanEscalateOnHit || _IsCreatureActor(aggressor)
@@ -10690,7 +13306,7 @@ Event OnCreatureHitFollower(string eventName, string strArg, float numArg, Form 
     ; grabs on the same victim back-to-back.
     Float now = Utility.GetCurrentRealTime()
     Float lastAttempt = StorageUtil.GetFloatValue(victim, "SNBaka.LastCreatureAttemptRT", 0.0)
-    If _RTStampStale(lastAttempt, now)      ; [ PR#2 fold (1)] pre-relaunch stamp = expired
+    If _RTStampStale(lastAttempt, now)      ; [REV-161 PR#2 fold (1)] pre-relaunch stamp = expired
         lastAttempt = 0.0
     EndIf
     If (now - lastAttempt) < 3.0
@@ -10737,7 +13353,7 @@ Actor Function _FindCreatureVictim(Actor akCreature)
         Actor a = c.GetNthRef(i, 62) as Actor
         If a && a != akCreature && !a.IsDead() && _CreatureAnimKey(a) == ""
             Bool ok = True
-            ;  4.2: the candidate scan consults the central policy alongside the
+            ; REV-144 4.2: the candidate scan consults the central policy alongside the
             ; creature toggle (the policy blankets every player-target admission site).
             If a == PlayerRef && (!bCreatureOnPlayer || !_PlayerTargetAdmitted(akCreature, a, "FindCreatureVictim"))
                 ok = False
@@ -10935,7 +13551,7 @@ Function PoseDrink_Execute(Actor akInitiator)
         akInitiator.SetDontMove(True)
         Debug.SendAnimationEvent(akInitiator, "IdleForceDefaultState")
         Utility.Wait(0.15)
-        ;  3.7: the drunk-state stamp of record (write at the blackout site,
+        ; REV-145 3.7: the drunk-state stamp of record (write at the blackout site,
         ; clear at the recovery leg below) -- the daemon drunk read rides this key.
         StorageUtil.SetIntValue(akInitiator, "SNBaka.DrunkBlackout", 1)
         Debug.SendAnimationEvent(akInitiator, "BaboDrinkBlackOut")   ; Start -> BlackOutLoop; held, not re-asserted
@@ -10945,7 +13561,7 @@ Function PoseDrink_Execute(Actor akInitiator)
         _PacifyActor(akInitiator, False)
         _HoldActorAI(akInitiator, False)
         Debug.SendAnimationEvent(akInitiator, "IdleForceDefaultState")
-        StorageUtil.SetIntValue(akInitiator, "SNBaka.DrunkBlackout", 0)   ;  3.7: recovery leg clears the stamp
+        StorageUtil.SetIntValue(akInitiator, "SNBaka.DrunkBlackout", 0)   ; REV-145 3.7: recovery leg clears the stamp
         akInitiator.EvaluatePackage()
     Else
         _PlaySoloHold(akInitiator, "BaboDrinkNormal", False, akInitiator.GetDisplayName() + " takes a drink.")
@@ -10996,7 +13612,7 @@ Function _RegisterModEvents()
     Else
         _Log("[SNBaka] _RegisterModEvents: PlayerRef is None -- SNBaka.Present NOT set this call")
     EndIf
-    ;  1a — Acheron bridge liveness re-stamp (per load + heartbeat): SNAcheron.Present
+    ; REV-61 1a — Acheron bridge liveness re-stamp (per load + heartbeat): SNAcheron.Present
     ; is written by the BRIDGE and persists in the cosave, so it can outlive the bridge mod
     ; being disabled (09-30 Frabbi incident root cause). _RegisterModEvents is re-run from
     ; Setup() on every OnInit/OnPlayerLoadGame/MCM reload + the OnUpdateGameTime heartbeat,
@@ -11009,28 +13625,28 @@ Function _RegisterModEvents()
         StorageUtil.SetIntValue(PlayerRef, "SNAcheron.Present", 0)
         _Log("[SNBaka] Acheron bridge: esp probe failed at re-registration — stale SNAcheron.Present cleared to 0 (local downed fallback owns this session)")
     EndIf
-    ;  detection + inflation triggers (see the DETECTION TRIGGERS section
+    ; REV-63 detection + inflation triggers (see the DETECTION TRIGGERS section
     ; near the tail of this file). Registered unconditionally; every handler is
     ; presence- and toggle-gated, and registering for an event nobody sends is
     ; harmless (OCum/FHU/SexLab all optional — listeners idle, no error spam).
     RegisterForModEvent("ocum_applied_cum",           "OnOCumApplied")
     RegisterForModEvent("ocum_applied_cum_npc_scene", "OnOCumAppliedNPCScene")
     RegisterForModEvent("HookStageEnd",               "OnSLStageEnd")
-    ; : HookAnimationEnd arm RETIRED (aftermath rider 2.5b).
-    ; : HookAnimationStart + HookAnimationEnd RE-ARMED for the FHU v2
+    ; REV-133c: HookAnimationEnd arm RETIRED (aftermath rider 2.5b).
+    ; REV-149: HookAnimationStart + HookAnimationEnd RE-ARMED for the FHU v2
     ; entry-capture bracket (capture at AnimationStart, stash clear at
-    ; AnimationEnd -- user-ruled mid-; distinct purpose from the retired
+    ; AnimationEnd -- user-ruled mid-REV-149; distinct purpose from the retired
     ; aftermath arm, whose handler name is NOT reused).
     RegisterForModEvent("HookAnimationStart",         "OnSLAnimationStart")
     RegisterForModEvent("HookAnimationEnd",           "OnSLAnimationEnd")
     RegisterForModEvent("sr.inflater.start",          "OnFHUStartSignal")
-    ;  cum-v2: the P+ push-time location signal (SexLabApplyCumFX,
+    ; REV-117 cum-v2: the P+ push-time location signal (SexLabApplyCumFX,
     ; 3-push ModEvent: TargetRef, SourceRef, aiType) and the DLL's ambient
     ; timer callback (4-slot service shape). Both idled harmlessly when absent
     ; (vanilla SL never sends the former; the DLL absent = no timer emission).
     RegisterForModEvent("SexLabApplyCumFX",           "OnSLApplyCumFX")
     RegisterForModEvent("sdb_cum_ambient_due",        "OnCumAmbientDue")
-    ;  Task 2.3: the bath-completion surface -- SLACS-2's
+    ; REV-133c Task 2.3: the bath-completion surface -- SLACS-2's
     ; Dirty_BathingQuest fires DnB_CleanActorDirt with the bathing actor as
     ; the single Form push (source-verified: SLACS_2_SCO_v079_5
     ; Scripts\Source\Dirty_BathingQuest.psc L140-145). Presence-gated (the
@@ -11038,7 +13654,7 @@ Function _RegisterModEvents()
     If Game.IsPluginInstalled("SLACS_2_Plus_SCO.esp")
         RegisterForModEvent("DnB_CleanActorDirt", "OnDnBCleanActorDirt")
     EndIf
-    ; : the OStim climax lane -- OStim's native per-orgasm broadcast
+    ; REV-155: the OStim climax lane -- OStim's native per-orgasm broadcast
     ; ("ostim_actor_orgasm", 4-slot payload: eventName, SceneID:String,
     ; ThreadID:Float, OrgasmedActor:Form). Presence-gated per the 0171
     ; convention (OStim.esp absent = event never sent = listener idle); the
@@ -11048,7 +13664,7 @@ Function _RegisterModEvents()
         RegisterForModEvent("ostim_actor_orgasm", "OnOStimActorOrgasm")
     EndIf
     _Log("[SNBaka] _RegisterModEvents: REV-65 detection triggers armed (OCum x2 [5-arg + 6-arg npc_scene], SL HookStageEnd [2-arg], FHU start [0-arg]) + REV-117 cum-v2 (P+ ApplyCumFX [3-arg], ambient due [4-slot]) + REV-149 FHU entry-capture (AnimationStart/End [2-arg]) + REV-155 OStim climax (ostim_actor_orgasm [4-slot, presence-gated])")
-    ;  instrumentation (report-only; PROJECT_STATE 125 open item): the
+    ; REV-116 instrumentation (report-only; PROJECT_STATE 125 open item): the
     ; arm-time gate ECHO -- what the detection gates are RIGHT NOW, so MCM
     ; user-values vs ModEvent-delivery becomes distinguishable from logs.
     ; Log-only; zero behavior change.
@@ -11056,7 +13672,7 @@ Function _RegisterModEvents()
 EndFunction
 
 ; ============================================================
-; MODULE LIFECYCLE SURFACE (, Phase B —  module contract of record)
+; MODULE LIFECYCLE SURFACE (REV-68, Phase B — §67 module contract of record)
 ; ============================================================
 ; The motherboard owns the arm/disarm/handshake sequence for the unified
 ; integration's modules. Under the Option-B amendment (fomod.md contract
@@ -11071,13 +13687,13 @@ EndFunction
 ; loads. Idempotent: safe to call as often as the listeners re-register.
 Function _ArmModules()
     _Log("[SNBaka] module-arm: SexLab handshake — installed=" + SkyrimNet_BakaSL.Installed())
-    ;  Amendment 3 (Option C, user-ruled 2026-10-12): presence and manager are DIFFERENT
+    ; REV-98b Amendment 3 (Option C, user-ruled 2026-10-12): presence and manager are DIFFERENT
     ; questions at DIFFERENT forms. Presence = the esp's 0x800 Downed worker quest resolving
     ; (un-cast probe via IsAcheronBridgeInstalled(), unchanged — 0x800 binds the Acheron
     ; consequence YAMLs and stays exactly as-is). Manager = the esp-attached manager script
     ; on QUST 0x801 (second script entry, 0 props, DNAM 11 start-game-enabled; attached since
-    ; the  fold). 's "manager has no esp host form" finding is WITHDRAWN
-    ; (objectFormat-2 decode error; enumeration receipts in PROJECT_STATE ); the old
+    ; the REV-62 fold). REV-96's "manager has no esp host form" finding is WITHDRAWN
+    ; (objectFormat-2 decode error; enumeration receipts in PROJECT_STATE §104); the old
     ; 0x800 cast here was a wrong-form cast — effectively a no-op. Retargeted to 0x801,
     ; EnsureAlive() is functional (the bridge's documented idempotent no-op when ticking).
     If !IsAcheronBridgeInstalled()
@@ -11093,27 +13709,27 @@ Function _ArmModules()
     EndIf
     _Log("[SNBaka] module-arm: GS Poses presence=" + _GSPresent())
     SNBaka_SlaveTatsModule.Arm()
-    ;  rider 1 — motherboard service registry (first service: tattoo.picker). Hosts
+    ; REV-74 rider 1 — motherboard service registry (first service: tattoo.picker). Hosts
     ; (this quest, the downed menu) presence-probe the registry and CALL the service; the
     ; module owns all logic. Entry-point services are presence-gated; hosts never contain
     ; guest logic (module-contract clause, recorded in fomod.md at ship).
     _RegisterService("tattoo.picker", SNBaka_SlaveTatsModule.Installed())
-    ;  S3: the pose.baka-half advertisement — the GS psc's T2 loops probe this
+    ; REV-103 S3: the pose.baka-half advertisement — the GS psc's T2 loops probe this
     ; before touching the 15 Baka-hosted pose actions (the 27-name dispatch guard).
     ; Present = unconditional True: the motherboard quest hosting this code IS the Baka
     ; half. Re-asserted every arm pass (Setup + heartbeat), same as every registry entry.
     _RegisterService("pose.baka-half", True)
-    ;  S2: the busy-state advertisement — GS's _IsBusyElsewhere probes this
+    ; REV-105 S2: the busy-state advertisement — GS's _IsBusyElsewhere probes this
     ; before consulting the SNBaka.Locked/OnGround keys (era doc 5.2 S2: the key
     ; names stay the wire format — zero save migration; a contract over the existing
     ; soft reads, not a new interface). Present = unconditional True for the same
     ; reason as the pose entry: the motherboard hosting this code IS the Baka half
     ; that writes those keys. Re-asserted every arm pass (Setup + heartbeat).
     _RegisterService("busy.baka-half", True)
-    ;  cum-v2: state-layer arm (DeDService cum.* family + ambient timer
+    ; REV-117 cum-v2: state-layer arm (DeDService cum.* family + ambient timer
     ; rule). Self-gating (inert + logged when the DLL is absent); idempotent.
     SNBaka_CumDetectionModule.ArmStateLayer(Self)
-    ; : the FHU prompt-layer decorators (get_ded_inflation +
+    ; REV-157: the FHU prompt-layer decorators (get_ded_inflation +
     ; get_ded_inflation_any, the 0175/132b registration class) -- module-
     ; owned, idempotent every arm pass, host pointer cached so the band
     ; floors read the MCM sliders.
@@ -11121,7 +13737,7 @@ Function _ArmModules()
     _Log("[SNBaka] module-arm: arm pass complete")
 EndFunction
 
-; ---  rider 1: minimal service registry (register / probe / call) -------------------
+; --- REV-74 rider 1: minimal service registry (register / probe / call) -------------------
 ; Contract-shaped and deliberately tiny — this is the mechanism, not a framework: a service
 ; id maps to a presence flag on this quest's StorageUtil namespace. The CALL leg stays a
 ; direct Papyrus call at the host site (the module's Globals); the registry answers only
@@ -11136,7 +13752,7 @@ Bool Function _ProbeService(String asServiceId)
     Return StorageUtil.GetIntValue(Self, "SNBaka.Svc." + asServiceId, 0) == 1
 EndFunction
 
-; Disarm counterpart (), reserved by the module contract so later modules
+; Disarm counterpart (REV-68), reserved by the module contract so later modules
 ; never grow ad-hoc teardown elsewhere. Advisory-only at this rev: no Phase-B
 ; module requires hard teardown (the bridge's registrations live and die with
 ; its own quest Form; BakaSL holds none). NOT wired into Setup()/heartbeat —
@@ -11208,11 +13824,17 @@ Function _RegisterDecorators()
     Debug.Trace("[SNBaka] decorator register: get_spank_state rc=" + rc)
     rc = SkyrimNetApi.RegisterDecorator("get_nearby_furniture_actors", "SkyrimNet_BakaIntegration", "GetNearbyFurnitureActors")
     Debug.Trace("[SNBaka] decorator register: get_nearby_furniture_actors rc=" + rc)
-    ; : get_ded_arousal -- FRAMEWORK-CLASS, MOTHERBOARD-owned (the /
+    ; REV-129: get_ded_arousal -- FRAMEWORK-CLASS, MOTHERBOARD-owned (the §82/§138
     ; ownership rule's first live application: the arousal chain is shared
     ; substrate, not cum-specific). Same rc-instrument class as above.
     rc = SkyrimNetApi.RegisterDecorator("get_ded_arousal", "SkyrimNet_BakaIntegration", "GetDedArousal")
     Debug.Trace("[SNBaka] decorator register: get_ded_arousal rc=" + rc + " (REV-129)")
+    ; REV-167 §5.3 (register entry 44, spec: mode-personality-enrichment.md):
+    ; get_severactions_mood -- motherboard-owned, presence-gated, READ-ONLY
+    ; (the 144 compatibility doctrine: we never write their state). Same
+    ; rc-instrument class as above.
+    rc = SkyrimNetApi.RegisterDecorator("get_severactions_mood", "SkyrimNet_BakaIntegration", "GetSeverActionsMood")
+    Debug.Trace("[SNBaka] decorator register: get_severactions_mood rc=" + rc + " (REV-167)")
     ; baka_flirted decorator removed — the flirt escalations self-gate via their descriptions now.
     ; (GetFlirted is kept below, unused, so any stale SkyrimNet registration still resolves cleanly.)
 EndFunction
@@ -11234,29 +13856,29 @@ Event OnUpdateGameTime()
     ; run on reload). This is what keeps the creature hand-off (and AEL/menu events) alive across loads.
     _RegisterDecorators()
     _RegisterModEvents()
-    ;  (Phase B): module lifecycle re-assert — same self-heal cadence as the
+    ; REV-68 (Phase B): module lifecycle re-assert — same self-heal cadence as the
     ; listeners above (handshakes re-log; EnsureAlive is a no-op when the bridge is
     ; already ticking).
     _ArmModules()
-    ;  RETIREMENT BANNER: the v1 SlaveTats ambient observation
-    ; pass ( rider 3 — ObservationPass, heartbeat-dispatched,
+    ; REV-156 RETIREMENT BANNER: the v1 SlaveTats ambient observation
+    ; pass (REV-74 rider 3 — ObservationPass, heartbeat-dispatched,
     ; player-only ~4h cadence) is RETIRED. Superseded by the daemon-tick
     ; AMBIENT EXPOSURE PASS (SNBaka_SlaveTatsModule.AmbientExposurePass,
     ; hooked in _DaemonTick, both modes; visibility-gated; the MCM
     ; "Ambient Observation Cues" toggle folded to it). Records:
-    ; slavetats.md  + PROJECT_STATE section 178.
-    ; : FHU poll self-healing arming.  defect of record: the poll
+    ; slavetats.md REV-156 + PROJECT_STATE section 178.
+    ; REV-65: FHU poll self-healing arming. REV-64 defect of record: the poll
     ; armed ONLY from Setup(), whose MCM OnGameReload chain never executed at
     ; save-load (stale save-bound SKI config instance) -- the poll was dead
     ; every load. This heartbeat demonstrably executes (~3.3 min cadence in
-    ; the  log), so arming here too makes the poll self-heal within one
+    ; the rev-64 log), so arming here too makes the poll self-heal within one
     ; heartbeat even when the MCM reload path is stale. _FHUStartPoll() is
     ; idempotent (no-op while a poll is pending); arming remains
     ; toggle-gated + install-gated. Arming points: Setup() (primary) + here.
-    If bFHUInflationEnabled && SNBaka_FHUInflationModule.Installed()   ;  Task 2: probe moved to the module (call shape only)
+    If bFHUInflationEnabled && SNBaka_FHUInflationModule.Installed()   ; REV-96 Task 2: probe moved to the module (call shape only)
         _FHUStartPoll()
     EndIf
-    _STAmbientStart()   ;  (dogfood 2.2): the decoupled ST ambient cadence re-asserts from the heartbeat too (self-heal posture)
+    _STAmbientStart()   ; REV-159 (dogfood 2.2): the decoupled ST ambient cadence re-asserts from the heartbeat too (self-heal posture)
     Float currentTime = Utility.GetCurrentGameTime()
     If _lastSpankFadeTime <= 0.0
         _lastSpankFadeTime = currentTime
@@ -11305,17 +13927,18 @@ EndFunction
 
 ; ---- Main spank dispatch ----
 Function SpankTarget_Execute(Actor akSpanker, Actor akTarget, Bool akForceButt = False)
+    _ActionLaneFire(akSpanker, akTarget, "SpankTarget") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] SpankTarget ENTER")
     _Log("[SNBaka] SpankTarget_Execute: spanker=" + akSpanker.GetDisplayName() + " target=" + akTarget.GetDisplayName())
     If !bEnabled || !akSpanker || !akTarget || akTarget.IsDead() || akSpanker.IsDead()
         _Log("[SNBaka] SpankTarget: disabled or dead actor.")
         Return
     EndIf
-    ;  Task 2: child boundary - spank lane entry point.
+    ; REV-146a Task 2: child boundary - spank lane entry point.
     If _ChildBoundaryRefused(akSpanker, akTarget, "SpankTarget")
         Return
     EndIf
-    ;  4.2: bPlayerCanBeSpanked FOLDS INTO the central player-target policy --
+    ; REV-144 4.2: bPlayerCanBeSpanked FOLDS INTO the central player-target policy --
     ; the spank-scoped gate is retired as an admission gate (existing saves seeded from
     ; its old value; see _SeedPlayerTargetPolicy). Player-own spanks pass ungated.
     If !_PlayerTargetAdmitted(akSpanker, akTarget, "SpankTarget")
@@ -11371,17 +13994,18 @@ Function SpankTarget_Execute(Actor akSpanker, Actor akTarget, Bool akForceButt =
 EndFunction
 
 Function SlapFace_Execute(Actor akSlapper, Actor akTarget)
+    _ActionLaneFire(akSlapper, akTarget, "SlapFace") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] SlapFace ENTER")
     _Log("[SNBaka] SlapFace_Execute: slapper=" + akSlapper.GetDisplayName() + " target=" + akTarget.GetDisplayName())
     If !bEnabled || !akSlapper || !akTarget || akTarget.IsDead() || akSlapper.IsDead()
         _Log("[SNBaka] SlapFace_Execute: early exit — bEnabled=" + bEnabled + " dead/None check")
         Return
     EndIf
-    ;  Task 2: child boundary - slap lane entry point.
+    ; REV-146a Task 2: child boundary - slap lane entry point.
     If _ChildBoundaryRefused(akSlapper, akTarget, "SlapFace")
         Return
     EndIf
-    ;  4.2: bPlayerCanBeSpanked FOLDS INTO the central player-target policy
+    ; REV-144 4.2: bPlayerCanBeSpanked FOLDS INTO the central player-target policy
     ; (same fold-in as SpankTarget above). Player-own slaps pass ungated.
     If !_PlayerTargetAdmitted(akSlapper, akTarget, "SlapFace")
         Return
@@ -11410,6 +14034,7 @@ Function SlapFace_Execute(Actor akSlapper, Actor akTarget)
 EndFunction
 
 Function BreastSlap_Execute(Actor akSpanker, Actor akTarget)
+    _ActionLaneFire(akSpanker, akTarget, "BreastSlap") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] BreastSlap ENTER")
     If !bEnabled || !akSpanker || !akTarget || akTarget.IsDead() || akSpanker.IsDead()
         Return
@@ -11581,7 +14206,7 @@ Function ApplySpankMark(Actor akTarget)
         StorageUtil.SetIntValue(akTarget, "SkyrimNetSDB.AssTatStage", newStage)
     EndIf
     StorageUtil.FormListAdd(Self, "SkyrimNetSDB.SpankedActors", akTarget, True)
-    ;  SlaveTats module: user-chosen degradation set rides alongside the heat marks
+    ; REV-72 SlaveTats module: user-chosen degradation set rides alongside the heat marks
     ; (extend-not-duplicate; module checks its own Enabled/ApplyOnSpank/set-config gates).
     SNBaka_SlaveTatsModule.OnSpankHeat(akTarget)
 EndFunction
@@ -11810,6 +14435,7 @@ EndFunction
 ; Applies a full sex-safe spank: impact + moan + tats + face marks + tears.
 ; akSpanker may be None (self-spank). No paired animation — safe inside sex scenes.
 Function _SexSpank_Execute(Actor akSpanker, Actor akTarget)
+    _ActionLaneFire(akSpanker, akTarget, "SexSpank") ; [REV-174f Leg 4.2] neutral fanned lane (LLM/player-initiated; daemon fires suppressed)
     _Log("[SNBakaACT] _SexSpank ENTER")
     If !akTarget
         Return
@@ -11933,7 +14559,7 @@ Function SexSpank_ShowMenu(Actor akCaster)
             json += "],\"playerInScene\":false}"
         EndIf
         SNBakaUI.ShowSexSpankMenu(json)
-        _PushModeStates()   ;  Feature B: initial button state at panel open
+        _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
         Return  ; result arrives via OnSNBakaMenuChoice
     EndIf
 
@@ -12125,7 +14751,7 @@ String Function GetAssTatNameForStage(Int stage) Global
 EndFunction
 
 ; ============================================================
-; : DETECTION TRIGGERS (cum detection + FHU inflation)
+; REV-63: DETECTION TRIGGERS (cum detection + FHU inflation)
 ; ============================================================
 ; PATTERN SOURCE (Task 1): the sdb_spanked/sdb_slapped path -- our own action
 ; scripts build a desc string and call SkyrimNetApi.RegisterEvent(eventType,
@@ -12150,7 +14776,7 @@ EndFunction
 ; ---- Presence probes (cached: GetFormFromFile on an ABSENT esp logs a hard
 ; Papyrus error, not a silent None -- the SNBakaSL.Absent-cache lesson,
 ; SkyrimNet_BakaSL.psc L7-14). Absence is cached on the None key once. ----
-;  Task 2: both probes' bodies MOVED VERBATIM to the module scripts (the 
+; REV-96 Task 2: both probes' bodies MOVED VERBATIM to the module scripts (the §64
 ; class -- cached absence semantics identical); these are the motherboard's forwarding
 ; wrappers, so every existing caller (MCM reads Main._OCumInstalled() /
 ; Main._FHUInstalled(), Setup(), heartbeat) keeps its call shape unchanged.
@@ -12163,39 +14789,39 @@ Bool Function _FHUInstalled()
 EndFunction
 
 ; ---- CUM DETECTION (OCum / OStim side) ----
-; : handler signatures derived from the senders' ACTUAL ModEvent push
+; REV-65: handler signatures derived from the senders' ACTUAL ModEvent push
 ; sequences (statically re-confirmed this session from the installed trees,
-; per the  root cause of record):
+; per the rev-64 root cause of record):
 ;   ocum_applied_cum (OCumMaleScript.psc L689-695, [035.00002] tree):
 ;     PushForm(Orgasmer), PushForm(Target), PushFloat(AmountML),
 ;     PushString(Area), PushString(SceneID)                 -- 5 args
 ;   ocum_applied_cum_npc_scene (same file, L697-704):
 ;     Form Orgasmer, Form Target, Int ThreadID, Float AmountML,
 ;     String Area, String SceneID                           -- 6 args
-; The  4-slot (eventName, strArg, numArg, sender) shape was the
+; The rev-63 4-slot (eventName, strArg, numArg, sender) shape was the
 ; SendModEvent convention and is RETIRED: a ModEvent.Create/Push* handler
 ; receives exactly the pushed values as typed parameters, and the VM
 ; rejects the dispatch on mismatch (the 44 "Incorrect number of arguments"
-; log errors of the  dogfood).
-;  bonus (user ruling): the TARGET (second Form push) is now
-; recoverable -- named-partner cue wording is PRIMARY; the  unnamed
+; log errors of the rev-64 dogfood).
+; REV-65 bonus (user ruling): the TARGET (second Form push) is now
+; recoverable -- named-partner cue wording is PRIMARY; the rev-63 unnamed
 ; wording is the fallback only (Target == None guard).
 Event OnOCumApplied(Form akOrgasmer, Form akTarget, Float afAmountML, String asArea, String asSceneID)
-    ;  Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleOCumApplied
-    ; (the  class; ModEvents are Form-members, so the declaration stays on the quest).
+    ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleOCumApplied
+    ; (the §64 class; ModEvents are Form-members, so the declaration stays on the quest).
     SNBaka_CumDetectionModule.HandleOCumApplied(Self, akOrgasmer, akTarget, afAmountML, asArea, asSceneID)
 EndEvent
 
-; : the npc_scene variant carries ThreadID as a 3rd (Int) push, so it
+; REV-65: the npc_scene variant carries ThreadID as a 3rd (Int) push, so it
 ; needs its own 6-arg handler. Identical gating/cue logic; thread id is
 ; logged in the sentinel (positions still resolve via the SL thread surface
 ; only in the SL proxy below -- OCum scenes do not use it).
 Event OnOCumAppliedNPCScene(Form akOrgasmer, Form akTarget, Int aiThreadID, Float afAmountML, String asArea, String asSceneID)
-    ;  Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleOCumAppliedNPCScene.
+    ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleOCumAppliedNPCScene.
     SNBaka_CumDetectionModule.HandleOCumAppliedNPCScene(Self, akOrgasmer, akTarget, aiThreadID, afAmountML, asArea, asSceneID)
 EndEvent
 
-;  Task 2: _FireCumCue MOVED VERBATIM to SNBaka_CumDetectionModule._FireCumCue
+; REV-96 Task 2: _FireCumCue MOVED VERBATIM to SNBaka_CumDetectionModule._FireCumCue
 ; (both OCum event bodies forward to the module now; the shared 15s cooldown key
 ; SNBaka.LastCumCueRT is unchanged, so the cooldown still spans OCum + SL proxy).
 
@@ -12207,19 +14833,19 @@ EndEvent
 ; including the orgasm stage. Evidence supports the PROXY case: the cue rides
 ; "a SexLab scene reached release" and NEVER claims overlay application.
 ; numArg = thread_id (first numeric push, sslThreadModel L2266-2270).
-; : signature derived from the sender's ACTUAL pushes (sslThreadModel
+; REV-65: signature derived from the sender's ACTUAL pushes (sslThreadModel
 ; PPLUS V2.18.1, SetupThreadEvent L2261-2268: PushInt(thread_id),
-; PushBool(HasPlayer) -- 2 args). The  4-slot shape is retired.
-;  Task 1.2 (ruled): the OnSLAnimationEnd listener is RETIRED with
+; PushBool(HasPlayer) -- 2 args). The rev-63 4-slot shape is retired.
+; REV-133c Task 1.2 (ruled): the OnSLAnimationEnd listener is RETIRED with
 ; the whole aftermath chain (rider 2.5b; the motherboard recompile is the
 ; declared, receipted scope -- clean removal beats archaeology-dust).
 Event OnSLStageEnd(Int aiThreadID, Bool abHasPlayer)
-    ;  Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleSLStageEnd.
+    ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleSLStageEnd.
     SNBaka_CumDetectionModule.HandleSLStageEnd(Self, aiThreadID, abHasPlayer)
 EndEvent
 
-; ---- : FHU v2 ENTRY-AROUSAL CAPTURE bracket (user rulings a/b + the
-; mid- hook-choice ruling) ----
+; ---- REV-149: FHU v2 ENTRY-AROUSAL CAPTURE bracket (user rulings a/b + the
+; mid-REV-149 hook-choice ruling) ----
 ; HookAnimationStart / HookAnimationEnd: SexLab non-blocking hook ModEvents
 ; (SexLabFramework.psc doc block L163-164, PPLUS V2.18.1), same 2-push payload
 ; as the proven HookStageEnd binding (sslThreadModel SetupThreadEvent:
@@ -12233,11 +14859,11 @@ Event OnSLAnimationEnd(Int aiThreadID, Bool abHasPlayer)
     SNBaka_FHUInflationModule.HandleSceneEndSL(Self, aiThreadID)
 EndEvent
 
-; ---- : get_ded_arousal DECORATOR (FRAMEWORK-CLASS, motherboard-owned; ----
-; the / ownership rule's FIRST LIVE APPLICATION). Reads the WITNESS
+; ---- REV-129: get_ded_arousal DECORATOR (FRAMEWORK-CLASS, motherboard-owned; ----
+; the §82/§138 ownership rule's FIRST LIVE APPLICATION). Reads the WITNESS
 ; (the passed actor = the reacting NPC's own arousal), NOT the wearer. Chain:
 ; OSL Aroused Reborn (side-effect-free read) -> SL Aroused NG -> none.
-; Tier matrix (planner-ratified 3-band, cum-effects.md  1.1(b)):
+; Tier matrix (planner-ratified 3-band, cum-effects.md REV-128 1.1(b)):
 ; 0 = no framework (neutral silence), 1 = LOW (<= 25), 2 = MID, 3 = HIGH (>= 75).
 String Function GetDedArousal(Actor akActor) Global
     Int arousal = -1
@@ -12264,19 +14890,127 @@ String Function GetDedArousal(Actor akActor) Global
     Return "{\"arousal\": " + arousal + ", \"tier\": " + tier + ", \"framework\": \"" + fw + "\"}"
 EndFunction
 
-;  cum-v2: P+ push-time location signal. Sender's pushes (sslThreadModel
+; ---- REV-167 §5.3: get_severactions_mood DECORATOR (register entry 44; ----
+; motherboard-owned, presence-gated, READ-ONLY). Reads SeverActions' mood
+; native (SeverActionsNative.psc 4.5.0: Native_GetMood, "50.0 when unset",
+; range -100..100); DeD supplies the tokenization (we gloss the number
+; into a story-voice mood word -- never their tokens, never written back;
+; the 144 compatibility doctrine). Null contract: plugin absent OR the
+; unset sentinel (exactly 50.0) -> {"present": false} and the prompt
+; template omits the block entirely; never "unknown".
+String Function GetSeverActionsMood(Actor akActor) Global
+    If !akActor
+        Return "{\"present\": false}"
+    EndIf
+    If SKSE.GetPluginVersion("SeverActionsNative") <= 0 && SKSE.GetPluginVersion("SeverActionsNative") <= 0
+        Return "{\"present\": false}"
+    EndIf
+    Float fMood = SeverActionsNative.Native_GetMood(akActor)
+    If fMood == 50.0
+        ; their documented unset sentinel -- presence-gated out
+        Return "{\"present\": false}"
+    EndIf
+    String sMood = "neutral"
+    If fMood <= -60.0
+        sMood = "furious"
+    ElseIf fMood <= -20.0
+        sMood = "hostile"
+    ElseIf fMood < 20.0
+        sMood = "sullen"
+    ElseIf fMood < 80.0
+        sMood = "content"
+    Else
+        sMood = "joyful"
+    EndIf
+    Return "{\"present\": true, \"mood\": \"" + sMood + "\"}"
+EndFunction
+
+
+; REV-173 Path A (user ruling): the relationship-sync string-arg render is
+; RETIRED -- same typed-binding finding as the probe (RenderTemplate binds
+; STRING; selector requires number; the harvest NEVER functioned in any
+; shipped build -- 100% degrade to Random + sentinel since birth, so this
+; retirement changes no lived behavior). The relationship context reaches
+; the LLM through the consideration prompts' in-template
+; render_character_profile("full", initiatorUUID) renders (pack-sourced,
+; number-typed at parse; the Relationships section rides the full render).
+; The store's "relationships" lane retires with it (Path A store scope:
+; vitals/uuidForm/gloss); snbaka_actorctx_relationships.prompt and
+; snbaka_relationship_sync.prompt are deleted (one-lineage).
+; _BioLinkedTo keeps its degrade-to-Random shape below. The Relationship
+; Priority option is thus INERT pending a planner-ruled rehome (flagged
+; for the user's pen at the REV-173 report).
+String Function _DaemonRelationshipNameSet(Actor akActor)
+    ; REV-173: retired -- see banner above. Empty set = the caller's
+    ; documented degrade-to-Random path (unchanged lived behavior).
+    Return ""
+EndFunction
+
+
+; REV-167 §15.4: the link test -- does the SUBJECT's bio name-set name the
+; other actor (Tier A vs Tier B for the two-tier draw). Case-insensitive
+; token match over the "|"-delimited set; compound entries ("Farkas and
+; Vilkas") match as the FULL entry only -- documented behavior, not a
+; heuristic. Empty/degraded set -> False (caller degrades to Random).
+Bool Function _BioLinkedTo(Actor akSubject, Actor akOther)
+    If !akSubject || !akOther
+        Return False
+    EndIf
+    String sSet = _DaemonRelationshipNameSet(akSubject)
+    If sSet == ""
+        Return False
+    EndIf
+    String sName = _AsciiILower(akOther.GetDisplayName())
+    If sName == ""
+        Return False
+    EndIf
+    Int iPos = 0
+    Int iLen = StringUtil.GetLength(sSet)
+    While iPos < iLen
+        Int iBar = StringUtil.Find(sSet, "|", iPos)
+        If iBar < 0
+            iBar = iLen
+        EndIf
+        If iBar > iPos
+            If _AsciiILower(StringUtil.Substring(sSet, iPos, iBar - iPos)) == sName
+                Return True
+            EndIf
+        EndIf
+        iPos = iBar + 1
+    EndWhile
+    Return False
+EndFunction
+
+; REV-167 helper: ASCII case fold (StringUtil has no case fold; both sides
+; pass through the same fold so equality is well-formed).
+String Function _AsciiILower(String sText) Global
+    Int i = 0
+    Int iLen = StringUtil.GetLength(sText)
+    String sOut = ""
+    While i < iLen
+        Int iCh = StringUtil.AsOrd(StringUtil.GetNthChar(sText, i))
+        If iCh >= 65 && iCh <= 90    ; A-Z
+            iCh += 32
+        EndIf
+        sOut = sOut + StringUtil.AsChar(iCh)
+        i += 1
+    EndWhile
+    Return sOut
+EndFunction
+
+; REV-117 cum-v2: P+ push-time location signal. Sender's pushes (sslThreadModel
 ; PPLUS V2.18.1 L2234-2238): PushForm(TargetRef), PushForm(SourceRef), PushInt(aiType).
 Event OnSLApplyCumFX(Form akTarget, Form akSource, Int aiType)
     SNBaka_CumDetectionModule.HandleSLApplyCumFX(Self, akTarget, akSource, aiType)
 EndEvent
 
-;  cum-v2: DeDService ambient timer callback (4-slot service ModEvent
+; REV-117 cum-v2: DeDService ambient timer callback (4-slot service ModEvent
 ; shape from EventPump.cpp: eventName, strArg, numArg, sender).
 Event OnCumAmbientDue(String eventName, String strArg, Float numArg, Form sender)
     SNBaka_CumDetectionModule.HandleCumAmbientDue(Self, numArg, sender)
 EndEvent
 
-;  Task 2.3: bath-completion handler (presence-gated registration --
+; REV-133c Task 2.3: bath-completion handler (presence-gated registration --
 ; see _RegisterModEvents); body module-owned (the wearer-only clear).
 Event OnDnBCleanActorDirt(Form akActor)
     SNBaka_CumDetectionModule.HandleBathClean(Self, akActor)
@@ -12299,19 +15033,19 @@ EndEvent
 ; ability path exposes no event). sr.inflater.start is used ONLY as an
 ; immediate-poll nudge on top of the interval.
 Event OnFHUStartSignal()
-    ; : zero-arg handler -- sr.inflater.start is a parameterless
+    ; REV-65: zero-arg handler -- sr.inflater.start is a parameterless
     ; broadcast (sr_inflateQuest.InflateQueued(), Beta 2.11 tree: ModEvent.Create
-    ; + Send, no Push calls). The  4-slot shape is retired ( evidence).
-    ;  Task 2: body MOVED VERBATIM to SNBaka_FHUInflationModule.HandleFHUStartSignal.
+    ; + Send, no Push calls). The rev-63 4-slot shape is retired (rev-64 evidence).
+    ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_FHUInflationModule.HandleFHUStartSignal.
     SNBaka_FHUInflationModule.HandleFHUStartSignal(Self)
 EndEvent
 
 Function _PollFHULevels()
-    ;  Task 2: body MOVED VERBATIM to SNBaka_FHUInflationModule.PollLevels.
+    ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_FHUInflationModule.PollLevels.
     SNBaka_FHUInflationModule.PollLevels(Self)
 EndFunction
 
-; : OStim climax -> FHU inflation driver. OStim broadcasts
+; REV-155: OStim climax -> FHU inflation driver. OStim broadcasts
 ; "ostim_actor_orgasm" per orgasming actor (4-slot service ModEvent shape:
 ; eventName, SceneID:String, ThreadID:Float, OrgasmedActor:Form -- the
 ; orgasming actor is the cum SOURCE). Registered presence-gated above

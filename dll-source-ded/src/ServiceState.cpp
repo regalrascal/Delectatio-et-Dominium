@@ -213,7 +213,7 @@ namespace DeD
 
 	bool ServiceState::GetAnyTrue(const std::string& a_dotted) const
 	{
-		//  (ambient-chain diagnosis, first silent link): rule predicates
+		// REV-123 (ambient-chain diagnosis, first silent link): rule predicates
 		// armed with a None owner read owner-formID 0, but actor-keyed keys store
 		// their rows under the actor's formID -- a plain Get(dotted, 0) can never
 		// see the write and the rule never fires. This read is the fix's read

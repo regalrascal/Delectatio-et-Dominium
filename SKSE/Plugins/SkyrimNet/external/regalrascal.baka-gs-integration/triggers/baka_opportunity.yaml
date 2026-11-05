@@ -9,10 +9,10 @@ response:
   content: |
     {{ originator }} holds the moment over {{ target }} -- words can fill it first
     (questions, threats, mockery, demands for surrender or belongings), but it ends
-    in an act: Execute (the deliberate killing blow on a downed victim -- the one a
-    victor chooses when the loser is an enemy wanted dead), Escalate (the rival-
-    escalation between them, not a fresh bout), HelpUp, or Release. {{ target }}'s
-    fate hangs on which one {{ originator }} reaches for.
+    in an act: Escalate (the rival-escalation between them, not a fresh bout), HelpUp 
+    (mercy), Release (conteptuously walking away), or Execute (the deliberate killing 
+    blow on a downed victim they want dead. {{ target }}'s fate hangs on which one 
+    {{ originator }} reaches for.
 
 audience: "nearby_npcs"
 

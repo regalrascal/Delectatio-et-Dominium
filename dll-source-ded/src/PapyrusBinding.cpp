@@ -2,6 +2,7 @@
 #include "ServiceState.h"
 #include "Scheduler.h"
 #include "EventPump.h"
+#include "ActorContextStore.h"
 
 #include "RE/T/TESForm.h"
 
@@ -164,6 +165,33 @@ namespace DeD
 			a_fFloatArg, std::string(a_strArg), a_formArg);
 	}
 
+	// ---------- 1.5 actor context (REV-170 Leg 3; design of record:
+	// docs/specs/native-optimization-lanes.md Lane 2 s"REV-170 Leg 2") ----------
+	static std::string DeD_GetActorContext(RE::StaticFunctionTag*,
+		RE::Actor* a_owner, std::string_view a_factClass)
+	{
+		return ActorContextStore::GetSingleton().Get(a_owner, std::string(a_factClass));
+	}
+
+	static bool DeD_SetActorContext(RE::StaticFunctionTag*,
+		RE::Actor* a_owner, std::string_view a_factClass,
+		std::string_view a_value, std::string_view a_source)
+	{
+		return ActorContextStore::GetSingleton().Set(
+			a_owner, std::string(a_factClass), std::string(a_value), std::string(a_source));
+	}
+
+	static bool DeD_InvalidateActorContext(RE::StaticFunctionTag*, RE::Actor* a_owner)
+	{
+		return ActorContextStore::GetSingleton().Invalidate(a_owner);
+	}
+
+	static void DeD_ArmActorContextCooldown(RE::StaticFunctionTag*,
+		RE::Actor* a_owner, std::string_view a_factClass)
+	{
+		ActorContextStore::GetSingleton().ArmCooldown(a_owner, std::string(a_factClass));
+	}
+
 	// ---------- registration ----------
 	bool RegisterPapyrusFunctions(RE::BSScript::IVirtualMachine* a_vm)
 	{
@@ -184,7 +212,11 @@ namespace DeD
 		a_vm->RegisterFunction("HasState", kScriptName, DeD_HasState);
 		a_vm->RegisterFunction("ClearActorState", kScriptName, DeD_ClearActorState);
 		a_vm->RegisterFunction("PushEvent", kScriptName, DeD_PushEvent);
-		SKSE::log::info("[DeDService] Papyrus functions registered (17).");
+		a_vm->RegisterFunction("GetActorContext", kScriptName, DeD_GetActorContext);
+		a_vm->RegisterFunction("SetActorContext", kScriptName, DeD_SetActorContext);
+		a_vm->RegisterFunction("InvalidateActorContext", kScriptName, DeD_InvalidateActorContext);
+		a_vm->RegisterFunction("ArmActorContextCooldown", kScriptName, DeD_ArmActorContextCooldown);
+		SKSE::log::info("[DeDService] Papyrus functions registered (21).");
 		return true;
 	}
 }

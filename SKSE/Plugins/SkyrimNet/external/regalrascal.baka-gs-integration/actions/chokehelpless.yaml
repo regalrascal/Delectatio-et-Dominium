@@ -1,6 +1,28 @@
 name: ChokeHelpless
 description: |
   Choke a DOWNED, helpless victim by the throat while they lie defeated on the ground — dominating, near-lethal punishment. Valid even while combat is still nominally live, because the target is already beaten and cannot resist. Pure violent domination, not sex.
+  
+  WHEN A CHARACTER WOULD DO THIS:
+  - A sadistic character toying with their overpowered victim
+  - A dominant victor fully incapacitating an enemy after a fight
+  - A character overcome by lust or rage lashing out physically
+  - A rapist preparing to take their pleasure of their victim
+
+  PERSONALITY TYPES WHO WOULD DO THIS:
+  - Wrothful warriors darkly celebrating victory
+  - Sadistic or domineering characters not above using force
+  - A captor who uses systematic violation as a psychological tool
+
+  DO NOT USE:
+  - On male-body targets — this action includes breast and intimate inspection stages and requires a female body
+  - Without a firmly established captive/captor power dynamic
+  - In social or public contexts unless all propriety is gone
+  - As a casual or impulsive act — this is a deliberate multi-stage process
+
+  CONSEQUENCES:
+  - Choking scene
+  - Likely escalation to sex with the incapacitated victim
+  
 questEditorId: SkyrimNet_BakaIntegration
 scriptName: SkyrimNet_BakaIntegration
 executionFunctionName: ChokeHelpless_Execute

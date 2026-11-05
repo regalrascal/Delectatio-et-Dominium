@@ -64,13 +64,13 @@ namespace DeD
 		if (a_callbackEvent.empty()) return false;
 		const std::string mk = RuleMapKey(a_moduleID, a_ruleID);
 		if (m_rules.count(mk) != 0) return false; // duplicate ruleID
-		//  (ambient-chain, second silent link): the Papyrus-side rule arms
+		// REV-124 (ambient-chain, second silent link): the Papyrus-side rule arms
 		// pass the predicate as the ALREADY-DOTTED family key ("cum.present"), but
 		// Tick_Impl reads moduleID + "." + predKey -- the pre-124 read queried the
 		// double-prefixed "cum.cum.present", which never matches a registration
 		// (Register builds dotted = moduleID + "." + key, ServiceState.cpp L141),
 		// so GetAnyTrue failed at its registration lookup and fire=false every
-		// tick -- the  dogfood's ambient silence (PROJECT_STATE 136).
+		// tick -- the REV-123 dogfood's ambient silence (PROJECT_STATE 136).
 		// Canonical normalization HERE, at arm: strip the module prefix if the
 		// caller passed a dotted key, so Tick_Impl's moduleID + "." + predKey
 		// reconstructs the canonical dotted key on both caller shapes.
@@ -145,13 +145,13 @@ namespace DeD
 			bool fire = true;
 			if (rule.predClass == PredicateClass::STATE_BOOL_TRUE ||
 				rule.predClass == PredicateClass::STATE_BOOL_CHANGED) {
-				// : a rule armed with a None predicate owner (predOwnerFormID
+				// REV-123: a rule armed with a None predicate owner (predOwnerFormID
 				// 0 -- the only shape a boot-time arm can express; the wearer is
 				// unknown at arm) reads the WILDCARD: TRUE when any owner's row is
 				// Bool TRUE. The pre-123 read was a plain owner-0 lookup, which can
 				// never see an actor-keyed write (stored under the actor's formID,
 				// ServiceState.cpp Set L195) -- the ambient rule never fired on the
-				//  dogfood for exactly this reason (first silent link,
+				// REV-122b dogfood for exactly this reason (first silent link,
 				// PROJECT_STATE 135).
 				bool isTrue = false;
 				if (rule.predOwnerFormID == 0) {
@@ -167,7 +167,7 @@ namespace DeD
 				} else { // CHANGED: edge-triggered False->True
 					fire = isTrue && !rule.lastPred;
 				}
-				//  (ambient plumbing; 10-18 dogfood): APPLICATION-ANCHORED
+				// REV-127 (ambient plumbing; 10-18 dogfood): APPLICATION-ANCHORED
 				// PHASING. The pre-127 grid ran from the rule's ARM (nextDueAge =
 				// cadenceSec at AddRule, L89) -- dues kept accruing while the
 				// predicate was False, so an application landing mid-grid fired
@@ -192,7 +192,7 @@ namespace DeD
 			if (!fire) continue;
 			if (rule.ageSec >= rule.nextDueAge) {
 				EventPump::Emit(rule.callbackEvent, nullptr, 0.f, "");
-				// : snap to the LAST ACTUAL FIRE. The pre-127
+				// REV-127: snap to the LAST ACTUAL FIRE. The pre-127
 				// nextDueAge += cadence drained every MISSED due in consecutive
 				// 1s-throttled ticks (the 10-18 paired ambient fires 01:43:40/41,
 				// 01:45:33/34, 01:47:33/34 -- catch-up bursts, one due per tick

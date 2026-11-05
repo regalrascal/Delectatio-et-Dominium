@@ -568,25 +568,25 @@ const DOWNED_ACTIONS = [
   { id: 5, label: 'Execute'     },
   { id: 6, label: 'Tie Up'      },
   { id: 7, label: 'Untie'       },
-  //  rider 1 — tattoo service entries. UNCONDITIONAL affordance (ruling ②B): the host
+  // REV-74 rider 1 — tattoo service entries. UNCONDITIONAL affordance (ruling ②B): the host
   // shows them always; the service handles SlaveTats absence gracefully (empty-state picker /
   // silent no-op). Papyrus handles 8/9; the DLL's numeric pipe is untouched.
   { id: 8, label: 'Apply Tattoo' },
   { id: 9, label: 'Remove Tattoos' },
-  //  — the Strip action (baka-module.md  spec +  rulings
+  // REV-144 — the Strip action (baka-module.md REV-134e spec + REV-136 rulings
   // (i)(a)/(ii)(b)/(iii); built this rev, BEFORE the daemon, so the action pool is
   // complete at daemon launch). id 10 strips the downed victim (player-clicked, ungated);
-  // id 11 "Allow to dress" (renamed  Task 10, user-authored verbatim) restores ONLY our tracked queue (restore OFF by default after
+  // id 11 "Allow to dress" (renamed REV-146a Task 10, user-authored verbatim) restores ONLY our tracked queue (restore OFF by default after
   // the strip — it stays off until this tile activates it). Same unconditional-affordance
   // contract as 8/9 (ruling ②B): the button list is host surface; Papyrus handles
   // empty-state refusals reason-coded. The DLL's numeric pipe is untouched (ids 10/11
   // sit below the +100 regular-pick offset).
   { id: 10, label: 'Strip'         },
   { id: 11, label: 'Allow to dress' },
-  //  (Issue #3, user ruling): the "Force Tattoo" tile (id 12) is
+  // REV-164 (Issue #3, user ruling): the "Force Tattoo" tile (id 12) is
   // RETIRED from the panel -- the LLM lane (ApplyTattoo action, now
   // downed-gated + decoupled from the configured-set requirement per the
-  //  why-trace) and the gated AI-aggressor daemon lane cover both
+  // REV-164 why-trace) and the gated AI-aggressor daemon lane cover both
   // remaining surfaces; the tile was the silent-[noset] failure surface.
   // The DLL's numeric pipe is untouched (id 12 simply no longer ships).
 ];
@@ -664,7 +664,7 @@ let g_encChoice = {};
 
 window.snbaka_open_interact = function(targetName) {
   g_mode = 'interact';
-  //  Feature A: empty/null targetName = the no-target session (power
+  // REV-147 Feature A: empty/null targetName = the no-target session (power
   // pressed with nobody on the crosshair). targetName is the ONLY target-context
   // field this entry reads (header-target text, already null-guarded below); all
   // grey-out/overlay state derives from it. The ambient-mode footer buttons stay
@@ -946,7 +946,7 @@ function sexBack() {
 // ════════════════════════════════════════════════════════════
 
 function _choose(id) {
-  //  Feature A: a no-target session never dispatches target-actions (the
+  // REV-147 Feature A: a no-target session never dispatches target-actions (the
   // grey-out already blocks pointer events; this guards keyboard/Enter paths).
   // Papyrus-side _DispatchInteractAction refuses any that slip through anyway.
   if (g_noTarget) return;
@@ -977,11 +977,11 @@ function _sendChoice(value) {
   }
 }
 
-// ──  4.2: ambient mode toggles (GS footer-button pattern) ────────────────
-// DISPATCH FIX (finding: both buttons dispatched a back hug): the 
+// ── REV-146a 4.2: ambient mode toggles (GS footer-button pattern) ────────────────
+// DISPATCH FIX (finding: both buttons dispatched a back hug): the REV-145
 // string sends ('mephalatoggle'/'molagbaltoggle') fell into the DLL's NUMERIC
 // choice pipe and coerced to 0 = BackHug. Fixed: numeric reserved ids 900/901.
-//  Feature B: the DLL now intercepts 900/901 BEFORE the modal unfocus/
+// REV-147 Feature B: the DLL now intercepts 900/901 BEFORE the modal unfocus/
 // hide path, so the menu GENUINELY stays open ("both modes toggled in one
 // visit" is now true bridge-side too), and the new ON/OFF highlight state is
 // pushed back via window.snbakaSetModeStates below (at panel open + per toggle).
@@ -992,7 +992,7 @@ function toggleMolagBal() {
   _sendChoice('901');
 }
 
-// ──  Feature B: mode-button live state, pushed from Papyrus via the DLL ──
+// ── REV-147 Feature B: mode-button live state, pushed from Papyrus via the DLL ──
 // Payload surface: window.snbakaSetModeStates(mephala, molagbal) - the proven
 // Invoke/payload pattern (SetGetUpCharge shape), invoked on the menu view.
 // mephala/molagbal are the authoritative Papyrus flags (SNBaka.MephalaMode /
@@ -1030,7 +1030,7 @@ function snbakaApplyScale() {
   const panel = document.getElementById('panel');
   if (panel) {
     panel.style.zoom = (SNBAKA_BASE_ZOOM * s).toFixed(3);
-    //  3.1: keep the panel's viewport cap in step with the live zoom
+    // REV-150 3.1: keep the panel's viewport cap in step with the live zoom
     // (the cap divides 100vh by this factor; see the #panel CSS comment).
     panel.style.setProperty('--sn-zoom', (SNBAKA_BASE_ZOOM * s).toFixed(3));
   }

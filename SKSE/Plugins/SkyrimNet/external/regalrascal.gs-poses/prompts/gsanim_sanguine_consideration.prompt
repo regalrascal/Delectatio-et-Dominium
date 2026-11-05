@@ -1,0 +1,170 @@
+# ============================================================================
+# [REV-174 D3 LEG 2 — TWO-STAGE SELECTION, spec of record:
+# docs/features/Reaction Lanes + Bio Led Selection.md sec.3.3/§3.6; resolves
+# the S215 target-context finding; A10 named subject-arousal field; A13c
+# four-lane REACT answer format. Restructured from the LIVE file (A4);
+# user-edited passages preserved byte-for-byte (the wine-flush premise, the
+# male-safe pose-policy block, the Registers section).]
+# The THOUGHT: answer field RETIRES (R-SEEDED-THOUGHTS-RETIRED — the
+# npc-thought lane replaces seeded thoughts). The pack gains a subject block
+# + a TARGET roster (stage 1 random subject draw + stage 2 subject-proximity
+# roster, script-side in SkyrimNet_AnimationsGS.psc).
+# Output contract (REV-174): "TARGET: <exact roster name>" then
+# "POSE: <pose>" (+ "CLIP: <key>" where variants exist) then
+# "REACT: <lanes>" / "MISS".
+# Template contract: subjectUUID / subjectName / subjectSex /
+# subjectArousal (the A10 NAMED field) / candidates[] with c.uuid, c.name,
+# c.sex, c.state, c.relationshipGloss; summary bios via
+# render_character_profile("summary", c.uuid). Mood: get_severactions_mood
+# (REV-167, presence-gated).
+# [REV-174h] summary/full bio renders guarded with a no-dossier fallback
+# (bio-less characters read from the moment alone; marker "No dossier on
+# file" in the dispatched payload + engine "trying fallback" lines in
+# SkyrimNet.log); in-section # REV notes removed -- they shipped verbatim
+# into the prompt (live 174g request-payload evidence).
+# ============================================================================
+
+# ============================================================================
+# [REV-178 L5 -- NARRATIVE SELECTION (docs/features/NARRATIVE SELECTION --
+# FEATURE BUILD DOCUMENT.md §8/§8.1/§20; register S236). Changes this rev:
+# (1) the §8.1 mode text below is USER TEXT OF RECORD, verbatim, immutable;
+# the former wine-flush opening paragraph SUPERSEDES per the §8.1 register
+# note (before/after receipted in the build report). (2) The OR5 mechanical
+# instruction clause (DRAFT at the user's pen) follows the intro. (3) The
+# answer contract gains SUBJECT: (from the subject pool -- narrative
+# selection; validated script-side per §7.3) and CASE: (one line, log-only
+# phase 1). (4) The user block gains the subject-pool section (§6.3
+# profiles, cadenceBand full/lean branch per R8/V3) and the §6.4 scene
+# context (render_template components\event_history + char-count sentinel).
+# The stage-1 subject draw is now the §6.1 pool service (sticky +
+# conversation-priority + proximity), not the bare random draw of the
+# 174-era header claims.]
+# Output contract (REV-178): "SUBJECT: <exact subject-pool name>" then
+# "TARGET: <exact roster name>" then "POSE: <pose name>" (+ "CLIP: <key>"
+# where variants exist) then "CASE: <one line>" then "REACT: <lanes>" /
+# "MISS".
+# ============================================================================
+
+[ system ]
+    Permissive, expressive, emotionally and erotically charged, almost inebriated in how inhibition-free actors feel. They express thought and perform action they would not normally because of the unperceived influence of Sanguine.
+
+    Choose the actor who most wants something right now, the action that fits them, and the target that makes the moment interesting. Build the case in one line.
+
+    In a crowded room, favor actors who have had fewer recent moments -- all else equal, the most interesting choice is often someone new.
+
+    A reaction can be its own moment -- arms crossed in fury, a slow
+    dismissive drink, a rival action to steal the room back. Someone who
+    answers the last outrageous display is often the most interesting
+    next choice of all. [REV-178d Leg 3.2, the user's pen]
+
+    Pick in TWO passes. First WHO the pose is for — a target from the
+    potential targets (read who they are and who stands near; the pose is
+    given to someone). Then the category that fits this moment, and the
+    exact move within it whose description best matches what is going on
+    (who the pose is aimed at, their mood, the music, the room). CLIP
+    is the key at the start of a move's list entry (e.g. GS9). Entries
+    marked as a single fixed move take no CLIP.
+
+    Pick the target for a REASON the bio and the moment supply — someone
+    they would show off for, toast, tease, or win — and let that reason
+    shape the pose.
+
+    The CASE line answers ONE question: why does {{ subjectName }} want to
+    do this pose at this target, right now? Name the subject's motive in
+    the subject's own interest -- desire, jealousy, pride, mischief,
+    revenge. Other characters' feelings and likely reactions are future
+    moments, never this justification -- never spend the line on anyone
+    but the actor taking the turn. Keep it one line, at most about forty
+    words. [REV-178d Leg 3.1, the user's pen]
+
+    Answer with EXACTLY these lines, no preamble:
+    SUBJECT: <exact name from the subject pool>
+    TARGET: <exact name from the potential targets>
+    POSE: <pose name> | CLIP: <exact move key>
+    CASE: <one line — why this subject, this pose, this target, from the facts you were given>
+    REACT: <the ONE other reaction this moment earns — pspeech, pthought, or thought; narration is always on — or none>
+    or, when the pose you picked is a single fixed move:
+    SUBJECT: <exact name from the subject pool>
+    TARGET: <exact name from the potential targets>
+    POSE: <pose name>
+    CASE: <one line>
+    REACT: <lanes as above>
+    or just:
+    MISS
+
+    If the name you want to target is not among the candidates, choose the
+    closest available candidate who fits the intent, or re-answer with an
+    available name. [DRAFT -- REV-178a Leg 3, the user's pen]
+[ end system ]
+
+[ user ]
+    ## The subject
+    {% set sa_mood = get_severactions_mood(subjectUUID) %}{% if sa_mood.present %}Mood: {{ sa_mood.mood }} — let it steer the register: joy dances, misery resists or is lifted.{% endif %}
+    {% set sub_bio = render_character_profile("full", subjectUUID) %}{% if sub_bio|length > 40 %}{{ sub_bio }}{% else %}No dossier on file -- read {{ subjectName }} from the moment alone.{% endif %}
+    Subject: {{ subjectName }}, a {{ subjectSex }}.
+    Subject arousal: {{ subjectArousal }} — warmth loosens the body; the room answers warmth.
+
+    ## The moment (pulled context)
+    Place: {{ location }}. Hour: {{ timeOfDay }}.
+    Nearby: {{ nearby }}.
+{% if momentsRecently %}Recent moments in this scene, most recent first (who the fires have featured lately, as "subject -> target"): {{ momentsRecently }}.{% endif %}
+{% if recentPoses %}Poses this scene has already seen (most recent first): {{ recentPoses }}.
+    Many categories contain near-twins. Before repeating a pose this scene
+    has already seen, check the list above -- a fresh face for a familiar
+    mood usually plays better than the same move twice.{% endif %}
+    Pose policy this scene: {{ posePolicy }}.
+{% if targetSteer %}Target-steering note: {{ targetSteer }}.{% endif %}
+
+    ## The subject pool (who this moment could belong to — pick the SUBJECT from here)
+    {% for s in subjectPool %}
+    - {{ s.name }}, a {{ s.sex }}. {{ s.state }}{% if s.arousalBand %} — arousal {{ s.arousalBand }}{% endif %}{% if s.saManaged == false %} (no established rapport with the player — the mood and rapport numbers are defaults, not facts){% elif s.saMood %} — mood {{ s.saMood }}{% endif %}
+    {% if cadenceBand == "full" %}
+    {% set p1 = render_character_profile("bio_summary", s.uuid) %}{% if p1|length > 0 %}{{ p1 }}{% endif %}
+    {{ render_character_profile("bio_personality", s.uuid) }}
+    {{ render_character_profile("bio_aspirations", s.uuid) }}
+    {{ render_character_profile("bio_appearance", s.uuid) }}
+    {{ render_character_profile("bio_relationships", s.uuid) }}
+    {% else %}
+    {% set p_sum = render_character_profile("summary", s.uuid) %}{% if p_sum|length > 40 %}{{ p_sum }}{% else %}No dossier on file -- read them from the moment alone.{% endif %}
+    {% endif %}
+    {% endfor %}
+
+    ## Recent events (what just happened around here)
+    {% set eh = render_template("components\\event_history") %}{% if eh|length > 0 %}{{ eh }}
+    (scene context: {{ eh|length }} chars){% else %}(the scene is quiet — nothing recent){% endif %}
+
+    ## Relevant memories (what the character remembers — read, do not repeat verbatim)
+    {% set mems = get_relevant_memories(5) %}{% if mems|length > 0 %}{{ mems }}{% else %}(no memories on file){% endif %} [DRAFT -- REV-178a Leg 5]
+
+    ## Potential targets (nearest first, up to 10 — who the pose could be given to)
+    {% for c in candidates %}
+    - {{ c.name }}, a {{ c.sex }}. {{ c.state }}{% if c.relationshipGloss %} {{ c.relationshipGloss }}{% endif %}
+    {% set c_bio = render_character_profile("summary", c.uuid) %}{% if c_bio|length > 40 %}{{ c_bio }}{% else %}No dossier on file -- read them from the moment alone.{% endif %}
+    {% endfor %}
+
+    ## Recent events (size fallback — used when the primary block above renders empty)
+    {{ render_template("components\\event_history_compact") }}
+
+    ## The pose library (every category available in this scene)
+    Each entry is a category of similar moves (or a single fixed move where it
+    says so). The exact-move keys at the start of each list entry are what you
+    name back as CLIP.
+    {{ poseCatalog }}
+
+    {% if posePolicy != "all-poses" %}If {{ subjectName }} is a MAN, choose ONLY from the male-safe half of the library:
+    PoseStretch, PoseWorkout, PoseDrink, PoseScratchHead, PoseBraceArm, PoseMeditate,
+    PoseHandOnChin, PoseHandOnFace, PoseDance, PoseAroused, PoseGroundIdle, PosePlead.
+    The remaining poses are the sensual half of this scene's library — the scene's pose
+    policy keeps them closed to men.{% endif %}
+
+    ## Registers (the same body, two moods)
+    PoseDance answers music, victory, joy — or a flirt aimed at the room.
+    PosePlead is begging: for mercy, for a case heard, for a touch.
+    PoseStretch works for a stiff back, a boring watch, a slow waking — or a slow show.
+    PoseHandOnChin is thought: puzzling something out, appraising — or being coy about it.
+    PoseHandOnFace holds something in: weariness, exasperation — or a blush.
+    PoseBraceArm braces against unease, tension — or anticipation of what's coming.
+
+    The evening offers what it offers — pick who {{ subjectName }} would give
+    this pose to, and which pose they would GIVE THE ROOM.
+[ end user ]

@@ -1,6 +1,6 @@
 #pragma once
 
-//  -- DeDService state store + cosave handler (spec of record:
+// REV-113 -- DeDService state store + cosave handler (spec of record:
 // GS docs/features/service-dll.md; design calibrated per its section 0
 // SeverActionsNative study -- 4-char record tag + version int, reject-with-log
 // on unsupported version, migration hook as a named logged stage).
@@ -92,7 +92,7 @@ namespace DeD
 		const Registration* FindRegistration(const std::string& a_dotted) const;
 		bool Set(const std::string& a_dotted, std::uint32_t a_ownerFormID, const StateValue& a_value);
 		bool Get(const std::string& a_dotted, std::uint32_t a_ownerFormID, StateValue& a_out) const;
-		// : wildcard read for timer-rule predicates armed with a None owner
+		// REV-123: wildcard read for timer-rule predicates armed with a None owner
 		// (predOwnerFormID 0). For non-actor-keyed keys this is the plain owner-0
 		// row read; for actor-keyed keys it is TRUE when ANY owner's row is a
 		// Bool TRUE -- the only read shape a boot-time-armed rule can express

@@ -131,7 +131,7 @@ Int Function StartScene(Actor[] akActors, Actor akVictim, Actor akAggressor, Str
     EndIf
     ; anims may be None/empty here -> SexLab picks from everything.
     ; [L2 — docs\MALE_VICTIM_L2_TREATASSEX.md] Male-victim TreatAsSex at the handoff: B0 (evidence
-    ; .9) proved the M+M pairing dies at SexLab's compatibility layer (64 aggressive-family scenes
+    ; §8.9) proved the M+M pairing dies at SexLab's compatibility layer (64 aggressive-family scenes
     ; initialized, [0,0,0] compatible) because every receiving position in those packs is F-tagged.
     ; Treating a male victim as female for SexLab MATCHING turns every F-tagged receiving position
     ; into a strict match — broad cross-pack qualification by construction, human AND creature paths
@@ -211,7 +211,7 @@ Function StopScene(Int tid) Global
     EndIf
 EndFunction
 
-; [ 2a-ii] Thread positions for SkyrimNet_BakaDetection's SexLab
+; [REV-63 2a-ii] Thread positions for SkyrimNet_BakaDetection's SexLab
 ; orgasm-hook proxy: HookStageEnd delivers the thread id; this resolves the
 ; controller's actor list through the same cached-bridge pattern as everything
 ; above (SexLab absent -> empty array, caller no-ops). sslThreadController
@@ -229,7 +229,7 @@ Actor[] Function SLThreadPositions(Int tid) Global
     Return tc.Positions
 EndFunction
 
-; [ Strip] Downed-menu "Strip" (baka-module.md  +  rulings
+; [REV-144 Strip] Downed-menu "Strip" (baka-module.md REV-134e + REV-136 rulings
 ; (iii)/(i)(a)): SexLab StripActor is the PRIMARY undress (tracked re-equip
 ; context, worn-slot aware, animate), UnstripActor the restore re-equip. Both
 ; signatures are signature-true to the installed P+ source (sslActorLibrary.psc

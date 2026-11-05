@@ -1,9 +1,9 @@
 Scriptname SNBaka_SlaveTatsModule
-;  SlaveTats module (recordless observer/detection class ? module contract point 3,
+; REV-72 SlaveTats module (recordless observer/detection class ? module contract point 3,
 ; fomod.md ?architecture). NO SexLab/OStim/etc types here; the only foreign API surface is
 ; SlaveTats itself (compile-stubbed in tools\compile\local; runtime resolved from whichever
 ; SlaveTats install wins MO2 priority ? currently SlaveTatsNG 0.8.2, a strict superset of
-; legacy SE per the  research, so this module's calls are safe under either).
+; legacy SE per the REV-72 research, so this module's calls are safe under either).
 
 ; ------------------------------------------------------------------
 ; STATE (StorageUtil, "SNBaka.ST." prefix; player-keyed)
@@ -19,16 +19,16 @@ Scriptname SNBaka_SlaveTatsModule
 ;   SNBaka.ST.SectionCount  Int   sections found in the last discovery pass (diagnostic)
 ;   SNBaka.ST.DiscoveredAt  Float game-time stamp of the last discovery pass
 ;   SNBaka.ST.Applied       StringList (actor-keyed) applied entries this module owns
-;    v3 entry format: "section|name|color|mode|area|timestamp"
+;   REV-150 v3 entry format: "section|name|color|mode|area|timestamp"
 ;     (timestamp = real-time seconds, Utility.GetCurrentRealTime(); mode = the
 ;     application origin - spank/defeat/escalation/picker/llm_action/downedmenu/
 ;     event/forced; area = the SlaveTats area the mark lives on, resolved from
-;     the cache at apply time - Body/Face/Hands/Feet).  "section|name" and
-;      "section|name|color" entries remain readable: fields parse
+;     the cache at apply time - Body/Face/Hands/Feet). REV-72 "section|name" and
+;     REV-74 "section|name|color" entries remain readable: fields parse
 ;     positionally, absent fields default (mode=event, area="", timestamp=0 ->
 ;     freshness band "unknown"); _DropAppliedEntry is field-count agnostic
 ;     (prefix match), so old and new entries remove identically.
-;   SNBaka.ST.Observe       Int   : master gate of the AMBIENT
+;   SNBaka.ST.Observe       Int   REV-156: master gate of the AMBIENT
 ;     EXPOSURE PASS (folded from the retired v1 ObservationPass; default 1)
 ;   SNBaka.ST.AmbientPct    Int   fire chance per daemon tick, percent
 ;     (default 35; MCM slider "Ambient Exposure Chance")
@@ -44,7 +44,7 @@ Bool Function Installed() Global
     ; Framework presence = the SlaveTats quest record loads from the esp (legacy SE esp, or
     ; the NG overwrite ? NG's runtime SlaveTats.pex shadows SE's by MO2 priority, but both
     ; installs carry SlaveTats.esp; the record resolves either way).
-    ;  F-3 (S181 finding): cached ABSENCE -- the uncached probe logged a hard
+    ; REV-159 F-3 (S181 finding): cached ABSENCE -- the uncached probe logged a hard
     ; Papyrus error on every caller (arm pass + the new 30s ambient cadence) when the
     ; esp is absent. esp load state cannot change within a session; the flag is set
     ; once on first failed probe and short-circuits every later call.
@@ -59,7 +59,7 @@ Bool Function Installed() Global
     Return bPresent
 EndFunction
 
-; SlaveTatsNG detection ( research 1d): NG's runtime SlaveTats.VERSION() returns
+; SlaveTatsNG detection (REV-72 research 1d): NG's runtime SlaveTats.VERSION() returns
 ; SlaveTatsNG.VERSION() (e.g. "0.8.2"); legacy SE returns "1.0.0" (data-structure version).
 ; Rather than parsing version strings, probe the NG SKSE plugin directly (zero => absent).
 Bool Function NGDetected() Global
@@ -67,7 +67,7 @@ Bool Function NGDetected() Global
 EndFunction
 
 ; ------------------------------------------------------------------
-; DISCOVERY ( research 1a/1c)
+; DISCOVERY (REV-72 research 1a/1c)
 ; ------------------------------------------------------------------
 ; SlaveTats discovers packs purely from the filesystem: compile_cache() JContainers-scans
 ; Data\Textures\Actors\Character\slavetats\*.json into the JDB cache at .SlaveTats.cache.
@@ -125,9 +125,9 @@ EndFunction
 ; ------------------------------------------------------------------
 
 ; ------------------------------------------------------------------
-; .1 (2026-10-24) ? MALE-CURATION SCREEN (user ruling of record,
-; slavetats.md .1). SlaveTats application is gender-agnostic; the
-;  3.4 [malebody] refuse-all model flips to a WHITELIST:
+; REV-150.1 (2026-10-24) ? MALE-CURATION SCREEN (user ruling of record,
+; slavetats.md REV-150.1). SlaveTats application is gender-agnostic; the
+; REV-150 3.4 [malebody] refuse-all model flips to a WHITELIST:
 ;   (1) all "Gay - *" and "Femboy" sections auto-whitelist (the
 ;       Slavetats-GayMisc pack class ? male-authored by construction);
 ;   (2) every other pack passes a female-anatomy keyword denylist
@@ -156,7 +156,7 @@ String Function _ToLower(String asText) Global
     Return result
 EndFunction
 
-; The female-anatomy keyword denylist (.1 ruling wording: pussy/
+; The female-anatomy keyword denylist (REV-150.1 ruling wording: pussy/
 ; vagina/cunt/clit/labia/breast/boob/tit/titty/nipple/womb/cervix/milf).
 ; True = hit = refuse the male apply. Additive at the user's pen: new
 ; words = one more ElseIf on the lowered text (ruling: wording-only).
@@ -223,14 +223,14 @@ Bool Function _IsFemaleClass(Actor akTarget) Global
 EndFunction
 
 ; Apply one tattoo entry. Returns true if SlaveTats accepted the call.
-; : aiColor < 0 = "not chosen" -> the module-wide default color (SNBaka.ST.DefaultColor,
+; REV-74: aiColor < 0 = "not chosen" -> the module-wide default color (SNBaka.ST.DefaultColor,
 ; itself 0 = pack default / no recolor); aiColor 0 = pack default (explicit). The color is a
 ; 0xRRGGBB int; hex strings from the picker are parsed by _HexToInt.
 Bool Function ApplyTattoo(Actor akTarget, String asSection, String asName, Int aiColor = -1, Bool abSilent = True, String asMode = "event") Global
     If !akTarget || !Installed()
         Return False
     EndIf
-    ; .1 male-curation gate ? THE choke point for every module avenue
+    ; REV-150.1 male-curation gate ? THE choke point for every module avenue
     ; (spank/defeat/escalation sets, picker, LLM actions, forced service).
     ; Female-class targets pass ungated; male-class targets must pass the
     ; whitelist screen (Gay - */Femboy auto-whitelist, else keyword denylist
@@ -244,7 +244,7 @@ Bool Function ApplyTattoo(Actor akTarget, String asSection, String asName, Int a
     EndIf
     Bool ok = SlaveTats.simple_add_tattoo(akTarget, asSection, asName, aiColor, True, abSilent, 1.0)
     If ok
-        ;  4.2: the v3 entry carries mode + area (cache-resolved) + the
+        ; REV-150 4.2: the v3 entry carries mode + area (cache-resolved) + the
         ; real-time apply stamp (the cum 0175 freshness-band precedent).
         StorageUtil.StringListAdd(akTarget, "SNBaka.ST.Applied", \
             asSection + "|" + asName + "|" + aiColor + "|" + asMode + "|" + _ResolveAreaFor(asSection, asName) + "|" + Utility.GetCurrentRealTime(), True)
@@ -259,7 +259,7 @@ Bool Function ApplyTattoo(Actor akTarget, String asSection, String asName, Int a
     Return ok
 EndFunction
 
-; Remove one tattoo entry. : fires sdb_tattoo_removed on success (rider 2: EVERY removal
+; Remove one tattoo entry. REV-74: fires sdb_tattoo_removed on success (rider 2: EVERY removal
 ; path fires, picker/ambient/LLM action alike).
 Bool Function RemoveTattoo(Actor akTarget, String asSection, String asName, Bool abSilent = True, String asMode = "event") Global
     If !akTarget || !Installed()
@@ -276,13 +276,13 @@ Bool Function RemoveTattoo(Actor akTarget, String asSection, String asName, Bool
     Return ok
 EndFunction
 
-; : applied-list entry now carries the color: "section|name|color" (old "section|name"
-; entries from  saves remain readable ? the color field simply parses as absent/0).
+; REV-74: applied-list entry now carries the color: "section|name|color" (old "section|name"
+; entries from REV-72 saves remain readable ? the color field simply parses as absent/0).
 String Function sectionColorEntry(String asSection, String asName, Int aiColor) Global
     Return asSection + "|" + asName + "|" + aiColor
 EndFunction
 
-; : drop one section|name pair from the applied bookkeeping (color-insensitive).
+; REV-74: drop one section|name pair from the applied bookkeeping (color-insensitive).
 Function _DropAppliedEntry(Actor akTarget, String asSection, String asName) Global
     Int cnt = StorageUtil.StringListCount(akTarget, "SNBaka.ST.Applied")
     Int i = cnt
@@ -296,11 +296,11 @@ Function _DropAppliedEntry(Actor akTarget, String asSection, String asName) Glob
     EndWhile
 EndFunction
 
-;  (rider 2): application-event triggers ? fired from EVERY application path with the
+; REV-74 (rider 2): application-event triggers ? fired from EVERY application path with the
 ; full payload the rider specifies (actor, section, name, location data, color, mode).
-; Sentinel per fire is the  full-payload pattern: the event text itself carries the
+; Sentinel per fire is the REV-65 full-payload pattern: the event text itself carries the
 ; payload so the YAML cue can react to the SPECIFIC mark ({{ target }} etc. do the rest).
-;  (?7 approved, ruling 3c): base text is OBSERVABLE-ONLY ("a fresh mark on their
+; REV-82 (?7 approved, ruling 3c): base text is OBSERVABLE-ONLY ("a fresh mark on their
 ; skin" ? the ?7 payload-reachability finding: response.content templates only player_name /
 ; event_json / time_desc / location / gameTimeStr and our 4-arg RegisterEvent fires no
 ; extraData, so section/name is NOT templateable in the YAML layer; the specific mark rides
@@ -325,7 +325,7 @@ Function _FireEvent(Bool abApplied, Actor akTarget, String asSection, String asN
     Debug.Trace("[SNBaka.ST] _FireEvent: " + evName + " mode=" + asMode + " color=0x" + _IntToHex(aiColor))
 EndFunction
 
-;  (?7, Draft C approved): arousal tier for the applied-event clause, read on the
+; REV-82 (?7, Draft C approved): arousal tier for the applied-event clause, read on the
 ; MARKED ACTOR's own arousal (self-keyed interpretation of record ? cumflation's matrix
 ; already conforms). Primary: OSL Aroused Reborn pure read via its SKSE plugin
 ; (GetArousal has time-update side effects ? NEVER at fire time; the plugin-version gate
@@ -333,7 +333,7 @@ EndFunction
 ; the "sla_Framework" quest (both NG and Reborn ship that quest/script pair; Reborn is
 ; caught by the primary, NG only by this). Neither readable -> "" (neutral = SILENCE,
 ; no invented state). Thresholds per the D&D Features Planner: >=75 / 25?75 / <=25.
-; Clause wording standard OF RECORD (ratified ?7, ): OBSERVABLE BEHAVIOR ONLY ?
+; Clause wording standard OF RECORD (ratified ?7, REV-82): OBSERVABLE BEHAVIOR ONLY ?
 ; describe what shows, never assert an internal state. This standard generalizes to
 ; every planner matrix implementation.
 String Function _ArousalClause(Actor akTarget) Global
@@ -358,7 +358,7 @@ String Function _ArousalClause(Actor akTarget) Global
     EndIf
 EndFunction
 
-; : 0xRRGGBB int <-> "rrggbb" hex string for the picker payload.
+; REV-74: 0xRRGGBB int <-> "rrggbb" hex string for the picker payload.
 Int Function _HexToInt(String asHex) Global
     Int v = 0
     Int i = 0
@@ -394,7 +394,7 @@ EndFunction
 
 ; Remove every entry the module applied to this actor (own bookkeeping list; never touches
 ; the framework's "SkyrimNet Spank" section entries applied by Baka's spank system).
-; : entries are "section|name|color" (legacy  entries "section|name"); each
+; REV-74: entries are "section|name|color" (legacy REV-72 entries "section|name"); each
 ; removal fires sdb_tattoo_removed via RemoveTattoo. asMode labels the calling surface.
 Function RemoveAllFromActor(Actor akTarget, String asMode = "bulk") Global
     If !akTarget
@@ -415,7 +415,7 @@ Function RemoveAllFromActor(Actor akTarget, String asMode = "bulk") Global
             If sep2 >= 0
                 nm = StringUtil.Substring(rest, 0, sep2)    ; strip the trailing color field
             Else
-                nm = rest                                    ; legacy  entry
+                nm = rest                                    ; legacy REV-72 entry
             EndIf
         EndIf
         If sec != "" && nm != ""
@@ -499,9 +499,9 @@ EndFunction
 ; ------------------------------------------------------------------
 
 ; ------------------------------------------------------------------
-;  (2026-10-24) - TATTOO v2 SESSION 1: APPLIED-STATE MODEL (4.2)
+; REV-150 (2026-10-24) - TATTOO v2 SESSION 1: APPLIED-STATE MODEL (4.2)
 ; + VISIBILITY CASCADE (4.1) + FORCED-TATTOO SERVICE (4.3)
-; Spec of record: slavetats.md  6.1-6.3 + the planner's Tattoo
+; Spec of record: slavetats.md REV-134e 6.1-6.3 + the planner's Tattoo
 ; Application section. Batch mode: pure Papyrus + content; NO DLL/esp.
 ; ------------------------------------------------------------------
 
@@ -557,7 +557,7 @@ EndFunction
 
 ; 4.2: freshness band for an apply timestamp (real-time seconds). Bands per
 ; the cum fragment precedent (0175: <600 fresh / <3600 drying / else faded);
-; timestamp 0 = legacy entry (pre-) -> "unknown".
+; timestamp 0 = legacy entry (pre-REV-150) -> "unknown".
 String Function FreshnessBand(Float afStamp, Float afNow = -1.0) Global
     If afStamp <= 0.0
         Return "unknown"
@@ -612,7 +612,7 @@ Int Function _AreaSlotMask(String asArea) Global
     Return Math.LeftShift(1, 32 - 30)    ; Body (and ""/unknown) -> body slot
 EndFunction
 
-; 4.1 LAYER 2 - revealing-armor keyword exceptions.  3.3 VERDICT:
+; 4.1 LAYER 2 - revealing-armor keyword exceptions. REV-150 3.3 VERDICT:
 ; NOT BUILT - the installed packs' json metadata carries ONLY
 ; name/section/texture/area/credit (probed read-only, anal.json + Femboy.json
 ; cited); the "revealing" keyword class lives in the ARMOR mods' esps, and no
@@ -623,7 +623,7 @@ Bool Function _RevealingKeywordException(Actor akTarget, Int aiSlotMask) Global
     Return False
 EndFunction
 
-; 4.1 LAYER 3 - DD occlusion, presence-gated.  3.3/6.2 VERDICT: DD IS
+; 4.1 LAYER 3 - DD occlusion, presence-gated. REV-150 3.3/6.2 VERDICT: DD IS
 ; installed (DeviousDevices.dll, SexLab - Devious Devices NG folder cited)
 ; but the zad_ keyword FORM IDS are NOT source-resolvable (Devious Devices -
 ; BRRF.esp is fully compressed - zero plain-text zad_ strings; the SE patch
@@ -717,7 +717,7 @@ Bool Function ForcedTattoo(Actor akAggressor, Actor akVictim) Global
         Debug.Trace("[SNBaka.ST] ForcedTattoo: REFUSED [noset] - no defeat or spank set configured (MCM / SlaveTats set menu)")
         Return False
     EndIf
-    ; .1: a male-class victim whose configured set is NOT male-curated
+    ; REV-150.1: a male-class victim whose configured set is NOT male-curated
     ; falls back to a random curated pick from the discovered packs (the
     ; Gay - */Femboy auto-whitelist class, then the keyword screen). No
     ; curated entry installed at all -> refuse [male-none-curated].
@@ -735,7 +735,7 @@ Bool Function ForcedTattoo(Actor akAggressor, Actor akVictim) Global
     Return ApplyTattoo(akVictim, section, name, color, True, "forced")
 EndFunction
 
-; .1: pick a random male-curated entry from the discovered cache.
+; REV-150.1: pick a random male-curated entry from the discovered cache.
 ; Pool pass = sections that pass MaleMayWear at section level (the
 ; Gay - */Femboy class auto-whitelists whole sections; other sections
 ; pass only when their own title text is anatomy-clean), then roll a
@@ -788,7 +788,7 @@ EndFunction
 
 Function Arm() Global
     Debug.Trace("[SNBaka] module-arm: SlaveTats presence=" + Installed() + " NG=" + NGDetected())
-    ; : the prompt-layer decorators (the 0175/132b registration
+    ; REV-157: the prompt-layer decorators (the 0175/132b registration
     ; class -- module-owned, idempotent every arm pass).
     Int rcFacts = SkyrimNetApi.RegisterDecorator("get_ded_marks", "SNBaka_SlaveTatsModule", "GetDedMarks")
     Int rcAny = SkyrimNetApi.RegisterDecorator("get_ded_marks_any", "SNBaka_SlaveTatsModule", "GetDedMarksAny")
@@ -796,21 +796,21 @@ Function Arm() Global
 EndFunction
 
 ; ------------------------------------------------------------------
-;  ? AMBIENT EXPOSURE PASS (daemon-tick consumer)
+; REV-156 ? AMBIENT EXPOSURE PASS (daemon-tick consumer)
 ; ------------------------------------------------------------------
-; *** RETIREMENT BANNER (, 2026-10-24): the v1 ObservationPass
-; ( rider 3 ? player-only, ~4 game-hour cadence via
+; *** RETIREMENT BANNER (REV-156, 2026-10-24): the v1 ObservationPass
+; (REV-74 rider 3 ? player-only, ~4 game-hour cadence via
 ; SNBaka.ST.ObserveHours, heartbeat-dispatched from the motherboard's
 ; OnUpdateGameTime) is RETIRED. Superseded by THIS pass: visibility-gated
-; (the  cascade's layer-1 truth), any nearby actor, any visible
+; (the REV-150 cascade's layer-1 truth), any nearby actor, any visible
 ; mark (foreign marks included ? the 3.3 verdict), daemon-tick cadence
 ; in both modes (the motherboard hook is _DaemonTick). History lives in
 ; git; the shipped tree carries exactly one ambient observation pass.
 ; The MCM "Ambient Observation Cues" toggle (SNBaka.ST.Observe) is
-; FOLDED to this pass as its master gate. Records: slavetats.md  +
+; FOLDED to this pass as its master gate. Records: slavetats.md REV-156 +
 ; PROJECT_STATE section 178.
 ;
-; SHAPE (user rulings,  exchange):
+; SHAPE (user rulings, REV-156 exchange):
 ;   - fires from the DAEMON TICK at ~35% likelihood when a tattoo is
 ;     VISIBLE (key SNBaka.ST.AmbientPct, default 35, MCM slider
 ;     "Ambient Exposure Chance"); fail = silent-with-sentinel.
@@ -825,7 +825,7 @@ EndFunction
 ;     recommended + adopted, surfaced for confirmation).
 ;   - the cue branches on APPLICATION-SPECIFIC information: LOCATION
 ;     (v3 area), the SPECIFIC tattoo name, the wearer, and the wearer's
-;     observable arousal tier (the  witness-chain clause wording
+;     observable arousal tier (the REV-82 witness-chain clause wording
 ;     of record via _ArousalClause, self-keyed standard ? the reacting
 ;     NPC is unknown at fire time, so the wearer's observable state
 ;     carries the register; recorded interpretation, user-correctable).
@@ -858,6 +858,19 @@ Function AmbientExposurePass() Global
     Actor[] all = PO3_SKSEFunctions.GetActorsByProcessingLevel(0)
     Int i = 0
     While i < all.Length && nW < 8
+        ; REV-167c 2.4 (community performance fold, DEFENSIVE HARDENING for
+        ; crowded cells / NGVO-class loadouts): yield 0.01s every 4 processed
+        ; entries so the walk shares the VM frame with the rest of the game.
+        ; The finder's careful design point is preserved -- NO query handle is
+        ; held across the wait: GetActorsByProcessingLevel returns a plain
+        ; Papyrus array (a snapshot copy), so nothing engine-side is open
+        ; during Utility.Wait. Cadence/chance rules unchanged (their note):
+        ; this only spreads the walk's cost, the roll/cooldown logic below is
+        ; untouched. Our 8-wearer cap makes this rarely-load-bearing; adopted
+        ; as hardening for the wild-NGVO case.
+        If i > 0 && (i % 4) == 0
+            Utility.Wait(0.01)
+        EndIf
         Actor a = all[i]
         If a && !a.IsDead() && !a.IsChild() && a.GetDistance(p) <= 2500.0
             If _FirstVisibleMark(a) != ""
@@ -906,13 +919,13 @@ Function AmbientExposurePass() Global
     StorageUtil.SetFloatValue(ak, "SNBaka.ST.AmbientLast", now)
     ; Cue (mandatory): branched on location + the specific mark + the
     ; wearer. Register entry 35 DRAFT (branch wordings at the user's pen).
-    ;  SLIM (ruling (b), register entry 36): the cue drops to
+    ; REV-157 SLIM (ruling (b), register entry 36): the cue drops to
     ; NUDGE-CLASS wording -- the standing facts (visible marks on self /
     ; others, section + name + location) now live in the get_ded_marks
     ; bio fragment (0177_ded_tattoos.prompt) and the application
     ; specifics stay in the APPLICATION events (sdb_tattoo_applied,
     ; ruling (a), untouched).
-    ;  3.2 recast (register DRAFT): the observed cue drops the
+    ; REV-161 3.2 recast (register DRAFT): the observed cue drops the
     ; wearer's immediate-reaction clause (_ArousalClause -- the wearer's
     ; in-the-moment reaction is the APPLIED cue's territory only,
     ; sdb_tattoo_applied); the AMBIENT carries OTHERS noticing the mark,
@@ -936,7 +949,7 @@ EndFunction
 ; The first VISIBLE mark on an actor, any source (the 3.3 foreign-marks
 ; verdict): "section|name|area", or "" when nothing visible. Layer-1
 ; truth only (the coverage-default table; layers 2/3 stay named-gap per
-; the  3.3 verdict ? no re-attempting). query_applied_tattoos
+; the REV-150 3.3 verdict ? no re-attempting). query_applied_tattoos
 ; reads the FRAMEWORK's own applied bookkeeping (JFormDB), so marks
 ; applied by any means are enumerated ? module-owned and foreign alike.
 String Function _FirstVisibleMark(Actor akTarget) Global
@@ -971,13 +984,13 @@ String Function _FirstVisibleMark(Actor akTarget) Global
     Return hit
 EndFunction
 
-;  4.5/4.6: validate an LLM-chosen (section, name) against the
+; REV-156 4.5/4.6: validate an LLM-chosen (section, name) against the
 ; live pack cache. Returns "section|name" as a 2-slot array; "" on
 ; refuse. Invalid section -> random section; invalid name -> random
 ; name from the chosen section (bounded, sentinel'd fallbacks ? the LLM
 ; guidance points at the cache, the fallback keeps the lane functional
 ; on a stray pick). Body-compat is NOT screened here ? the ApplyTattoo
-; choke point owns it ([male-not-curated], the .1 class).
+; choke point owns it ([male-not-curated], the REV-150.1 class).
 String[] Function ValidatePick(String asSection, String asName) Global
     String[] out = Utility.CreateStringArray(2, "")
     String[] sections = GetSections()
@@ -1005,14 +1018,252 @@ String[] Function ValidatePick(String asSection, String asName) Global
     Return out
 EndFunction
 
+; [REV-178e] LLM-lane curated picking: EXCLUDES event makeup AND pre-screens
+; body-compat (curate-before-pick). The LLM lanes are agent/dialogue-initiated
+; decoration lanes -- the event-consequence textures (Baka's hardcoded
+; "SkyrimNet Spank" heat/tear/breast marks and the three MCM degradation-set
+; slots spank/defeat/escalation) are reserved to their event hooks. User
+; ruling (supersedes the REV-164 configured-set preference): a "brand them
+; with a tattoo" narration must never resolve to spank redness. Rider 2:
+; MaleMayWear screening moved INTO the pick (male targets can no longer be
+; handed a pick the choke point will then refuse) -- the ApplyTattoo choke
+; point stays as the belt, the pick is now the suspenders.
+
+; Shared event-makeup section list: Baka's hardcoded event section + the
+; three configured MCM degradation-set slot sections ("" when unconfigured).
+String[] Function _EventSections() Global
+    Actor p = Game.GetPlayer()
+    String[] excluded = Utility.CreateStringArray(4, "")
+    excluded[0] = "SkyrimNet Spank"
+    excluded[1] = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetSection", "")
+    excluded[2] = StorageUtil.GetStringValue(p, "SNBaka.ST.DefeatSetSection", "")
+    excluded[3] = StorageUtil.GetStringValue(p, "SNBaka.ST.EscalationSetSection", "")
+    Return excluded
+EndFunction
+
+Bool Function _SectionIsEvent(String asSection) Global
+    If asSection == ""
+        Return False
+    EndIf
+    Return _EventSections().Find(asSection) >= 0
+EndFunction
+
+; Body-compat pre-screen (the REV-150.1 class, hoisted out of the choke
+; point so picks are wearable by construction; the choke point remains).
+Bool Function _WearableBy(Actor akTarget, String asSection, String asName) Global
+    If !akTarget
+        Return True
+    EndIf
+    Return _IsFemaleClass(akTarget) || MaleMayWear(asSection, asName)
+EndFunction
+
+; Flat "section|name" candidate list across all non-event sections,
+; body-compat screened for akTarget. Two-pass (count then fill) -- no
+; SKSE resize helpers assumed.
+String[] Function _CuratedCandidates(Actor akTarget) Global
+    String[] sections = GetSections()
+    Int cnt = 0
+    Int i = 0
+    While i < sections.Length
+        If sections[i] != "" && !_SectionIsEvent(sections[i])
+            String[] names = GetSetNames(sections[i])
+            Int j = 0
+            While j < names.Length
+                If _WearableBy(akTarget, sections[i], names[j])
+                    cnt += 1
+                EndIf
+                j += 1
+            EndWhile
+        EndIf
+        i += 1
+    EndWhile
+    String[] result = Utility.CreateStringArray(cnt, "")
+    Int k = 0
+    i = 0
+    While i < sections.Length && k < cnt
+        If sections[i] != "" && !_SectionIsEvent(sections[i])
+            String[] names = GetSetNames(sections[i])
+            Int j = 0
+            While j < names.Length && k < cnt
+                If _WearableBy(akTarget, sections[i], names[j])
+                    result[k] = sections[i] + "|" + names[j]
+                    k += 1
+                EndIf
+                j += 1
+            EndWhile
+        EndIf
+        i += 1
+    EndWhile
+    Return result
+EndFunction
+
+; Random curated pick for the unnamed LLM lane (ApplyTattoo). Returns a
+; 2-slot array; empty on refuse ([noeligible] no non-event body-compatible
+; entry exists).
+String[] Function CuratedLLMPick(Actor akTarget) Global
+    String[] out = Utility.CreateStringArray(2, "")
+    String[] cands = _CuratedCandidates(akTarget)
+    If cands.Length == 0
+        Debug.Trace("[SNBaka.ST] CuratedLLMPick: REFUSED [noeligible] - no non-event body-compatible entry (SkyrimNet Spank / configured degradation sets / male whitelist exclusions) -- REV-178e")
+        Return out
+    EndIf
+    String pick = cands[Utility.RandomInt(0, cands.Length - 1)]
+    Int sep = StringUtil.Find(pick, "|")
+    out[0] = StringUtil.Substring(pick, 0, sep)
+    out[1] = StringUtil.Substring(pick, sep + 1)
+    Return out
+EndFunction
+
+; [REV-178e rider 4 / S250] COMPACT curated pack listing for the selection
+; ask's packList field (user direction: extract the packs and list the tattoo
+; NAMES only -- bullet-compact, "Section: name; name; ..." sections joined by
+; " | ", body-compat screened per target). The rider-2 curation rides into
+; the ask: event-makeup sections ("SkyrimNet Spank" + the three MCM
+; degradation-set sections) never appear here. User ruling 2: NO per-section
+; cap -- the global whole-line truncation guard is the only bound (bites only
+; on mega-pack installs; drops WHOLE sections with a receipt, never
+; mid-name). Cap 2400: the compact names-only shape buys roughly 3x the
+; roster per character vs a verbose listing.
+String Function CuratedPackText(Actor akTarget, Int aiMaxLen = 2400) Global
+    String[] sections = GetSections()
+    If sections.Length == 0
+        Return ""
+    EndIf
+    String out = ""
+    Int i = 0
+    While i < sections.Length
+        If sections[i] != "" && !_SectionIsEvent(sections[i])
+            String[] names = GetSetNames(sections[i])
+            String line = ""
+            Int j = 0
+            While j < names.Length
+                If names[j] != "" && _WearableBy(akTarget, sections[i], names[j])
+                    If line != ""
+                        line = line + "; "
+                    EndIf
+                    line = line + names[j]
+                EndIf
+                j += 1
+            EndWhile
+            If line != ""
+                String full = sections[i] + ": " + line
+                If StringUtil.GetLength(out) + StringUtil.GetLength(full) + 3 > aiMaxLen
+                    Debug.Trace("[SNBaka.ST] CuratedPackText: cap " + aiMaxLen + " reached - dropping '" + sections[i] + "' and remaining sections (whole-line guard, S244 Leg 3.1 discipline) -- REV-178e rider 4 receipt")
+                    i = sections.Length    ; break the outer loop
+                Else
+                    If out != ""
+                        out = out + " | "
+                    EndIf
+                    out = out + full
+                EndIf
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    Return out
+EndFunction
+
+; [REV-178e rider 4 / S250] compact one-line summary of the target's
+; currently module-applied tattoos ("section/name; section/name") for the
+; ask's anti-reapply context field; "" when none applied.
+String Function CuratedAppliedText(Actor akTarget) Global
+    If !akTarget
+        Return ""
+    EndIf
+    Int cnt = StorageUtil.StringListCount(akTarget, "SNBaka.ST.Applied")
+    String out = ""
+    Int i = 0
+    While i < cnt
+        String[] p = _EntryParts(StorageUtil.StringListGet(akTarget, "SNBaka.ST.Applied", i))
+        If p.Length >= 2 && p[0] != "" && p[1] != ""
+            If out != ""
+                out = out + "; "
+            EndIf
+            out = out + p[0] + "/" + p[1]
+        EndIf
+        i += 1
+    EndWhile
+    Return out
+EndFunction
+
+; [REV-178e rider 2] Curated validation for the LLM-NAMED lanes
+; (CommandTattoo / MarkPlayer): honors the LLM's (section, name) when it is
+; in-cache, NON-event, and body-compatible; degrades to a random wearable
+; name within the named section when the section survives but the name does
+; not; degrades to a random global curated candidate otherwise. Reason-coded
+; refuses: [nopacks] (nothing discovered) / [noeligible] (nothing non-event
+; body-compatible). Replaces raw ValidatePick on these lanes.
+String[] Function ValidatePickCurated(Actor akTarget, String asSection, String asName) Global
+    String[] out = Utility.CreateStringArray(2, "")
+    String[] sections = GetSections()
+    If sections.Length == 0
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: REFUSED [nopacks] - no sections discovered -- REV-178e")
+        Return out
+    EndIf
+    Bool secOK = asSection != "" && sections.Find(asSection) >= 0
+    If secOK && _SectionIsEvent(asSection)
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: named section '" + asSection + "' is EVENT MAKEUP - excluded, curated fallback -- REV-178e")
+        secOK = False
+    EndIf
+    If secOK
+        String[] names = GetSetNames(asSection)
+        If asName != "" && names.Find(asName) >= 0
+            If _WearableBy(akTarget, asSection, asName)
+                out[0] = asSection
+                out[1] = asName
+                Return out
+            EndIf
+            Debug.Trace("[SNBaka.ST] ValidatePickCurated: named '" + asName + "' (" + asSection + ") fails body-compat - in-section curated degrade (curate-before-pick) -- REV-178e")
+        EndIf
+        ; Degrade within the named section: wearable names only.
+        Int cnt = 0
+        Int i = 0
+        While i < names.Length
+            If _WearableBy(akTarget, asSection, names[i])
+                cnt += 1
+            EndIf
+            i += 1
+        EndWhile
+        If cnt > 0
+            Int want = Utility.RandomInt(1, cnt)
+            Int seen = 0
+            i = 0
+            While i < names.Length
+                If _WearableBy(akTarget, asSection, names[i])
+                    seen += 1
+                    If seen == want
+                        out[0] = asSection
+                        out[1] = names[i]
+                        Return out
+                    EndIf
+                EndIf
+                i += 1
+            EndWhile
+        EndIf
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: no wearable entry in named section '" + asSection + "' - global curated fallback -- REV-178e")
+    ElseIf asSection != ""
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: named section '" + asSection + "' not in cache - global curated fallback -- REV-178e")
+    EndIf
+    String[] cands = _CuratedCandidates(akTarget)
+    If cands.Length == 0
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: REFUSED [noeligible] - no non-event body-compatible entry -- REV-178e")
+        Return out
+    EndIf
+    String pick = cands[Utility.RandomInt(0, cands.Length - 1)]
+    Int sep = StringUtil.Find(pick, "|")
+    out[0] = StringUtil.Substring(pick, 0, sep)
+    out[1] = StringUtil.Substring(pick, sep + 1)
+    Return out
+EndFunction
+
 ; ------------------------------------------------------------------
-; SET PICKING (PrismaUI SNSlaveTats_Menu,  Task 3)
+; SET PICKING (PrismaUI SNSlaveTats_Menu, REV-72 Task 3)
 ; ------------------------------------------------------------------
 ; The cache groups tattoos as cache -> domain("default") -> area -> section, and one
 ; section can span several areas (e.g. face + body entries of the same pack section).
 ; Enumeration therefore unions across areas.
 ;
-; -b ? SECTION-NODE SHAPE (SE vs NG, the  discovery root cause):
+; REV-76-b ? SECTION-NODE SHAPE (SE vs NG, the REV-77 discovery root cause):
 ;   SE 1.3.x: the section node is a JMap KEYED BY TATTOO NAME (names = map keys).
 ;   NG 0.8.x: the section node is a JArray OF ENTRY OBJECTS; each entry JMap carries
 ;   "name" (and "section") as values ? cf. NG's own SlaveTatsMCMMenu.psc _setup_sections.
@@ -1053,7 +1304,7 @@ String[] Function GetSections() Global
         EndWhile
     EndIf
     SlaveTats.release_cache()
-    ;  menu-path sentinel (?5): GetSections was one of the four silent functions
+    ; REV-79 menu-path sentinel (?5): GetSections was one of the four silent functions
     ; on the picker path ? the ?80 diagnosis had to infer its health from side effects.
     Debug.Trace("[SNBaka.ST] GetSections: " + result.Length + " sections")
     Return result
@@ -1062,7 +1313,7 @@ EndFunction
 ; Build the SNSlaveTats_Menu JSON payload: current chosen sets + every discovered
 ; section with its tattoo names. Capped (60 sections / 30 names) so the JS payload
 ; stays sane for big installs; escaping is minimal (| and quotes are not expected in
-; SlaveTats section/name keys). : payload carries "disc"/"emit" counts so the
+; SlaveTats section/name keys). REV-79: payload carries "disc"/"emit" counts so the
 ; view's empty state can distinguish NOTHING-DISCOVERED from DISCOVERED-BUT-DROPPED
 ; (the ?80 UX lie), and the build itself traces the sections/listed/dropped triple.
 String Function BuildMenuJSON() Global
@@ -1097,7 +1348,7 @@ String Function BuildMenuJSON() Global
         s += 1
     EndWhile
     json += "]"
-    ;  counted empty-state: the view gets discovery-vs-listed counts so it can
+    ; REV-79 counted empty-state: the view gets discovery-vs-listed counts so it can
     ; tell "nothing discovered" from "discovered but dropped at render" (?80 UX lie).
     json += ",\"disc\":" + sections.Length + ",\"emit\":" + emitted + "}"
     Debug.Trace("[SNBaka.ST] BuildMenuJSON: sections=" + sections.Length + " listed=" + emitted + " dropped=" + (sections.Length - emitted))
@@ -1118,10 +1369,10 @@ Function OpenSetMenu() Global
         Return
     EndIf
     RefreshPacks()
-    ;  menu-path sentinel (?5): OpenSetMenu was silent on the MCM path.
+    ; REV-79 menu-path sentinel (?5): OpenSetMenu was silent on the MCM path.
     Debug.Trace("[SNBaka.ST] Picker: open path=MCM sections=" + StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.SectionCount", -1))
     SNBakaUI.ShowSlaveTatsMenu(BuildMenuJSON())
-    ;  ?5 rider (picker defect, view-render class): the  sentinel fires
+    ; REV-85c ?5 rider (picker defect, view-render class): the REV-79 sentinel fires
     ; BEFORE the show call, so the log could not distinguish "show issued" from
     ; "view actually became visible" ? a silently-dead view leg (the stale-DLL case)
     ; logs healthy. This POST-show trace is issued right after the bridge call; it
@@ -1131,7 +1382,7 @@ Function OpenSetMenu() Global
 EndFunction
 
 ; ------------------------------------------------------------------
-;  rider 1 ? ACTOR-BOUND PICKER (service tattoo.picker)
+; REV-74 rider 1 ? ACTOR-BOUND PICKER (service tattoo.picker)
 ; ------------------------------------------------------------------
 ; Service entry point the motherboard's downed menu calls (choice 8). Opens the SAME
 ; SNSlaveTats_Menu view in "picker" mode: the pick is applied immediately to the bound
@@ -1144,6 +1395,14 @@ EndFunction
 ; Stored player-keyed, NOT in script state ? the module is recordless/Globals-only.
 Actor Function _PickerTarget() Global
     Return StorageUtil.GetFormValue(Game.GetPlayer(), "SNBaka.ST.PickerTarget", None) as Actor
+EndFunction
+
+; [REV-178e rider 3 / S249] availability probe for the actor-bound picker
+; (the player-initiated CommandTattoo panel route). True only when the
+; picker could actually open (SlaveTats installed + PrismaUI/DLL ready) --
+; callers degrade to their auto-apply leg when False.
+Bool Function PickerAvailable() Global
+    Return Installed() && SNBakaUI.IsAvailable()
 EndFunction
 
 Function OpenPickerFor(Actor akTarget, Actor akCaster = None) Global
@@ -1163,10 +1422,10 @@ Function OpenPickerFor(Actor akTarget, Actor akCaster = None) Global
     EndIf
     StorageUtil.SetFormValue(Game.GetPlayer(), "SNBaka.ST.PickerTarget", akTarget)
     RefreshPacks()
-    ;  menu-path sentinel (?5): OpenPickerFor was silent on the event path.
+    ; REV-79 menu-path sentinel (?5): OpenPickerFor was silent on the event path.
     Debug.Trace("[SNBaka.ST] Picker: open path=event sections=" + StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.SectionCount", -1))
     SNBakaUI.ShowSlaveTatsMenu(BuildPickerJSON(akTarget))
-    ;  ?5 rider (picker defect): POST-show trace, same as the MCM path ?
+    ; REV-85c ?5 rider (picker defect): POST-show trace, same as the MCM path ?
     ; proves the event leg ran to the bridge call (see OpenSetMenu note above).
     Debug.Trace("[SNBaka.ST] Picker: show issued path=event (post-call)")
 EndFunction
@@ -1208,7 +1467,7 @@ EndFunction
 
 ; Store one slot's pick ("spank"/"defeat"/"escalation"). Empty section/name clears
 ; the slot. Called from SkyrimNet_BakaIntegration._ST_MenuChoice (DLL dispatch).
-; : the MCM-mode picker sends the chosen color as a "|hex" subfield on asName ?
+; REV-74: the MCM-mode picker sends the chosen color as a "|hex" subfield on asName ?
 ; split it off: name is stored bare, the color lands in the per-channel color key
 ; (SNBaka.ST.<Slot>SetColor; -1 = "Default" -> module-wide DefaultColor at apply time).
 Function SetChoice(String asSlot, String asSection, String asName) Global
@@ -1244,7 +1503,7 @@ EndFunction
 ; Tattoo names inside one section (unioned across all areas that carry it).
 String[] Function GetSetNames(String asSection) Global
     String[] result = Utility.CreateStringArray(0)
-    ; : shape sentinel for the exit trace below -- "none" = section not found.
+    ; REV-79: shape sentinel for the exit trace below -- "none" = section not found.
     String shp = "none"
     If !Installed() || asSection == ""
         Return result
@@ -1271,7 +1530,7 @@ String[] Function GetSetNames(String asSection) Global
                         Int c = JArray.count(sec)
                         Int n = 0
                         While n < c
-                            ;  arity fix (?80 root cause): 3-arg call ? the installed
+                            ; REV-79 arity fix (?80 root cause): 3-arg call ? the installed
                             ; JContainers native is getObj(object, index, default=0); the old
                             ; 2-arg call aborted to None on every entry read (294 errors).
                             String nm = JMap.getStr(JArray.getObj(sec, n, 0), "name")
@@ -1297,24 +1556,24 @@ String[] Function GetSetNames(String asSection) Global
         EndWhile
     EndIf
     SlaveTats.release_cache()
-    ;  menu-path sentinel (?5, per ?80 spec): one line per section call ?
+    ; REV-79 menu-path sentinel (?5, per ?80 spec): one line per section call ?
     ; shape names which enumeration branch ran; count is the unioned result.
     Debug.Trace("[SNBaka.ST] GetSetNames: " + asSection + " shape=" + shp + " count=" + result.Length)
     Return result
 EndFunction
 ; ------------------------------------------------------------------
-;  - PROMPT-LAYER EXTENSION (the cum-v2 mold applied to tattoos)
+; REV-157 - PROMPT-LAYER EXTENSION (the cum-v2 mold applied to tattoos)
 ; ------------------------------------------------------------------
 ; Two module-owned decorators (registered at arm, the 0175/132b class):
 ;   get_ded_marks(actor)       bio-lane FACTS (the 0175 mold): visible
-;                              marks ONLY (the  cascade layer-1
+;                              marks ONLY (the REV-150 cascade layer-1
 ;                              truth, the user's visible-only ruling);
 ;                              the self/other split; location + section
 ;                              + name carried per visible mark. Covered
 ;                              marks render nothing.
 ;   get_ded_marks_any(actor)   disposition-lane eligibility (the 132b
 ;                              minimal any/nearest class).
-; NULL CONTRACT (the  discipline): every absent-framework state
+; NULL CONTRACT (the REV-133 discipline): every absent-framework state
 ;                              returns well-formed JSON - SlaveTats
 ;                              absent, no marks anywhere, nothing
 ;                              visible, empty scan all read as
@@ -1330,7 +1589,7 @@ EndFunction
 
 ; All visible marks on an actor, any source, as a facts string
 ; "section|name|area" joined by "~", or "" when nothing visible. Truth
-; identical to _FirstVisibleMark (the  layer-1 cascade; layers
+; identical to _FirstVisibleMark (the REV-150 layer-1 cascade; layers
 ; 2/3 named-gap, no re-attempting): query_applied_tattoos enumerates
 ; module-owned AND foreign marks; an entry is visible when its area's
 ; coverage slot is unworn. Pool pattern per the installed-source

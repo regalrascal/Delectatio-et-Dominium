@@ -1,0 +1,21 @@
+name: "gsanim_pose_lane_pthought"
+description: "GS pose player-private-thought reaction lane (REV-178b Leg 2.3 -- the 174f Baka action-lane shape mirrored GS-side; player_thought; intro-only content, script-composed desc; register DRAFT)"
+# [REV-174k 2026-11-01 -- FLAT CONTENT] Trigger response.content does NO template substitution on this engine build. The what-happened desc reaches the LLM via the event-log cue (RegisterEvent desc). Content is therefore FLAT. DRAFT at the user's pen.
+# [REV-178b Leg 2.3] see gsanim_pose_lane_narr.yaml for the set banner (neutral
+# intro, identical content across lanes, A37 rotation, GSAnim.PoseLane_* gates).
+# Player-lane binding (the D1b precedent): the event registers with PlayerRef
+# bound as target actor at the fire site.
+eventCriteria:
+  eventType: "gsanim_pose_lane_pthought"
+
+response:
+  type: "player_thought"
+  content: |
+    {{ event_data }}
+# [REV-179 2026-11-04 -- RENDER-SEAM] The yaml-side closing sentence retired: the cue composer owns the closer (fires it at compose time); yaml content ends at the event_data pull (rulings of record, 178d dogfood).
+audience: "player"
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7
+interrupt: true

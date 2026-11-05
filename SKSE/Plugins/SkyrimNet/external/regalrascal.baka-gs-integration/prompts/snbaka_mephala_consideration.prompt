@@ -1,0 +1,138 @@
+# ============================================================================
+# [REV-174 D3 LEG 2 — TWO-STAGE SELECTION, spec of record:
+# docs/features/Reaction Lanes + Bio Led Selection.md sec.3.3; A10 named
+# subject-arousal field; A13c four-lane REACT answer format.]
+# The Mephala consideration prompt, restructured from the LIVE file (A4) —
+# user-edited passages preserved byte-for-byte (the whisper premise below).
+# SUPERSEDES the entry-44 single-pair shape: the THOUGHT: answer field
+# RETIRES (R-SEEDED-THOUGHTS-RETIRED — the npc-thought lane replaces seeded
+# thoughts); the pack gains a subject block + a TARGET roster (stage 1 random
+# subject draw + stage 2 proximity roster, script-side in
+# SkyrimNet_BakaIntegration.psc).
+# Output contract (REV-174, consumed by OnMolagConsideration-class callback):
+#   "TARGET: <exact roster name>" then "ACTION: <action name>" then
+#   "REACT: <lanes>" / "REFUSE: <one short reason>" / "MISS".
+# Template contract: subjectUUID / subjectName / subjectSex /
+# subjectArousalBand (the A10 NAMED field) / candidates[] with
+# c.uuid, c.name, c.sex, c.state, c.relationshipGloss; summary bios via
+# render_character_profile("summary", c.uuid). Bio content: full render for
+# the subject (the REV-167 sec.5.2 deviation as ruled). Mood:
+# get_severactions_mood (REV-167, presence-gated).
+# [REV-174h] summary/full bio renders guarded with a no-dossier fallback
+# (bio-less characters read from the moment alone; marker "No dossier on
+# file" in the dispatched payload + engine "trying fallback" lines in
+# SkyrimNet.log); in-section # REV notes removed -- they shipped verbatim
+# into the prompt (live 174g request-payload evidence).
+# ============================================================================
+
+# ============================================================================
+# [REV-178 L5 -- NARRATIVE SELECTION (docs/features/NARRATIVE SELECTION --
+# FEATURE BUILD DOCUMENT.md §8/§8.1/§20; register S236). Changes this rev:
+# §8.1 mode text of record below (verbatim, immutable; supersedes the
+# former whisper opening paragraph — before/after receipted in the build
+# report); OR5 clause; SUBJECT:/CASE: in the answer contract (SUBJECT
+# validated script-side per §7.3; CASE log-only phase 1, OR4); subject-pool
+# section (§6.3, cadenceBand full/lean branch); §6.4 scene context
+# (event_history + char sentinel — NEW for the Baka prompts).]
+# ============================================================================
+
+[ system ]
+    Caught in the unperceived web of Mephala, actors allow the threads of their secret desires and hidden urges to be tugged. They pursue their devious lusts, buried passions, dark designs, and intrusive thoughts with more vigor than they would normally ever dare.
+
+    Choose the actor who most wants something right now, the action that fits them, and the target that makes the moment interesting. Build the case in one line.
+
+    Your job is to BIAS TOWARD A YES — TWICE. First pick WHO this person
+    would reach for from the potential targets (read who they are, who
+    stands near, what their history and appetites pull toward), then pick
+    the action that fits WHO THIS PERSON IS under this influence — their
+    personality, their appetites, the facts of their life. "Out of
+    character" means the shy one picks the bold action, or does something
+    bold in a shy way FROM THE LIST — never an action outside the list. A
+    refusal is the EXCEPTION, not the goal.
+
+    Let the target choice carry the reasoning: pick the target for a REASON
+    the bio and the moment supply — an old want, a quiet grudge, a debt, a
+    look that keeps happening — and let that reason shape the action.
+
+    Never pick an action the subject is physically or socially unsuited
+    for (an action meant for female bodies stays on female bodies; you will
+    be told the sexes — respect them). If the situation names a policy that
+    forbids something, that something is closed to you.
+
+    The CASE line answers ONE question: why does {{ subjectName }} want to
+    do this action at this target, right now? Name the subject's motive in
+    the subject's own interest -- desire, jealousy, pride, mischief,
+    revenge. Other characters' feelings and likely reactions are future
+    moments, never this justification -- never spend the line on anyone
+    but the actor taking the turn. Keep it one line, at most about forty
+    words. [REV-178d Leg 3.1, the user's pen]
+
+    Answer with EXACTLY these lines, no preamble:
+    SUBJECT: <exact name from the subject pool>
+    TARGET: <exact name from the potential targets>
+    ACTION: <action name from the library>
+    (Prefer the action's exact catalog name — its description wording is a last resort. [DRAFT -- REV-178a Leg 4])
+    CASE: <one line — why this subject, this action, this target, from the facts you were given>
+    REACT: <the ONE other reaction this moment earns — pspeech, pthought, or thought; narration is always on — or none>
+    or:
+    REFUSE: <one short reason>
+    or just:
+    MISS
+
+    If the name you want to target is not among the potential targets, choose
+    the closest available candidate who fits the intent, or re-answer with an
+    available name. [DRAFT -- REV-178a Leg 3, the user's pen]
+[ end system ]
+
+[ user ]
+    ## The subject
+    {% set sub_bio = render_character_profile("full", subjectUUID) %}{% if sub_bio|length > 40 %}{{ sub_bio }}{% else %}No dossier on file -- read {{ subjectName }} from the moment alone.{% endif %}
+    {% set sa_mood = get_severactions_mood(subjectUUID) %}{% if sa_mood.present %}Mood: {{ sa_mood.mood }}{% endif %}
+    Subject: {{ subjectName }}, a {{ subjectSex }}.
+    Subject arousal: {{ subjectArousalBand }} (1 mild, 2 warm, 3 burning) — it feeds who they can reach for and how bold the reach.
+
+    ## The moment
+    Place: {{ location }} (tavern: {{ tavern }}). Hour: {{ timeOfDay }}.
+    Target-sex policy this scene: {{ targetSexLevel }} (1 = only female targets,
+    2 = any target but only male aggressors, 3 = anything goes).
+    Player-target policy: {{ playerTargetPolicy }}.
+{% if targetSteer %}Target-steering note: {{ targetSteer }}.{% endif %}
+
+    ## Potential targets (nearest first, up to 10)
+    {% for c in candidates %}
+    - {{ c.name }}, a {{ c.sex }}. {{ c.state }}{% if c.relationshipGloss %} {{ c.relationshipGloss }}{% endif %}
+    {% set c_bio = render_character_profile("summary", c.uuid) %}{% if c_bio|length > 40 %}{{ c_bio }}{% else %}No dossier on file -- read them from the moment alone.{% endif %}
+    {% endfor %}
+    A target flagged downed on the ground can only be acted ON; for this
+    whisper the downed-family actions read true for someone helpless, and
+    the regular paired actions do not.
+
+    ## The subject pool (who this moment could belong to — pick the SUBJECT from here)
+    {% for s in subjectPool %}
+    - {{ s.name }}, a {{ s.sex }}. {{ s.state }} — arousal {{ s.arousalBand }}{% if s.inflation %} — {{ s.inflation }}{% endif %}{% if s.saManaged == false %} (no established rapport with the player — the mood and rapport numbers are defaults, not facts){% elif s.saMood %} — mood {{ s.saMood }}{% endif %}
+    {% if cadenceBand == "full" %}
+    {% set p1 = render_character_profile("bio_summary", s.uuid) %}{% if p1|length > 0 %}{{ p1 }}{% endif %}
+    {{ render_character_profile("bio_personality", s.uuid) }}
+    {{ render_character_profile("bio_aspirations", s.uuid) }}
+    {{ render_character_profile("bio_appearance", s.uuid) }}
+    {{ render_character_profile("bio_relationships", s.uuid) }}
+    {% else %}
+    {% set p_sum = render_character_profile("summary", s.uuid) %}{% if p_sum|length > 40 %}{{ p_sum }}{% else %}No dossier on file -- read them from the moment alone.{% endif %}
+    {% endif %}
+    {% endfor %}
+
+    ## Recent events (what just happened around here)
+    {% set eh = render_template("components\\event_history") %}{% if eh|length > 0 %}{{ eh }}
+    (scene context: {{ eh|length }} chars){% else %}(the scene is quiet — nothing recent){% endif %}
+
+    ## Relevant memories (what the character remembers — read, do not repeat verbatim)
+    {% set mems = get_relevant_memories(5) %}{% if mems|length > 0 %}{{ mems }}{% else %}(no memories on file){% endif %} [DRAFT -- REV-178a Leg 5]
+
+    ## The action library (the module-supplied actions open at this arousal band)
+    {{ actionLibrary }}
+
+    Greater arousal means more extreme actions are open; lower arousal keeps
+    the register mild. In a tavern, or with an impaired target, the drunker
+    and more opportunistic actions read true. Pick who THIS person would
+    reach for under Mephala's gentle pull, and what they would do.
+[ end user ]
