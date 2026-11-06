@@ -48,7 +48,7 @@ here.
 
 - **Paired actions through the Interact power** — affectionate, forced, and sexual actions
   targeted at any NPC, a downed victim, a hostile creature, or yourself. 
-  ***This is controlled through a minor power in your magic menu.***
+  ***This is controlled through a minor power in your magic menu - "DeD-Interact".***
 - **Escalation with resistance** — a resist / struggle / submit / call-for-help chain the
   model plays out in context. The downed-victim menus (Escalate / Opportunity) carry
   the full option set, including Execute and ApplyTattoo.
@@ -77,7 +77,7 @@ the model decided they would.
 
 - **PrismaUI pose grid** — 19 high-quality pose categories, on the player or any targeted
   NPC.
-  ***This is controlled through a minor power in your magic menu.***
+  ***This is controlled through a minor power in your magic menu - "DeD-Pose".***
 - **Sanguine Mode** — the background daemon that puts nearby NPCs into mood-fitting poses,
   on a cadence slider you set. Every pick is one consideration pass: the LLM reads the
   live scene and picks both the pose and the exact move — in Sanguine's own permissive,
