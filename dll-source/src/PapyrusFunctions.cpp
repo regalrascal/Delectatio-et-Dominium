@@ -1,5 +1,5 @@
 #include "PapyrusFunctions.h"
-#include "PrismaUIBridge.h"
+#include "DeDPanelClient.h"
 #include "HitEventSink.h"
 
 #include <cctype>
@@ -58,7 +58,7 @@ namespace {
 }
 
 static bool SNBakaUI_IsAvailable(RE::StaticFunctionTag*) {
-    const bool result = PrismaUIBridge::IsAvailable();
+    const bool result = DeDPanelClient::IsAvailable();
     if (!result)
         SKSE::log::warn("IsAvailable() = false - view invalid, will try to recover.");
     return result;
@@ -66,40 +66,40 @@ static bool SNBakaUI_IsAvailable(RE::StaticFunctionTag*) {
 
 static void SNBakaUI_ShowInteractMenu(RE::StaticFunctionTag*,
                                       RE::Actor* akCaster, RE::Actor* akTarget) {
-    PrismaUIBridge::ShowInteractMenu(akCaster, akTarget);
+    DeDPanelClient::ShowInteractMenu(akCaster, akTarget);
 }
 
 static RE::Actor* SNBakaUI_GetInteractTarget(RE::StaticFunctionTag*) {
-    return PrismaUIBridge::GetInteractTarget();
+    return DeDPanelClient::GetInteractTarget();
 }
 
 static void SNBakaUI_SetNoCollision(RE::StaticFunctionTag*, RE::Actor* akActor, bool abDisable) {
-    PrismaUIBridge::SetActorCollision(akActor, abDisable);
+    DeDPanelClient::SetActorCollision(akActor, abDisable);
 }
 
 static bool SNBakaUI_IsCraftingTemptation(RE::StaticFunctionTag*, RE::TESObjectREFR* akFurniture) {
-    return PrismaUIBridge::IsAlchemyOrEnchantingFurniture(akFurniture);
+    return DeDPanelClient::IsAlchemyOrEnchantingFurniture(akFurniture);
 }
 
 static void SNBakaUI_ShowSexSpankMenu(RE::StaticFunctionTag*,
                                       RE::BSFixedString json) {
     SKSE::log::info("ShowSexSpankMenu native called.");
-    PrismaUIBridge::ShowSexSpankMenu(json.c_str() ? json.c_str() : "{}");
+    DeDPanelClient::ShowSexSpankMenu(json.c_str() ? json.c_str() : "{}");
 }
 
 static void SNBakaUI_ShowEncounterMenu(RE::StaticFunctionTag*,
                                        RE::Actor* akAggressor, RE::Actor* akVictim) {
-    PrismaUIBridge::ShowEncounterMenu(akAggressor, akVictim);
+    DeDPanelClient::ShowEncounterMenu(akAggressor, akVictim);
 }
 
 static void SNBakaUI_ShowDownedMenu(RE::StaticFunctionTag*,
                                     RE::Actor* akCaster, RE::Actor* akVictim) {
-    PrismaUIBridge::ShowDownedMenu(akCaster, akVictim);
+    DeDPanelClient::ShowDownedMenu(akCaster, akVictim);
 }
 
 static void SNBakaUI_ShowMidCombatMenu(RE::StaticFunctionTag*,
                                     RE::Actor* akCaster, RE::Actor* akTarget) {
-    PrismaUIBridge::ShowMidCombatMenu(akCaster, akTarget);
+    DeDPanelClient::ShowMidCombatMenu(akCaster, akTarget);
 }
 
 static float SNBakaUI_GetOffset(RE::StaticFunctionTag*,
@@ -120,27 +120,28 @@ static RE::Actor* SNBakaUI_GetLastHitAggressor(RE::StaticFunctionTag*, RE::Actor
 }
 
 static void SNBakaUI_SetGetUpCharge(RE::StaticFunctionTag*, float afPct) {
-    PrismaUIBridge::SetGetUpCharge(afPct);
+    DeDPanelClient::SetGetUpCharge(afPct);
 }
 
 // REV-147 Feature B: push the ambient mode-button ON/OFF highlight state to the open
 // SNBaka_Menu footer (Papyrus -> bridge -> JS payload; Papyrus owns the flags).
 static void SNBakaUI_SetModeStates(RE::StaticFunctionTag*, bool abMephala, bool abMolagBal) {
-    PrismaUIBridge::SetModeStates(abMephala, abMolagBal);
+    DeDPanelClient::SetModeStates(abMephala, abMolagBal);
 }
 
 // REV-72: SlaveTats set-picker entry point (SNSlaveTats_Menu view, modal).
 static void SNBakaUI_ShowSlaveTatsMenu(RE::StaticFunctionTag*, RE::BSFixedString json) {
-    PrismaUIBridge::ShowSlaveTatsMenu(json.c_str() ? json.c_str() : "{}");
+    DeDPanelClient::ShowSlaveTatsMenu(json.c_str() ? json.c_str() : "{}");
 }
 
 // REV-92: Execute-gate accept/decline popup entry point (SNBaka_ExecuteConfirm view, modal).
 static void SNBakaUI_ShowExecuteConfirm(RE::StaticFunctionTag*,
                                         RE::Actor* akInitiator, RE::Actor* akTarget) {
-    PrismaUIBridge::ShowExecuteConfirm(akInitiator, akTarget);
+    DeDPanelClient::ShowExecuteConfirm(akInitiator, akTarget);
 }
 
 bool PapyrusFunctions::Register(RE::BSScript::IVirtualMachine* vm) {
+    RegisterSlaveTatsNatives(vm);
     vm->RegisterFunction("IsAvailable",       kScriptName, SNBakaUI_IsAvailable);
     vm->RegisterFunction("ShowInteractMenu",  kScriptName, SNBakaUI_ShowInteractMenu);
     vm->RegisterFunction("ShowSexSpankMenu",  kScriptName, SNBakaUI_ShowSexSpankMenu);

@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.6.0 — Beaten, Not Dead
+
+DeD Downed replaces Acheron. Includes everything from 0.5.0, which was never released on its own.
+
+- **DeD Downed (new module).** A lethal blow can down the player, companions or anyone else instead of killing them.
+  When you lose, each nearby enemy decides what to do with you and your downed companions — rob, threaten, a scene
+  (alone or as a group), strip, tattoo, paint, or leave — weighted by your Never-to-Very-often setting per outcome,
+  one action each or until they lose interest. Then the "after": a fade, time passes, you come to nearby, optionally
+  Wounded until you sleep (an active effect). Help Up costs a health potion in a fight; real heals get anyone up;
+  Execute plays a kill move for your weapon. Beaten enemies can be talked into standing down. Restraints (Devious
+  Devices or listed keywords) keep a captive restrained; Baka's Tie Up holds them down for its hours. An aggressive
+  scene on a beaten enemy resets their down.
+- **Companions.** They fight on and may heal you back into the fight; after a win they help you up, or — if you allow
+  it — decide for themselves (never an execution). Or they surrender with you.
+- **The Acheron Bridge is retired.** Its plugin, scripts and content pack are gone. Acheron can stay installed but
+  switched off, or be removed after the MCM's Prepare to Remove Acheron.
+- **Fixes.** The leftover Acheron pacify that left people unable to fight is gone with the bridge; the MCM's Acheron
+  page only shows while Acheron is installed.
+
+## v0.5.0 — The DeD Menu (not released separately)
+
+- **Magelight UI replaces PrismaUI.** Every menu runs on Magelight UI 1.9.0+.
+- **One combined DeD menu.** The DeD Interact power (or the Open DeD key) opens one menu with a section per installed
+  module, each with its own Settings tab; a status page for the cum module.
+- **Tattoos and makeup.** Pick, queue and apply marks on yourself, a downed captive or a willing NPC; live preview with
+  Phantasm; your own descriptions or automatic ones read from the texture, so the AI knows what a mark shows; makeup
+  actions and reactions; installed packs found automatically.
+- **Scenes.** Hand Off Scene Setup sends scenes through SkyrimNet-SexLab Integration or OStimNet; richer scene-start
+  narration; the Spank (in a scene) key spanks your scene partner.
+- **Fixes (0.4.1 – 0.5.0).** Mods installed after the first load are now detected; AI tattoo and display actions match
+  SkyrimNet's current action format; Baka's MCM split into two pages, unused thought lanes retired, player-speech lanes
+  off by default; Devious Devices NG no longer leaves you "stuck stripped" after redressing; OStim-only fixes.
+
 ## v0.4.0 — the community-hardened release
 
 Everything v0.3.0-alpha carried, made to work right — the daedric-modes overhaul, a downed-state reliability patch, and a full author's-pen text pass.

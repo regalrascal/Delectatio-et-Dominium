@@ -102,14 +102,13 @@ Scriptname SNBaka_CumDetectionModule
 ; error, not a silent None -- the SNBakaSL.Absent-cache lesson). Absence is cached
 ; on the None key once. MOVED VERBATIM from the motherboard's _OCumInstalled. ----
 Bool Function Installed() Global
-    If StorageUtil.GetIntValue(None, "SNBaka.OCumAbsent", 0) == 1
+    ; S316 fix: the absence used to be cached in StorageUtil on the None key, which rides the
+    ; SAVE - a game first run without the mod never detected it after the mod was installed.
+    ; The SKSE load-order lookup below is error-free when the plugin is absent, so no cache.
+    If Game.GetModByName("OCum.esp") == 255 && Game.GetLightModByName("OCum.esp") == 65535
         Return False
     EndIf
-    If Game.GetFormFromFile(0x000800, "OCum.esp") != None
-        Return True
-    EndIf
-    StorageUtil.SetIntValue(None, "SNBaka.OCumAbsent", 1)
-    Return False
+    Return Game.GetFormFromFile(0x000800, "OCum.esp") != None
 EndFunction
 
 ; ---- REV-122 D5: stale cosave real-time stamp clamp (load-time) ----
@@ -1307,3 +1306,115 @@ EndFunction
 ; ---- fact) + ambient at +60s (the room). Both retirements' reopening notes
 ; ---- live in cum-effects.md (room-too-quiet findings -> the delayed-ambient
 ; ---- design conversation).
+
+; ------------------------------------------------------------------
+; MAGELIGHT PHASE 3 LEG 2 (S324) - THE CUM MANAGEMENT STATUS PAGE
+; ------------------------------------------------------------------
+; The Baka DLL (framework) bridges the panel's "cum" module page to PanelMsg here (same bridge as SlaveTats / FHU).
+; Main: the subject's cum state from the DeDService state store (cum.present, cum.last_location, cum.last_source,
+; cum.last_applied_rt, cum.expires_rt) and the accumulated location list; the tracked wearer can be tapped to view
+; them. Settings are served by DeD_MCM ("settingsVia": "mcm"). Read-only. Placeholder text (register). ASCII.
+; ------------------------------------------------------------------
+
+String Function _CQ(String s) Global
+    String o = ""
+    If StringUtil.Find(s, "\"") < 0 && StringUtil.Find(s, "\\") < 0
+        o = s
+    Else
+        Int n = StringUtil.GetLength(s)
+        Int i = 0
+        While i < n
+            String c = StringUtil.GetNthChar(s, i)
+            If c == "\"" || c == "\\"
+                o += "\\"
+            EndIf
+            o += c
+            i += 1
+        EndWhile
+    EndIf
+    Return "\"" + o + "\""
+EndFunction
+
+Function PanelMsg(String asKind, String asSection, String asTab, String asPick, String asKey, String asValue, Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    Debug.Trace("[SNBaka][CUM][PANEL] " + asKind + " section=" + asSection + " pick=" + asPick)
+    If asKind == "closed"
+        StorageUtil.UnsetFormValue(p, "SNBaka.Cum.P.Subject")
+        Return
+    EndIf
+    If asKind == "act" && asPick == "wearer"
+        StorageUtil.SetFormValue(p, "SNBaka.Cum.P.Subject", StorageUtil.GetFormValue(None, "SNBaka.CumWearer", None))
+    EndIf
+    If asKind == "req" || asKind == "act"
+        DeDService.PanelPush("cum", _PanelStatusJson(akTarget))
+    EndIf
+EndFunction
+
+String Function _Minutes(Float afSeconds) Global
+    Int m = (afSeconds / 60.0) as Int
+    If m < 1
+        Return "under a minute"
+    ElseIf m == 1
+        Return "1 minute"
+    EndIf
+    Return m + " minutes"
+EndFunction
+
+String Function _PanelStatusJson(Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    Actor subj = StorageUtil.GetFormValue(p, "SNBaka.Cum.P.Subject", None) as Actor
+    If !subj
+        subj = akTarget
+    EndIf
+    If !subj
+        subj = p
+    EndIf
+    String name = subj.GetDisplayName()
+    If subj == p
+        name = "Yourself"
+    EndIf
+    Bool present = DeDService.GetStateBool(subj, "cum.present", False)
+    String chips = "{\"label\":\"No cum\"}"
+    String status = "nothing applied right now"
+    If present
+        Float now = Utility.GetCurrentRealTime()
+        chips = "{\"label\":\"Cum present\",\"tone\":\"red\"}"
+        Int n = StorageUtil.StringListCount(subj, "DeD_Cum_Locations")
+        Int i = 0
+        While i < n
+            chips += ",{\"label\":" + _CQ(StorageUtil.StringListGet(subj, "DeD_Cum_Locations", i)) + "}"
+            i += 1
+        EndWhile
+        If n == 0
+            String loc = DeDService.GetStateString(subj, "cum.last_location", "")
+            If loc != ""
+                chips += ",{\"label\":" + _CQ(loc) + "}"
+            EndIf
+        EndIf
+        status = "applied " + _Minutes(now - DeDService.GetStateFloat(subj, "cum.last_applied_rt", now)) + " ago"
+        Float exp = DeDService.GetStateFloat(subj, "cum.expires_rt", 0.0)
+        If exp > now
+            status += ", clears in " + _Minutes(exp - now)
+        EndIf
+        String src = DeDService.GetStateString(subj, "cum.last_source", "")
+        If src != ""
+            status += " (source: " + src + ")"
+        EndIf
+    EndIf
+    String items = ""
+    Actor wearer = StorageUtil.GetFormValue(None, "SNBaka.CumWearer", None) as Actor
+    If wearer
+        items = "{\"id\":\"wearer\",\"label\":" + _CQ("Current wearer: " + wearer.GetDisplayName()) + ",\"stay\":true"
+        If wearer == subj
+            items += ",\"state\":\"on\""
+        EndIf
+        items += "}"
+    EndIf
+    String out = "{\"module\":\"cum\",\"section\":\"main\",\"tab\":\"status\",\"layout\":\"list\",\"tabs\":[{\"id\":\"status\",\"label\":\"Status\"}]"
+    out += ",\"header\":{\"eyebrow\":\"Cum Management\",\"name\":" + _CQ(name) + ",\"status\":" + _CQ(status) + ",\"chips\":[" + chips + "]}"
+    out += ",\"items\":[" + items + "]"
+    If items == ""
+        out += ",\"notice\":{\"title\":\"No one is tracked\",\"text\":\"No cum effect is being tracked right now.\"}"
+    EndIf
+    Return out + "}"
+EndFunction

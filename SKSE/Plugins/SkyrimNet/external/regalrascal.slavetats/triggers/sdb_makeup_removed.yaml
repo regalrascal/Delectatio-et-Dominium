@@ -1,0 +1,18 @@
+name: "sdb_makeup_removed"
+description: "A nearby NPC notices someone's makeup has just been wiped away"
+
+eventCriteria:
+  eventType: "sdb_makeup_removed"
+
+response:
+  type: "direct_narration"
+  content: |
+    The makeup on {{ target }}'s face has just been wiped away. Anyone who notices reacts
+    in their own way.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

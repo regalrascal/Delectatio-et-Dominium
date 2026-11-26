@@ -3,6 +3,15 @@
 #include "Scheduler.h"
 #include "EventPump.h"
 #include "ActorContextStore.h"
+#include "DDGuard.h"
+#include "ModuleRegistry.h"
+#include "UIHost.h"
+#include "PanelFlags.h"
+#include "PanelHost.h"
+#include "Preview.h"
+#include "Downed.h"
+
+#include <filesystem>
 
 #include <spdlog/sinks/basic_file_sink.h>
 #include <RE/B/BSInputDeviceManager.h>
@@ -30,6 +39,38 @@ public:
     RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const*,
                                           RE::BSTEventSource<RE::InputEvent*>*) override {
         DeD::Scheduler::GetSingleton().Drive();
+        return RE::BSEventNotifyControl::kContinue;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// REV-187 -- DDNG stale-strip guard sink (spec of record:
+// docs/specs/ddng-force-strip-after-redress-guard.md v1.2, Component 4).
+// TESEquipEvent dispatches synchronously inside the engine equip path, on
+// the initiating caller's thread, so stack attribution in the sink names the
+// initiator (the SNEquipTrap technique). Every event passes through kContinue
+// — nothing is blocked or reversed here.
+// ---------------------------------------------------------------------------
+class DDGuardEquipSink : public RE::BSTEventSink<RE::TESEquipEvent> {
+public:
+    static DDGuardEquipSink* GetSingleton() {
+        static DDGuardEquipSink instance;
+        return &instance;
+    }
+
+    RE::BSEventNotifyControl ProcessEvent(const RE::TESEquipEvent* a_event,
+                                          RE::BSTEventSource<RE::TESEquipEvent>*) override {
+        if (a_event && a_event->actor && a_event->equipped == 0) { // unequip only
+            const auto actor = skyrim_cast<RE::Actor*>(a_event->actor.get());
+            if (actor && DeD::DDGuard::GetSingleton().OnUnequip(actor, a_event->baseObject)) {
+                // Hit: DeviousDevices.dll-attributed armor unequip. The Papyrus
+                // handler (SkyrimNet_BakaIntegration.OnDDGuardStrip) owns the
+                // redress window / zero-device gate / single retry — this DLL stays
+                // attribution-only and never touches DD state (ruling of record #3).
+                DeD::EventPump::Emit(DeD::DDGuard::kHitEvent, actor,
+                                     0.0f, fmt::format("{:08X}", a_event->baseObject));
+            }
+        }
         return RE::BSEventNotifyControl::kContinue;
     }
 };
@@ -81,6 +122,14 @@ static void OnSaveCallback(SKSE::SerializationInterface* a_intfc)
                             buf.size(), DeD::Scheduler::kSchemaVersion);
         }
     }
+    {
+        // A3b leg 1 (S338): the DeD Downed state (DWND); Downed::Save takes its own lock.
+        const auto buf = DeD::Downed::GetSingleton().Save();
+        if (!a_intfc->WriteRecord(DeD::Downed::kRecordType, DeD::Downed::kSchemaVersion,
+                                  buf.data(), static_cast<std::uint32_t>(buf.size()))) {
+            SKSE::log::error("[DeDService] DWND save failed.");
+        }
+    }
 }
 
 static void OnLoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -123,6 +172,19 @@ static void OnLoadCallback(SKSE::SerializationInterface* a_intfc)
                                 length, version);
                 ++loaded;
             }
+        } else if (type == DeD::Downed::kRecordType) {
+            if (version != DeD::Downed::kSchemaVersion) {
+                SKSE::log::warn("[DeDService] DWND version {} unsupported -- rejected.", version);
+                ++rejected;
+                continue;
+            }
+            if (!DeD::Downed::GetSingleton().Load(a_intfc, length, data.data())) {
+                SKSE::log::warn("[DeDService] DWND malformed -- downed state reset.");
+                DeD::Downed::GetSingleton().Revert();
+                ++malformed;
+            } else {
+                ++loaded;
+            }
         } else {
             // Unknown tags: skipped silently (standard SKSE shape; spec 0.1.3).
             ++unknown;
@@ -142,7 +204,37 @@ static void OnRevertCallback(SKSE::SerializationInterface*)
     DeD::ServiceState::GetSingleton().Revert();
     DeD::Scheduler::GetSingleton().Revert();
     DeD::ActorContextStore::GetSingleton().Revert(); // REV-170 Leg 3: in-memory only, dropped wholesale
+    DeD::PanelFlags::GetSingleton().Revert();
+    DeD::Downed::GetSingleton().Revert();            // A3b leg 1: DWND rows reload from the cosave        // Phase 2: modules re-publish their flags after load
     SKSE::log::info("[DeDService] reverted (new game / cosave discard).");
+}
+
+// Magelight Phase 2 leg 6: the one DeD power (DeD_Framework.esp SPEL 0x802, effect script DeD_PanelPowerEffect ->
+// DeDService.OpenPanel). On every load: with the panel available, the player holds the DeD power and the two old
+// powers (Baka "DeD: Interact" 0x80E, GS pose selector 0xD63) are removed - Baka / GS no longer grant them while the
+// panel is available. Without the panel (Magelight UI or the page missing) the DeD power is withheld and the old
+// powers stay with their Phase 1 menus. Idempotent; unconditional log line.
+static void SyncPanelPower()
+{
+    auto* player = RE::PlayerCharacter::GetSingleton();
+    auto* dh     = RE::TESDataHandler::GetSingleton();
+    if (!player || !dh) return;
+    auto* power = dh->LookupForm<RE::SpellItem>(0x802, "DeD_Framework.esp");
+    const bool panel = DeD::UIHost::GetSingleton().HasView(DeD::PanelHost::kModule, DeD::PanelHost::kView);
+    int removed = 0;
+    if (panel && power) {
+        if (!player->HasSpell(power)) player->AddSpell(power);
+        const std::pair<RE::FormID, const char*> old[] = { { 0x80E, "SkyrimNet_BakaIntegration.esp" }, { 0xD63, "SkyrimNet_AnimationsGS.esp" } };
+        for (const auto& [id, file] : old) {
+            auto* sp = dh->LookupForm<RE::SpellItem>(id, file);
+            if (sp && player->HasSpell(sp)) { player->RemoveSpell(sp); ++removed; }
+        }
+    } else if (power && player->HasSpell(power)) {
+        player->RemoveSpell(power);
+    }
+    SKSE::log::info("[DeDService][PANEL] power sync: panel {}, DeD power {} ({}), old powers removed {}.",
+        panel ? "available" : "absent", power ? "found" : "MISSING from DeD_Framework.esp",
+        panel && power ? "granted" : "withheld", removed);
 }
 
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
@@ -172,6 +264,19 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
             RE::BSInputDeviceManager::GetSingleton()->AddEventSink(ServiceDriveSink::GetSingleton());
             SKSE::log::info("[DeDService] scheduler drive registered (input sink).");
             {
+                // REV-187 / spec Component 1 gate: resolve DDNG presence once, at
+                // kDataLoaded. Absent -> the guard sink is never armed (zero behavior
+                // change on non-DDNG lists) and every Papyrus guard no-ops.
+                if (SKSE::GetPluginInfo("DeviousDevices")) {
+                    DeD::DDGuard::GetSingleton().SetDDNGPresent();
+                    SKSE::log::info("[DeDService] DDNG present -- DDGuard equip sink armed.");
+                    RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESEquipEvent>(
+                        DDGuardEquipSink::GetSingleton());
+                } else {
+                    SKSE::log::info("[DeDService] DDNG absent -- DDGuard stays inert this load.");
+                }
+            }
+            {
                 // REV-170 Leg 3: resolve the SkyrimNet C++ surface (DevKit
                 // CppAPI contract: LoadLibraryA("SkyrimNet") + GetProcAddress;
                 // v3+ gates FormIDToUUID; older installs degrade the Actor
@@ -193,12 +298,30 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
                     SKSE::log::info("[DeDService] SkyrimNet not loaded -- ActorContext MISS-only.");
                 }
             }
+            {
+                // Magelight workstream Phase 1 (docs/workstreams/magelight-ui.md 6c): read the
+                // installed modules' descriptors, then host their views. Modules talk to the
+                // host through the DeDUI C ABI (include/DeDUI_API.h); nothing here knows a module.
+                wchar_t exe[MAX_PATH]{};
+                ::GetModuleFileNameW(nullptr, exe, MAX_PATH);
+                const auto dedRoot = std::filesystem::path(exe).parent_path() / L"Data" / L"Magelight" / L"DeD";
+                DeD::ModuleRegistry::GetSingleton().Load(dedRoot);
+                DeD::UIHost::GetSingleton().Init(dedRoot);
+            }
+            // Tattoo-overhaul T2 (S330): the Phantasm client for live previews (soft dependency, D-T4).
+            DeD::Preview::GetSingleton().Init();
+            break;
+        case SKSE::MessagingInterface::kPostLoadGame:
+        case SKSE::MessagingInterface::kNewGame:
+            DeD::Preview::GetSingleton().OnGameLoad();
+            SyncPanelPower();
             break;
         }
     });
 
     SKSE::GetPapyrusInterface()->Register(
         [](RE::BSScript::IVirtualMachine* vm) { return DeD::RegisterPapyrusFunctions(vm); });
+    SKSE::log::info("[DeDService] runtime: Skyrim {} {} (one DLL for SE/AE/VR).", (REL::Module::IsVR() ? "VR" : (REL::Module::IsAE() ? "AE" : "SE")), REL::Module::get().version().string());
     SKSE::log::info("[DeDService] boot complete.");
     return true;
 }

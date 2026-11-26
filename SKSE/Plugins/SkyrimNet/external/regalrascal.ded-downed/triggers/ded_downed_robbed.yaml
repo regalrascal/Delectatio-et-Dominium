@@ -1,0 +1,20 @@
+name: "ded_downed_robbed"
+description: "DeD Downed (S349, spec 9): a victorious enemy has just robbed a beaten, downed person (the player or a companion). The event text says what was taken."
+
+eventCriteria:
+  eventType: "ded_downed_robbed"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} crouches over the beaten {{ target }} and goes through their belongings
+    while they lie helpless. Narrate the robbery and the robber's attitude (contempt, greed,
+    mockery, cold business), and the victim's helplessness. What was taken:
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 5
+priority: 8

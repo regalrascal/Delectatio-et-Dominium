@@ -1,0 +1,19 @@
+name: "ded_downed_freed"
+description: "DeD Downed (S349, spec 8): someone has just taken the restraints off a captive."
+
+eventCriteria:
+  eventType: "ded_downed_freed"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} takes the restraints off {{ target }}. Narrate the release and how
+    {{ target }} takes it: relief, distrust, gratitude or hatred.
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 10
+priority: 7

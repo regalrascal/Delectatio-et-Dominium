@@ -1,0 +1,18 @@
+name: "sdb_makeup_applied"
+description: "A nearby NPC notices someone has just had makeup put on"
+
+eventCriteria:
+  eventType: "sdb_makeup_applied"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ target }} has just had fresh makeup put on. Those who notice react in their own
+    way -- admiration, teasing, curiosity, or indifference.
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

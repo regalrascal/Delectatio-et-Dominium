@@ -95,3 +95,37 @@ Function ShowSlaveTatsMenu(String asJson) Global Native
 ;   0 = Accept (downed-recheck then execute)   -1 = Decline / timeout / moot (refusal)
 ; A timeout is enforced Papyrus-side (_ExecuteGateCallback) - the popup itself never hangs.
 Function ShowExecuteConfirm(Actor akInitiator, Actor akTarget) Global Native
+
+; ---- S316 native SlaveTats helpers (dll-source/src/SlaveTatsNative.cpp) ----
+; The pack index is read straight from the pack files (SlaveTats' own rules: top-level *.json in
+; Data/Textures/Actors/Character/slavetats/, name + section + Body/Face/Hands/Feet area + texture,
+; "default" domain). STScan rebuilds it and returns the section count; the readers scan once if needed.
+Int Function STScan() Global Native
+String[] Function STSections() Global Native
+String[] Function STNames(String asSection) Global Native
+String Function STArea(String asSection, String asName) Global Native
+; The REV-150.1 male-wearable screen (Gay - * / Femboy whitelist, female-anatomy keyword denylist).
+Bool Function STMaleMayWear(String asSection, String asName) Global Native
+; ASCII lower-case.
+String Function ToLowerAscii(String asText) Global Native
+; True when SlaveTats' own cache must be rebuilt (pack files changed since DeD last rebuilt it, or no saved
+; cache file); STCacheBuilt records the current pack files after a rebuild.
+Bool Function STCacheStale() Global Native
+Function STCacheBuilt() Global Native
+; S321: the SlaveTats panel's pack JSON built natively (Papyrus pools strings case-insensitively, so JSON built in
+; Papyrus can come back with True / False; it was also slow). Lists are the module's StorageUtil string lists.
+String Function STSettingsJson(String[] akOffForced, String[] akOffVoluntary, String[] akStyleMakeup, String[] akStyleTattoo, Bool abObserve, Int aiPct, Bool abNarr, Bool abEnabled, Int aiColorIndex, Bool abRelease, Float afAmbientFloor, Bool abAskDesc, Bool abAutoDesc) Global Native
+String Function STPackItemsJson(String asStyle, String[] akOff, String[] akStyleMakeup, String[] akStyleTattoo) Global Native
+; S326: tattoo descriptions, one shared file (Data/SKSE/Plugins/DeD/TattooDescriptions.json). STDescription = custom, else
+; automatic, else ""; STCustomDescription = the custom one only; STSetDescription sets (or, with "", clears) it.
+String Function STDescription(String asSection, String asName) Global Native
+String Function STCustomDescription(String asSection, String asName) Global Native
+Bool Function STSetDescription(String asSection, String asName, String asText) Global Native
+; S327: True while a design has no custom description and was not skipped; STSkipDescription = never ask again.
+Bool Function STNeedsDescription(String asSection, String asName) Global Native
+Bool Function STSkipDescription(String asSection, String asName) Global Native
+; S329 (step D): automatic descriptions. Queue a design (False when it has a description, is queued, or failed twice);
+; Next = the ded_tattoo_describe context JSON for the next design ("" when none, or one is in flight); Done = the answer.
+Bool Function STAutoDescribeQueue(String asSection, String asName) Global Native
+String Function STAutoDescribeNext() Global Native
+Bool Function STAutoDescribeDone(String asResponse, Int aiSuccess) Global Native

@@ -48,15 +48,13 @@ Bool Function Installed() Global
     ; Papyrus error on every caller (arm pass + the new 30s ambient cadence) when the
     ; esp is absent. esp load state cannot change within a session; the flag is set
     ; once on first failed probe and short-circuits every later call.
-    If StorageUtil.GetIntValue(None, "SNBaka.ST.ProbeAbsent", 0) == 1
+    ; S316 fix: the absence used to be cached in StorageUtil on the None key, which rides the
+    ; SAVE - a game first run without the mod never detected it after the mod was installed.
+    ; The SKSE load-order lookup below is error-free when the plugin is absent, so no cache.
+    If Game.GetModByName("SlaveTats.esp") == 255 && Game.GetLightModByName("SlaveTats.esp") == 65535
         Return False
     EndIf
-    Bool bPresent = Game.GetFormFromFile(0x800, "SlaveTats.esp") != None
-    If !bPresent
-        StorageUtil.SetIntValue(None, "SNBaka.ST.ProbeAbsent", 1)
-        Debug.Trace("[SNBaka.ST] Installed: SlaveTats.esp absent (cached absent from now on) -- REV-159 F-3")
-    EndIf
-    Return bPresent
+    Return Game.GetFormFromFile(0x800, "SlaveTats.esp") != None
 EndFunction
 
 ; SlaveTatsNG detection (REV-72 research 1d): NG's runtime SlaveTats.VERSION() returns
@@ -142,6 +140,10 @@ EndFunction
 
 ; ASCII lowercase (Papyrus has no ToLower; SKSE StringUtil AsOrd/AsChar loop).
 String Function _ToLower(String asText) Global
+    ; S316: native (SNBakaUI.ToLowerAscii); the Papyrus loop below is unreachable fallback text kept for reference.
+    If asText != ""
+        Return SNBakaUI.ToLowerAscii(asText)
+    EndIf
     Int n = StringUtil.GetLength(asText)
     String result = ""
     Int i = 0
@@ -198,6 +200,8 @@ EndFunction
 ; The whitelist verdict for one section/name pair: (1) the GayMisc class
 ; auto-whitelists; (2) everything else rides the keyword screen.
 Bool Function MaleMayWear(String asSection, String asName) Global
+    ; S316: the same screen in native code (SNBakaUI.STMaleMayWear, identical word list and the "tither" rule).
+    Return SNBakaUI.STMaleMayWear(asSection, asName)
     String sec = _ToLower(asSection)
     If StringUtil.Find(sec, "gay - ") == 0 || sec == "femboy"
         Return True
@@ -249,6 +253,8 @@ Bool Function ApplyTattoo(Actor akTarget, String asSection, String asName, Int a
         StorageUtil.StringListAdd(akTarget, "SNBaka.ST.Applied", \
             asSection + "|" + asName + "|" + aiColor + "|" + asMode + "|" + _ResolveAreaFor(asSection, asName) + "|" + Utility.GetCurrentRealTime(), True)
         Debug.Trace("[SNBaka.ST] ApplyTattoo: applied '" + asName + "' (" + asSection + ") color=0x" + _IntToHex(aiColor) + " mode=" + asMode + " to " + akTarget.GetDisplayName())
+        _QueueDescription(asSection, asName, asMode)   ; S327 (D-T8)
+        _AutoDescribe(asSection, asName)   ; S329 (D-T10)
         _FireEvent(True, akTarget, asSection, asName, aiColor, asMode)
     Else
         ; Failure logging (rider Task 2): SlaveTats rejected the call ? the cache walk says
@@ -313,7 +319,27 @@ Function _FireEvent(Bool abApplied, Actor akTarget, String asSection, String asN
     If !akTarget
         Return
     EndIf
-    String mark = asSection + " / " + asName
+    ; REV-185: spank-pack marks are EVENT MAKEUP - their narration lives
+    ; on the spank event's own trigger (sdb_spanked), never on the
+    ; immediate tattoo cues. Silent-skip (sentinel'd) for the blacklisted
+    ; sections; everything else keeps the full REV-74 rider-2 payload.
+    If !_IsBakaPack(asSection) && StyleOf(asSection) == "makeup"
+        ; S316 makeup lanes: makeup is never narrated as a tattoo; it has its own events (placeholder
+        ; text, register entry 60).
+        String mk = DescriptionOf(asSection, asName)   ; S326: the description (custom > auto > 'name' (pack))
+        If abApplied
+            SkyrimNetApi.RegisterEvent("sdb_makeup_applied", akTarget.GetDisplayName() + " now wears fresh makeup (" + mk + "), just put on. Anyone who sees it reacts to the look.", akTarget, akTarget)
+        Else
+            SkyrimNetApi.RegisterEvent("sdb_makeup_removed", "The makeup on " + akTarget.GetDisplayName() + "'s face (" + mk + ") has been wiped away.", akTarget, akTarget)
+        EndIf
+        Debug.Trace("[SNBaka.ST] _FireEvent: makeup event (applied=" + abApplied + ") mode=" + asMode)
+        Return
+    EndIf
+    If _SectionIsSpankMakeup(asSection)
+        Debug.Trace("[SNBaka.ST] _FireEvent: SILENT-SKIP spank-makeup '" + asName + "' (" + asSection + ") on " + akTarget.GetDisplayName() + " - reserved to the spank trigger, not the tattoo cues -- REV-185")
+        Return
+    EndIf
+    String mark = DescriptionOf(asSection, asName)   ; S326: the description (custom > auto > 'name' (pack))
     String evName = "sdb_tattoo_removed"
     String evText = "The mark on " + akTarget.GetDisplayName() + "'s skin (" + mark + ") has been wiped away."
     If abApplied
@@ -445,7 +471,14 @@ Function OnSpankHeat(Actor akTarget) Global
     String section = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetSection", "")
     String name = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetName", "")
     If section == "" || name == ""
-        Return    ; no set chosen yet ? nothing to extend with
+        ; [REV-184 D5] FRESH-DEFAULT: no set chosen yet -> default to OUR
+        ; shipped spank set ("SkyrimNet Spank" / "spank_ass", the shipped
+        ; skyrimnet_spank.json pack) instead of idling. Saved values are
+        ; untouched (existing saves keep their pick -- fresh-default-vs-saved
+        ; migration note of record); the MCM picker still overrides this.
+        section = "SkyrimNet Spank"
+        name = "spank_ass"
+        Debug.Trace("[SNBaka.ST] OnSpankHeat: no set chosen -- defaulting to our shipped set (SkyrimNet Spank / spank_ass) (REV-184 D5)")
     EndIf
     If ApplyTattoo(akTarget, section, name, StorageUtil.GetIntValue(p, "SNBaka.ST.SpankSetColor", -1), True, "spank")
         Debug.Trace("[SNBaka.ST] OnSpankHeat: applied '" + name + "' (" + section + ") to " + akTarget.GetDisplayName())
@@ -512,6 +545,11 @@ EndFunction
 String Function _ResolveAreaFor(String asSection, String asName) Global
     String result = ""
     If !Installed() || asSection == "" || asName == ""
+        Return result
+    EndIf
+    ; S316: the native pack index answers first; the cache walk stays as the fallback.
+    result = SNBakaUI.STArea(asSection, asName)
+    If result != ""
         Return result
     EndIf
     Int cache = SlaveTats.acquire_cache()
@@ -702,37 +740,16 @@ Bool Function ForcedTattoo(Actor akAggressor, Actor akVictim) Global
         Debug.Trace("[SNBaka.ST] ForcedTattoo: REFUSED [disabled] - module master gate off")
         Return False
     EndIf
-    String section = StorageUtil.GetStringValue(p, "SNBaka.ST.DefeatSetSection", "")
-    String name = StorageUtil.GetStringValue(p, "SNBaka.ST.DefeatSetName", "")
-    Int color = StorageUtil.GetIntValue(p, "SNBaka.ST.DefeatSetColor", -1)
-    If section == "" || name == ""
-        section = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetSection", "")
-        name = StorageUtil.GetStringValue(p, "SNBaka.ST.SpankSetName", "")
-        color = StorageUtil.GetIntValue(p, "SNBaka.ST.SpankSetColor", -1)
-        If section != "" && name != ""
-            Debug.Trace("[SNBaka.ST] ForcedTattoo: defeat set unconfigured - spank set fallback")
-        EndIf
-    EndIf
-    If section == "" || name == ""
-        Debug.Trace("[SNBaka.ST] ForcedTattoo: REFUSED [noset] - no defeat or spank set configured (MCM / SlaveTats set menu)")
+    ; Leg 5 / T1 (D-T1, D-T2): the defeat/spank slot sets are retired. The forced service picks
+    ; from the Forced method's enabled TATTOO packs, body-compat screened (curate-before-pick;
+    ; the REV-150.1 male whitelist rides inside _CuratedCandidates via _WearableBy).
+    String[] pick = CuratedLLMPick(akVictim, "forced")
+    If pick.Length < 2 || pick[0] == "" || pick[1] == ""
+        Debug.Trace("[SNBaka.ST] ForcedTattoo: REFUSED [noeligible] - no enabled Forced tattoo pack has an entry " + akVictim.GetDisplayName() + " can wear -- T1")
         Return False
     EndIf
-    ; REV-150.1: a male-class victim whose configured set is NOT male-curated
-    ; falls back to a random curated pick from the discovered packs (the
-    ; Gay - */Femboy auto-whitelist class, then the keyword screen). No
-    ; curated entry installed at all -> refuse [male-none-curated].
-    If !_IsFemaleClass(akVictim) && !MaleMayWear(section, name)
-        String[] pick = _PickCuratedForMale()
-        If pick.Length < 2 || pick[0] == "" || pick[1] == ""
-            Debug.Trace("[SNBaka.ST] ForcedTattoo: REFUSED [male-none-curated] - configured set '" + name + "' (" + section + ") fails the whitelist and no curated pack entry is installed (Gay - */Femboy or keyword-screen pass)")
-            Return False
-        EndIf
-        Debug.Trace("[SNBaka.ST] ForcedTattoo: configured set not male-curated - curated fallback '" + pick[1] + "' (" + pick[0] + ")")
-        section = pick[0]
-        name = pick[1]
-        color = -1    ; the curated pick rides its pack default
-    EndIf
-    Return ApplyTattoo(akVictim, section, name, color, True, "forced")
+    Debug.Trace("[SNBaka.ST] ForcedTattoo: Forced-method pick '" + pick[1] + "' (" + pick[0] + ") -- T1")
+    Return ApplyTattoo(akVictim, pick[0], pick[1], -1, True, "forced")
 EndFunction
 
 ; REV-150.1: pick a random male-curated entry from the discovered cache.
@@ -932,7 +949,7 @@ Function AmbientExposurePass() Global
     ; with the wearer optionally re-noticing it later (catching the
     ; looks). Narration-voice standard; others-first framing.
     SkyrimNetApi.RegisterEvent("sdb_tattoo_observed", \
-        ak.GetDisplayName() + " has a tattoo showing on " + loc + ": '" + m[1] + "' (" + m[0] + "). Anyone close enough sees the mark; those who notice it react in their own way, and the wearer may catch their looks and grow newly aware of it too.", \
+        ak.GetDisplayName() + " has a tattoo showing on " + loc + ": " + DescriptionOfWorn(m[0], m[1]) + ". Anyone close enough sees the mark; those who notice it react in their own way, and the wearer may catch their looks and grow newly aware of it too.", \
         ak, ak)
     Debug.Trace("[SNBaka.ST] ambient: FIRED sdb_tattoo_observed - wearer=" + ak.GetDisplayName() + " mark='" + m[1] + "' (" + m[0] + ") area=" + m[2] + " roll=" + roll + "/" + pct + "% -- REV-156")
     ; Narration (gated second surface, DEFAULT OFF).
@@ -975,7 +992,12 @@ String Function _FirstVisibleMark(Actor akTarget) Global
                 area = "Body"    ; unknown area - body-class default, coarse (the ResolveVisibility convention)
             EndIf
             If akTarget.GetWornForm(_AreaSlotMask(area)) == None
-                hit = JMap.getStr(e, "section") + "|" + JMap.getStr(e, "name") + "|" + area
+                ; REV-185: spank-makeup marks are invisible to the tattoo
+                ; surfaces (the ambient pass + the witness eligibility read);
+                ; reserved to the spank event's own trigger.
+                If !_SectionIsSpankMakeup(JMap.getStr(e, "section"))
+                    hit = JMap.getStr(e, "section") + "|" + JMap.getStr(e, "name") + "|" + area
+                EndIf
             EndIf
             i += 1
         EndWhile
@@ -1048,6 +1070,31 @@ Bool Function _SectionIsEvent(String asSection) Global
     Return _EventSections().Find(asSection) >= 0
 EndFunction
 
+; ------------------------------------------------------------------
+; REV-185 - SPANK-MAKEUP BLACKLIST (user ruling, Issue-class): the
+; spank pack ("SkyrimNet Spank": spank01-03 redness, spank_ass /
+; spank_breasts heat, tears1-3, sob1-2, drool1 - and any MCM-configured
+; SpankSetSection) is EVENT MAKEUP, not tattoo content. Its narration
+; belongs to the spank event's own trigger (sdb_spanked); the immediate
+; (sdb_tattoo_applied) and ambient/observable (sdb_tattoo_observed,
+; get_ded_marks / get_ded_marks_any) tattoo surfaces must NEVER react to
+; it. The three MCM degradation-set slots (defeat/escalation) stay
+; tattoo-visible per the REV-178e ruling; only the SPANK lane is
+; blacklisted here. A separate trigger pack for these textures is a
+; down-the-road item, ruled out for now.
+; ------------------------------------------------------------------
+Bool Function _SectionIsSpankMakeup(String asSection) Global
+    If asSection == ""
+        Return False
+    EndIf
+    ; Leg 5 / T1: the spank slot is retired (D-T2); the REV-185 rule now covers every pack the
+    ; player (or the name guess) files as MAKEUP - makeup is never narrated as a tattoo (4.2).
+    If asSection == "SkyrimNet Spank"
+        Return True
+    EndIf
+    Return StyleOf(asSection) == "makeup"
+EndFunction
+
 ; Body-compat pre-screen (the REV-150.1 class, hoisted out of the choke
 ; point so picks are wearable by construction; the choke point remains).
 Bool Function _WearableBy(Actor akTarget, String asSection, String asName) Global
@@ -1060,12 +1107,12 @@ EndFunction
 ; Flat "section|name" candidate list across all non-event sections,
 ; body-compat screened for akTarget. Two-pass (count then fill) -- no
 ; SKSE resize helpers assumed.
-String[] Function _CuratedCandidates(Actor akTarget) Global
+String[] Function _CuratedCandidates(Actor akTarget, String asMethod = "forced", String asStyle = "tattoo") Global
     String[] sections = GetSections()
     Int cnt = 0
     Int i = 0
     While i < sections.Length
-        If sections[i] != "" && !_SectionIsEvent(sections[i])
+        If _PackEligible(sections[i], asMethod, asStyle)
             String[] names = GetSetNames(sections[i])
             Int j = 0
             While j < names.Length
@@ -1081,7 +1128,7 @@ String[] Function _CuratedCandidates(Actor akTarget) Global
     Int k = 0
     i = 0
     While i < sections.Length && k < cnt
-        If sections[i] != "" && !_SectionIsEvent(sections[i])
+        If _PackEligible(sections[i], asMethod, asStyle)
             String[] names = GetSetNames(sections[i])
             Int j = 0
             While j < names.Length && k < cnt
@@ -1100,9 +1147,9 @@ EndFunction
 ; Random curated pick for the unnamed LLM lane (ApplyTattoo). Returns a
 ; 2-slot array; empty on refuse ([noeligible] no non-event body-compatible
 ; entry exists).
-String[] Function CuratedLLMPick(Actor akTarget) Global
+String[] Function CuratedLLMPick(Actor akTarget, String asMethod = "forced", String asStyle = "tattoo") Global
     String[] out = Utility.CreateStringArray(2, "")
-    String[] cands = _CuratedCandidates(akTarget)
+    String[] cands = _CuratedCandidates(akTarget, asMethod, asStyle)
     If cands.Length == 0
         Debug.Trace("[SNBaka.ST] CuratedLLMPick: REFUSED [noeligible] - no non-event body-compatible entry (SkyrimNet Spank / configured degradation sets / male whitelist exclusions) -- REV-178e")
         Return out
@@ -1124,7 +1171,7 @@ EndFunction
 ; on mega-pack installs; drops WHOLE sections with a receipt, never
 ; mid-name). Cap 2400: the compact names-only shape buys roughly 3x the
 ; roster per character vs a verbose listing.
-String Function CuratedPackText(Actor akTarget, Int aiMaxLen = 2400) Global
+String Function CuratedPackText(Actor akTarget, Int aiMaxLen = 2400, String asMethod = "forced") Global
     String[] sections = GetSections()
     If sections.Length == 0
         Return ""
@@ -1132,7 +1179,7 @@ String Function CuratedPackText(Actor akTarget, Int aiMaxLen = 2400) Global
     String out = ""
     Int i = 0
     While i < sections.Length
-        If sections[i] != "" && !_SectionIsEvent(sections[i])
+        If _PackEligible(sections[i], asMethod)
             String[] names = GetSetNames(sections[i])
             String line = ""
             Int j = 0
@@ -1142,6 +1189,10 @@ String Function CuratedPackText(Actor akTarget, Int aiMaxLen = 2400) Global
                         line = line + "; "
                     EndIf
                     line = line + names[j]
+                    String dsc = SNBakaUI.STDescription(sections[i], names[j])   ; S326
+                    If dsc != ""
+                        line = line + " (" + dsc + ")"
+                    EndIf
                 EndIf
                 j += 1
             EndWhile
@@ -1180,6 +1231,10 @@ String Function CuratedAppliedText(Actor akTarget) Global
                 out = out + "; "
             EndIf
             out = out + p[0] + "/" + p[1]
+            String dsc = SNBakaUI.STDescription(p[0], p[1])   ; S326
+            If dsc != ""
+                out = out + " (" + dsc + ")"
+            EndIf
         EndIf
         i += 1
     EndWhile
@@ -1193,7 +1248,7 @@ EndFunction
 ; not; degrades to a random global curated candidate otherwise. Reason-coded
 ; refuses: [nopacks] (nothing discovered) / [noeligible] (nothing non-event
 ; body-compatible). Replaces raw ValidatePick on these lanes.
-String[] Function ValidatePickCurated(Actor akTarget, String asSection, String asName) Global
+String[] Function ValidatePickCurated(Actor akTarget, String asSection, String asName, String asMethod = "voluntary") Global
     String[] out = Utility.CreateStringArray(2, "")
     String[] sections = GetSections()
     If sections.Length == 0
@@ -1201,8 +1256,8 @@ String[] Function ValidatePickCurated(Actor akTarget, String asSection, String a
         Return out
     EndIf
     Bool secOK = asSection != "" && sections.Find(asSection) >= 0
-    If secOK && _SectionIsEvent(asSection)
-        Debug.Trace("[SNBaka.ST] ValidatePickCurated: named section '" + asSection + "' is EVENT MAKEUP - excluded, curated fallback -- REV-178e")
+    If secOK && !_PackEligible(asSection, asMethod)
+        Debug.Trace("[SNBaka.ST] ValidatePickCurated: named section '" + asSection + "' is off for the " + asMethod + " method or filed as makeup - curated fallback -- T1")
         secOK = False
     EndIf
     If secOK
@@ -1244,7 +1299,7 @@ String[] Function ValidatePickCurated(Actor akTarget, String asSection, String a
     ElseIf asSection != ""
         Debug.Trace("[SNBaka.ST] ValidatePickCurated: named section '" + asSection + "' not in cache - global curated fallback -- REV-178e")
     EndIf
-    String[] cands = _CuratedCandidates(akTarget)
+    String[] cands = _CuratedCandidates(akTarget, asMethod)
     If cands.Length == 0
         Debug.Trace("[SNBaka.ST] ValidatePickCurated: REFUSED [noeligible] - no non-event body-compatible entry -- REV-178e")
         Return out
@@ -1279,6 +1334,12 @@ String[] Function GetSections() Global
     String[] result = Utility.CreateStringArray(0)
     If !Installed()
         Return result
+    EndIf
+    ; S316: the native pack index (read from the pack files) answers first; the cache walk below is
+    ; the fallback when the native scan finds nothing (e.g. an unusual install layout).
+    String[] nat = SNBakaUI.STSections()
+    If nat.Length > 0
+        Return nat
     EndIf
     Int cache = SlaveTats.acquire_cache()
     If cache == 0
@@ -1365,7 +1426,7 @@ Function OpenSetMenu() Global
         Return
     EndIf
     If !SNBakaUI.IsAvailable()
-        Debug.Notification("SlaveTats menu: PrismaUI / SNBaka DLL not ready.")
+        Debug.Notification("SlaveTats menu: Magelight UI / DeD menus not ready.")
         Return
     EndIf
     RefreshPacks()
@@ -1410,7 +1471,7 @@ Function OpenPickerFor(Actor akTarget, Actor akCaster = None) Global
         Return
     EndIf
     If !SNBakaUI.IsAvailable()
-        Debug.Notification("SlaveTats menu: PrismaUI / SNBaka DLL not ready.")
+        Debug.Notification("SlaveTats menu: Magelight UI / DeD menus not ready.")
         Return
     EndIf
     If !Installed()
@@ -1421,7 +1482,11 @@ Function OpenPickerFor(Actor akTarget, Actor akCaster = None) Global
         Return
     EndIf
     StorageUtil.SetFormValue(Game.GetPlayer(), "SNBaka.ST.PickerTarget", akTarget)
-    RefreshPacks()
+    ; Leg 5: with the combined panel the section rescans on open itself (ScanPacks); only the
+    ; Phase 1 picker view still needs the refresh here.
+    If !(DeDService.PanelAvailable() && DeDService.PanelModuleInstalled("slavetats"))
+        RefreshPacks()
+    EndIf
     ; REV-79 menu-path sentinel (?5): OpenPickerFor was silent on the event path.
     Debug.Trace("[SNBaka.ST] Picker: open path=event sections=" + StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.SectionCount", -1))
     SNBakaUI.ShowSlaveTatsMenu(BuildPickerJSON(akTarget))
@@ -1436,7 +1501,7 @@ String Function BuildPickerJSON(Actor akTarget) Global
     String json = BuildMenuJSON()
     ; Splice "mode":"picker","target":"<name>" after the opening brace.
     Int openLen = 1
-    json = "{\"mode\":\"picker\",\"target\":\"" + akTarget.GetDisplayName() + "\"," + StringUtil.Substring(json, openLen, StringUtil.GetLength(json) - openLen)
+    json = "{\"mode\":\"picker\",\"tid\":" + akTarget.GetFormID() + ",\"target\":\"" + akTarget.GetDisplayName() + "\"," + StringUtil.Substring(json, openLen, StringUtil.GetLength(json) - openLen)
     Return json
 EndFunction
 
@@ -1507,6 +1572,11 @@ String[] Function GetSetNames(String asSection) Global
     String shp = "none"
     If !Installed() || asSection == ""
         Return result
+    EndIf
+    ; S316: native pack index first (see GetSections).
+    String[] nat = SNBakaUI.STNames(asSection)
+    If nat.Length > 0
+        Return nat
     EndIf
     Int cache = SlaveTats.acquire_cache()
     If cache == 0
@@ -1614,11 +1684,15 @@ String Function _DedAllVisibleMarks(Actor akTarget) Global
                 area = "Body"    ; unknown area - body-class default, coarse (the _FirstVisibleMark convention)
             EndIf
             If akTarget.GetWornForm(_AreaSlotMask(area)) == None
-                If nOut > 0
-                    out = out + "~"
+                ; REV-185: spank-makeup marks are invisible to the bio-lane
+                ; facts too (get_ded_marks); reserved to the spank trigger.
+                If !_SectionIsSpankMakeup(JMap.getStr(e, "section"))
+                    If nOut > 0
+                        out = out + "~"
+                    EndIf
+                    out = out + JMap.getStr(e, "section") + "|" + JMap.getStr(e, "name") + "|" + area
+                    nOut += 1
                 EndIf
-                out = out + JMap.getStr(e, "section") + "|" + JMap.getStr(e, "name") + "|" + area
-                nOut += 1
             EndIf
             i += 1
         EndWhile
@@ -1644,7 +1718,7 @@ String Function GetDedMarks(Actor akActor) Global
         String out = "{\"present\": true, \"self\": true, \"marks\": ["
         While i < sm.Length
             String[] p = StringUtil.Split(sm[i], "|")
-            out += "{\"section\": \"" + p[0] + "\", \"name\": \"" + p[1] + "\", \"area\": \"" + p[2] + "\"}"
+            out += "{\"section\": \"" + p[0] + "\", \"name\": \"" + p[1] + "\", \"area\": \"" + p[2] + "\", \"description\": \"" + _JEsc(DescriptionOfWorn(p[0], p[1])) + "\"}"
             If i < sm.Length - 1
                 out += ","
             EndIf
@@ -1674,7 +1748,7 @@ String Function GetDedMarks(Actor akActor) Global
                 out = "{\"present\": true, \"self\": false, \"wearer\": \"" + nm + "\", \"marks\": ["
                 While j < parts.Length
                     String[] q = StringUtil.Split(parts[j], "|")
-                    out += "{\"section\": \"" + q[0] + "\", \"name\": \"" + q[1] + "\", \"area\": \"" + q[2] + "\"}"
+                    out += "{\"section\": \"" + q[0] + "\", \"name\": \"" + q[1] + "\", \"area\": \"" + q[2] + "\", \"description\": \"" + _JEsc(DescriptionOfWorn(q[0], q[1])) + "\"}"
                     If j < parts.Length - 1
                         out += ","
                     EndIf
@@ -1722,4 +1796,1115 @@ String Function GetDedMarksAny(Actor akObserver) Global
         i += 1
     EndWhile
     Return "{\"any\": false}"
+EndFunction
+
+; ------------------------------------------------------------------
+; MAGELIGHT PHASE 2 LEG 5 + TATTOO T1 (docs/specs/magelight-phase2-spec.md 5.4 and 6;
+; docs/workstreams/tattoo-overhaul.md 6-8)
+; ------------------------------------------------------------------
+; PACKS = SlaveTats sections. Per-pack settings are keyed by the section name and kept apart
+; from SlaveTats' own cache, so they survive a pack being unticked and ticked again:
+;   SNBaka.ST.Off.forced / SNBaka.ST.Off.voluntary  StringList  packs switched OFF per method
+;     (a list of the disabled ones, so a newly installed pack is ON by default; the spank pack
+;     "SkyrimNet Spank" is seeded OFF in both once, D-T2)
+;   SNBaka.ST.StyleMakeup / SNBaka.ST.StyleTattoo   StringList  the player's corrections of the
+;     name guess (a section whose name holds "makeup" is guessed Makeup, else Tattoo; D-T3)
+;   SNBaka.ST.KnownPacks  StringList  the packs seen by the last scan (added/removed log)
+;   SNBaka.ST.T1Done      Int         the one-time T1 migration ran
+;   SNBaka.ST.P.*         panel session state (tab, pack, design, self, scanned)
+; Methods (D-T2): "forced" (a downed target) and "voluntary" (a willing NPC, yourself).
+; Tattoo lanes (LLM actions, the forced service) pick only ON packs of their method filed as
+; Tattoo; the panel's Makeup tab lists the ON packs filed as Makeup.
+; ------------------------------------------------------------------
+
+String Function StyleOf(String asSection) Global
+    Actor p = Game.GetPlayer()
+    If StorageUtil.StringListFind(p, "SNBaka.ST.StyleMakeup", asSection) >= 0
+        Return "makeup"
+    EndIf
+    If StorageUtil.StringListFind(p, "SNBaka.ST.StyleTattoo", asSection) >= 0
+        Return "tattoo"
+    EndIf
+    If StringUtil.Find(_ToLower(asSection), "makeup") >= 0
+        Return "makeup"
+    EndIf
+    Return "tattoo"
+EndFunction
+
+Function SetStyle(String asSection, String asStyle) Global
+    Actor p = Game.GetPlayer()
+    StorageUtil.StringListRemove(p, "SNBaka.ST.StyleMakeup", asSection, True)
+    StorageUtil.StringListRemove(p, "SNBaka.ST.StyleTattoo", asSection, True)
+    Bool guessMakeup = StringUtil.Find(_ToLower(asSection), "makeup") >= 0
+    If asStyle == "makeup" && !guessMakeup
+        StorageUtil.StringListAdd(p, "SNBaka.ST.StyleMakeup", asSection, False)
+    ElseIf asStyle == "tattoo" && guessMakeup
+        StorageUtil.StringListAdd(p, "SNBaka.ST.StyleTattoo", asSection, False)
+    EndIf
+    Debug.Trace("[SNBaka.ST][PANEL] pack style: '" + asSection + "' -> " + StyleOf(asSection))
+EndFunction
+
+Bool Function PackOn(String asSection, String asMethod) Global
+    Return StorageUtil.StringListFind(Game.GetPlayer(), "SNBaka.ST.Off." + asMethod, asSection) < 0
+EndFunction
+
+Function SetPackOn(String asSection, String asMethod, Bool abOn) Global
+    Actor p = Game.GetPlayer()
+    If abOn
+        StorageUtil.StringListRemove(p, "SNBaka.ST.Off." + asMethod, asSection, True)
+    Else
+        StorageUtil.StringListAdd(p, "SNBaka.ST.Off." + asMethod, asSection, False)
+    EndIf
+    Debug.Trace("[SNBaka.ST][PANEL] pack '" + asSection + "' " + asMethod + " = " + abOn)
+EndFunction
+
+; Lane eligibility: never Baka's spank pack (S316: it belongs to the Baka module only), switched on for
+; the method, and filed under the lane's style (tattoo lanes "tattoo", makeup lanes "makeup").
+Bool Function _PackEligible(String asSection, String asMethod, String asStyle = "tattoo") Global
+    Return asSection != "" && !_IsBakaPack(asSection) && PackOn(asSection, asMethod) && StyleOf(asSection) == asStyle
+EndFunction
+
+; The spank packs ("SkyrimNet Spank", Baka's own heat marks, and "Spank That Ass", the second spank pack
+; shipped with DeD): Baka module only, never listed or picked by the tattoo module (user ruling S316,
+; supersedes D-T2's "pickable, off by default"; both ship with the Baka FOMOD option from S317).
+Bool Function _IsBakaPack(String asSection) Global
+    Return asSection == "SkyrimNet Spank" || asSection == "Spank That Ass"
+EndFunction
+
+; Lane -> method (spec 4.1 / D-T2). dialogue (CommandTattoo), self and voluntary are willing;
+; llm_action (downed ApplyTattoo), ownership (MarkPlayer), forced and picker-on-downed are forced.
+String Function MethodForLane(String asLane) Global
+    If asLane == "dialogue" || asLane == "self" || asLane == "voluntary"
+        Return "voluntary"
+    EndIf
+    Return "forced"
+EndFunction
+
+; Downed, read from the same soft keys Baka's _IsDownedAny reads (no Baka dependency).
+Bool Function _IsDowned(Actor ak) Global
+    If !ak
+        Return False
+    EndIf
+    Return StorageUtil.GetIntValue(ak, "SNBaka.OnGround", 0) == 1 || ak.IsBleedingOut() || DeDService.IsDowned(ak)   ; S353: DeDService, not the retired bridge
+EndFunction
+
+; One-time T1 migration: the spank pack starts OFF in both methods (D-T2); the three retired
+; slot sets and their auto-apply toggles are cleared (D-T1).
+Function _T1Migrate() Global
+    Actor p = Game.GetPlayer()
+    If StorageUtil.GetIntValue(p, "SNBaka.ST.T1Done", 0) == 1
+        Return
+    EndIf
+    StorageUtil.SetIntValue(p, "SNBaka.ST.T1Done", 1)
+    String[] slots = new String[3]
+    slots[0] = "Spank"
+    slots[1] = "Defeat"
+    slots[2] = "Escalation"
+    Int i = 0
+    While i < 3
+        StorageUtil.UnsetStringValue(p, "SNBaka.ST." + slots[i] + "SetSection")
+        StorageUtil.UnsetStringValue(p, "SNBaka.ST." + slots[i] + "SetName")
+        StorageUtil.UnsetIntValue(p, "SNBaka.ST." + slots[i] + "SetColor")
+        StorageUtil.UnsetIntValue(p, "SNBaka.ST.ApplyOn" + slots[i])
+        i += 1
+    EndWhile
+    Debug.Trace("[SNBaka.ST] T1 migration: spank/defeat/escalation slot sets cleared (D-T1, D-T2)")
+EndFunction
+
+; Rescan the pack folder and log what changed since the last scan. Called on every game load
+; (the Baka DLL, kPostLoadGame / kNewGame) and once per panel opening of the tattoo section.
+; MO2 fixes the mod list while the game runs, so a load always sees the current set; the
+; panel rescan also catches files added by hand mid-session.
+Function ScanPacks(String asWhy) Global
+    If !Installed()
+        Debug.Trace("[SNBaka.ST] pack scan (" + asWhy + "): SlaveTats not installed - skipped")
+        Return
+    EndIf
+    _T1Migrate()
+    Float t0 = Utility.GetCurrentRealTime()
+    ; S316: the native index (read from the pack files) is what every DeD listing reads. SlaveTats'
+    ; own cache (its apply calls read it) is rebuilt only when the pack files changed since the last
+    ; rebuild - the slow part on SlaveTats SE.
+    Int nNative = SNBakaUI.STScan()
+    Bool rebuilt = False
+    If SNBakaUI.STCacheStale()
+        RefreshPacks()
+        SNBakaUI.STCacheBuilt()
+        rebuilt = True
+    EndIf
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.ST.SectionCount", nNative)
+    String[] now = GetSections()
+    Actor p = Game.GetPlayer()
+    Int added = 0
+    String addedText = ""
+    Int i = 0
+    While i < now.Length
+        If StorageUtil.StringListFind(p, "SNBaka.ST.KnownPacks", now[i]) < 0
+            added += 1
+            If added <= 12
+                addedText += "'" + now[i] + "' "
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    Int removed = 0
+    String removedText = ""
+    Int known = StorageUtil.StringListCount(p, "SNBaka.ST.KnownPacks")
+    i = 0
+    While i < known
+        String k = StorageUtil.StringListGet(p, "SNBaka.ST.KnownPacks", i)
+        If now.Find(k) < 0
+            removed += 1
+            If removed <= 12
+                removedText += "'" + k + "' "
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    StorageUtil.StringListClear(p, "SNBaka.ST.KnownPacks")
+    StorageUtil.StringListCopy(p, "SNBaka.ST.KnownPacks", now)
+    Float took = Utility.GetCurrentRealTime() - t0
+    Debug.Trace("[SNBaka.ST] pack scan (" + asWhy + "): " + now.Length + " packs (native index " + nNative + ", SlaveTats cache rebuilt " + rebuilt + ") in " + took + "s; added " + added + " " + addedText + "; removed " + removed + " " + removedText + "(settings of removed packs are kept)")
+EndFunction
+
+Function OnGameLoaded() Global
+    Debug.Trace("[SNBaka.ST] game loaded - automatic pack scan (leg 5)")
+    _TryOffAll("game load")   ; T2: nothing tried on survives a load
+    _Redress("game load")
+    ScanPacks("load")
+EndFunction
+
+; ------------------------------------------------------------------
+; THE SLAVETATS SECTION OF THE COMBINED DeD PANEL (spec 5.4, 17, 18)
+; ------------------------------------------------------------------
+; The Baka DLL (framework) holds the panel handler for module "slavetats" and calls PanelMsg for
+; every request / action / setting / close; this script answers through DeDService.PanelPush and
+; DeDService.PanelSettingResult. Display text is placeholder (register entry 60). ASCII.
+; Tabs: tattoo, makeup (pack -> design -> colour adds to the queue), worn (tap to remove; Remove All).
+; The queue is applied by the footer Apply button in one go; closing the panel discards it (S316).
+; The subject is the panel's target, or the player (no target, or the "Tattoo Self" switch).
+; A standing NPC can only be marked after agreeing through CommandTattoo (OpenWillingFor, S316);
+; a downed NPC is the Forced method; yourself is always allowed.
+; ------------------------------------------------------------------
+
+String Function _JEsc(String s) Global
+    If StringUtil.Find(s, "\"") < 0 && StringUtil.Find(s, "\\") < 0
+        Return s
+    EndIf
+    String o = ""
+    Int n = StringUtil.GetLength(s)
+    Int i = 0
+    While i < n
+        String c = StringUtil.GetNthChar(s, i)
+        If c == "\"" || c == "\\"
+            o += "\\"
+        EndIf
+        o += c
+        i += 1
+    EndWhile
+    Return o
+EndFunction
+
+String Function _B(Bool b) Global
+    If b
+        Return "true"
+    EndIf
+    Return "false"
+EndFunction
+
+String Function _Q(String s) Global
+    Return "\"" + _JEsc(s) + "\""
+EndFunction
+
+Actor Function _PanelSubject(Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    If !akTarget || akTarget == p || StorageUtil.GetIntValue(p, "SNBaka.ST.P.Self", 0) == 1
+        Return p
+    EndIf
+    Return akTarget
+EndFunction
+
+String Function _PanelMethod(Actor akSubject) Global
+    If akSubject == Game.GetPlayer() || !_IsDowned(akSubject)
+        Return "voluntary"
+    EndIf
+    Return "forced"
+EndFunction
+
+; CommandTattoo's willing route: the NPC has agreed (their own action fired). The agreement covers one
+; sitting: it is used up by Apply and lapses after 5 minutes.
+Function OpenWillingFor(Actor akNpc, Actor akCaster = None) Global
+    If !akNpc
+        Return
+    EndIf
+    Actor p = Game.GetPlayer()
+    StorageUtil.SetFormValue(p, "SNBaka.ST.Agreed", akNpc)
+    StorageUtil.SetFloatValue(p, "SNBaka.ST.AgreedAt", Utility.GetCurrentRealTime())
+    Debug.Trace("[SNBaka.ST][PANEL] " + akNpc.GetDisplayName() + " agreed to be marked (CommandTattoo) - opening the willing menu")
+    OpenPickerFor(akNpc, akCaster)
+EndFunction
+
+Bool Function _Agreed(Actor akSubject) Global
+    Actor p = Game.GetPlayer()
+    If StorageUtil.GetFormValue(p, "SNBaka.ST.Agreed", None) != akSubject
+        Return False
+    EndIf
+    Return Utility.GetCurrentRealTime() - StorageUtil.GetFloatValue(p, "SNBaka.ST.AgreedAt", 0.0) < 300.0
+EndFunction
+
+; May the player apply to this subject from the panel? Yourself: yes. Downed: yes (Forced).
+; Standing NPC: only after agreeing.
+Bool Function _MayApply(Actor akSubject) Global
+    If akSubject == Game.GetPlayer() || _IsDowned(akSubject)
+        Return True
+    EndIf
+    Return _Agreed(akSubject)
+EndFunction
+
+
+; ------------------------------------------------------------------
+; T2 (tattoo-overhaul 8, S330): LIVE PREVIEW - try-on, undress, restore
+; ------------------------------------------------------------------
+; With Phantasm installed (DeDService.PreviewAvailable), the Tattoo / Makeup / Worn tabs carry a live picture of the
+; subject (section JSON "preview"). Choosing a design puts it on the body for real (SlaveTats, silent, no events, not
+; recorded as applied); choosing a colour swaps it for the coloured one, which stays on as a queued mark; taking a mark
+; out of the queue takes it off. Apply takes every tried-on mark off and applies the queue the normal way (events,
+; records, descriptions). Closing without Apply, switching the subject, or a game load takes every tried-on mark off.
+; A design the subject already wears is never tried on (taking it off again would remove the real one).
+; While the preview shows, the subject's worn armour comes off (the "Undress" switch, on by default) and goes back on
+; when the panel closes, the switch goes off, or the subject changes. Devious devices (zad_Lockable) and items marked
+; SexLabNoStrip stay on. Keys: SNBaka.ST.P.Tried (string list "section|name" on the player), SNBaka.ST.P.TrySubj,
+; SNBaka.ST.P.Browse, SNBaka.ST.P.Dressee (forms on the player), SNBaka.ST.P.Undressed (form list on the subject).
+Bool Function _PreviewOn() Global
+    Return DeDService.PreviewAvailable()
+EndFunction
+
+Bool Function _WearsApplied(Actor akSubject, String asSection, String asName) Global
+    Int n = StorageUtil.StringListCount(akSubject, "SNBaka.ST.Applied")
+    Int i = 0
+    While i < n
+        String[] parts = _EntryParts(StorageUtil.StringListGet(akSubject, "SNBaka.ST.Applied", i))
+        If parts[0] == asSection && parts[1] == asName
+            Return True
+        EndIf
+        i += 1
+    EndWhile
+    Return False
+EndFunction
+
+Bool Function _TryOn(Actor akSubject, String asSection, String asName, Int aiColor) Global
+    Actor p = Game.GetPlayer()
+    If !akSubject || _WearsApplied(akSubject, asSection, asName)
+        Return False
+    EndIf
+    Actor was = StorageUtil.GetFormValue(p, "SNBaka.ST.P.TrySubj") as Actor
+    If was && was != akSubject
+        _TryOffAll("subject changed")
+    EndIf
+    If aiColor < 0
+        aiColor = StorageUtil.GetIntValue(p, "SNBaka.ST.DefaultColor", 0)
+    EndIf
+    Bool ok = SlaveTats.simple_add_tattoo(akSubject, asSection, asName, aiColor, True, True, 1.0)
+    If ok
+        StorageUtil.SetFormValue(p, "SNBaka.ST.P.TrySubj", akSubject)
+        StorageUtil.StringListAdd(p, "SNBaka.ST.P.Tried", asSection + "|" + asName, False)
+        DeDService.PreviewRefresh(akSubject)
+    EndIf
+    Debug.Trace("[SNBaka.ST][PREVIEW] try on '" + asName + "' (" + asSection + ") color=0x" + _IntToHex(aiColor) + " on " + akSubject.GetDisplayName() + " ok=" + ok + " -- S330")
+    Return ok
+EndFunction
+
+Function _TryOff(String asSection, String asName) Global
+    Actor p = Game.GetPlayer()
+    Actor subj = StorageUtil.GetFormValue(p, "SNBaka.ST.P.TrySubj") as Actor
+    Int i = StorageUtil.StringListFind(p, "SNBaka.ST.P.Tried", asSection + "|" + asName)
+    If !subj || i < 0
+        Return
+    EndIf
+    StorageUtil.StringListRemoveAt(p, "SNBaka.ST.P.Tried", i)
+    SlaveTats.simple_remove_tattoo(subj, asSection, asName, True, True)
+    DeDService.PreviewRefresh(subj)
+    Debug.Trace("[SNBaka.ST][PREVIEW] took off '" + asName + "' (" + asSection + ") from " + subj.GetDisplayName() + " -- S330")
+EndFunction
+
+Function _TryOffAll(String asWhy) Global
+    Actor p = Game.GetPlayer()
+    Actor subj = StorageUtil.GetFormValue(p, "SNBaka.ST.P.TrySubj") as Actor
+    Int n = StorageUtil.StringListCount(p, "SNBaka.ST.P.Tried")
+    If subj && n > 0
+        Int i = 0
+        While i < n
+            String e = StorageUtil.StringListGet(p, "SNBaka.ST.P.Tried", i)
+            Int a = StringUtil.Find(e, "|")
+            If a > 0
+                SlaveTats.simple_remove_tattoo(subj, StringUtil.Substring(e, 0, a), StringUtil.Substring(e, a + 1), i == n - 1, True)
+            EndIf
+            i += 1
+        EndWhile
+        DeDService.PreviewRefresh(subj)
+        Debug.Trace("[SNBaka.ST][PREVIEW] took off " + n + " tried-on mark(s) from " + subj.GetDisplayName() + " (" + asWhy + ") -- S330")
+    EndIf
+    StorageUtil.StringListClear(p, "SNBaka.ST.P.Tried")
+    StorageUtil.UnsetFormValue(p, "SNBaka.ST.P.TrySubj")
+    StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Browse")
+EndFunction
+
+; The design being looked at (before a colour is chosen) is worn in the module's default colour.
+Function _BrowseOff() Global
+    Actor p = Game.GetPlayer()
+    String b = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Browse", "")
+    If b == ""
+        Return
+    EndIf
+    StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Browse")
+    Int a = StringUtil.Find(b, "|")
+    If a > 0
+        _TryOff(StringUtil.Substring(b, 0, a), StringUtil.Substring(b, a + 1))
+    EndIf
+EndFunction
+
+Function _Undress(Actor akSubject) Global
+    Actor p = Game.GetPlayer()
+    If !akSubject || StorageUtil.GetIntValue(p, "SNBaka.ST.P.NoUndress", 0) == 1
+        Return
+    EndIf
+    Actor was = StorageUtil.GetFormValue(p, "SNBaka.ST.P.Dressee") as Actor
+    If was == akSubject
+        Return
+    EndIf
+    If was
+        _Redress("subject changed")
+    EndIf
+    Keyword kDD = Keyword.GetKeyword("zad_Lockable")
+    Keyword kNoStrip = Keyword.GetKeyword("SexLabNoStrip")
+    StorageUtil.FormListClear(akSubject, "SNBaka.ST.P.Undressed")
+    Int n = 0
+    Int i = 0
+    While i < 32
+        Int slot = 30 + i
+        If slot != 31 && slot != 41    ; hair and long hair
+            Armor a = akSubject.GetWornForm(Math.LeftShift(1, i)) as Armor
+            If a && StorageUtil.FormListFind(akSubject, "SNBaka.ST.P.Undressed", a) < 0 && !(kDD && a.HasKeyword(kDD)) && !(kNoStrip && a.HasKeyword(kNoStrip))
+                StorageUtil.FormListAdd(akSubject, "SNBaka.ST.P.Undressed", a, False)
+                n += 1
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+    StorageUtil.SetFormValue(p, "SNBaka.ST.P.Dressee", akSubject)
+    ; S331: native, at once (UnequipItem waited for the menu to close: armour in the picture, a flash on exit)
+    If n > 0
+        DeDService.PreviewDress(akSubject, StorageUtil.FormListToArray(akSubject, "SNBaka.ST.P.Undressed"), False)
+    EndIf
+    Debug.Trace("[SNBaka.ST][PREVIEW] undressed " + akSubject.GetDisplayName() + " for the preview: " + n + " item(s) off (native, at once) -- S331")
+EndFunction
+
+Function _Redress(String asWhy) Global
+    Actor p = Game.GetPlayer()
+    Actor subj = StorageUtil.GetFormValue(p, "SNBaka.ST.P.Dressee") as Actor
+    StorageUtil.UnsetFormValue(p, "SNBaka.ST.P.Dressee")
+    If !subj
+        Return
+    EndIf
+    Int n = StorageUtil.FormListCount(subj, "SNBaka.ST.P.Undressed")
+    Int back = 0
+    Int i = 0
+    StorageUtil.FormListClear(subj, "SNBaka.ST.P.Redress")
+    While i < n
+        Form f = StorageUtil.FormListGet(subj, "SNBaka.ST.P.Undressed", i)
+        If f && subj.GetItemCount(f) > 0 && !subj.IsEquipped(f)
+            StorageUtil.FormListAdd(subj, "SNBaka.ST.P.Redress", f, False)
+            back += 1
+        EndIf
+        i += 1
+    EndWhile
+    If back > 0   ; S331: native, at once
+        DeDService.PreviewDress(subj, StorageUtil.FormListToArray(subj, "SNBaka.ST.P.Redress"), True)
+    EndIf
+    StorageUtil.FormListClear(subj, "SNBaka.ST.P.Redress")
+    StorageUtil.FormListClear(subj, "SNBaka.ST.P.Undressed")
+    Debug.Trace("[SNBaka.ST][PREVIEW] dressed " + subj.GetDisplayName() + " again (" + asWhy + "): " + back + " of " + n + " item(s) back on (native, at once) -- S331")
+EndFunction
+
+; The panel shows the preview on these tabs when Phantasm is present and the subject may be marked.
+Bool Function _PreviewTab(String asTab) Global
+    Return asTab == "tattoo" || asTab == "makeup" || asTab == "worn"
+EndFunction
+
+Function _PanelReset() Global
+    Actor p = Game.GetPlayer()
+    _BrowseOff()   ; T2: the design being looked at comes off when the pick is abandoned
+    StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Pack")
+    StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Design")
+EndFunction
+
+Function PanelMsg(String asKind, String asSection, String asTab, String asPick, String asKey, String asValue, Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    String tName = "none"
+    If akTarget
+        tName = akTarget.GetDisplayName()
+    EndIf
+    Debug.Trace("[SNBaka.ST][PANEL] " + asKind + " section=" + asSection + " tab=" + asTab + " pick=" + asPick + " key=" + asKey + " target=" + tName)
+    If asKind == "closed"
+        Int dropped = StorageUtil.StringListCount(p, "SNBaka.ST.P.Queue")
+        If dropped > 0
+            Debug.Trace("[SNBaka.ST][PANEL] closed without Apply - " + dropped + " queued mark(s) discarded")
+        EndIf
+        _TryOffAll("closed without Apply")   ; T2 (S330)
+        _Redress("panel closed")
+        _PanelReset()
+        StorageUtil.StringListClear(p, "SNBaka.ST.P.Queue")
+        StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Self")
+        StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Scanned")
+        StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Worn")
+        Return
+    EndIf
+    If asKind == "set"
+        _PanelSetting(asKey, asValue)
+        Return
+    EndIf
+    If asKind == "req" && asSection == "settings"
+        DeDService.PanelPush("slavetats", _PanelSettingsJson())
+        Return
+    EndIf
+    If !Installed()
+        DeDService.PanelPush("slavetats", "{\"module\":\"slavetats\",\"section\":\"main\",\"items\":[],\"notice\":{\"title\":\"SlaveTats is not installed\",\"text\":\"Nothing to apply.\"}}")
+        Return
+    EndIf
+    If asKind == "req"
+        If StorageUtil.GetIntValue(p, "SNBaka.ST.P.Scanned", 0) == 0
+            StorageUtil.SetIntValue(p, "SNBaka.ST.P.Scanned", 1)
+            ScanPacks("panel")
+        EndIf
+        If asTab != "" && asTab != StorageUtil.GetStringValue(p, "SNBaka.ST.P.Tab", "")
+            StorageUtil.SetStringValue(p, "SNBaka.ST.P.Tab", asTab)
+            _PanelReset()
+            StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Worn")
+        EndIf
+    ElseIf asKind == "act"
+        Actor subj = _PanelSubject(akTarget)
+        If asPick == "__back" && StorageUtil.GetIntValue(p, "SNBaka.ST.P.Worn", -1) >= 0
+            StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Worn")
+        ElseIf StringUtil.Find(asPick, "worn:") == 0
+            StorageUtil.SetIntValue(p, "SNBaka.ST.P.Worn", StringUtil.Substring(asPick, 5) as Int)
+        ElseIf StringUtil.Find(asPick, "desc|") == 0
+            Debug.Trace("[SNBaka.ST][PANEL] description saved (" + asPick + ")")   ; stored by the Baka DLL before this call
+            _DescQueueDropKey(StringUtil.Substring(asPick, 5))
+        ElseIf StringUtil.Find(asPick, "dskip:") == 0
+            Int di = StringUtil.Substring(asPick, 6) as Int
+            String de = StorageUtil.StringListGet(None, "SNBaka.ST.DescQueue", di)
+            Int db = StringUtil.Find(de, "|")
+            If db > 0
+                SNBakaUI.STSkipDescription(StringUtil.Substring(de, 0, db), StringUtil.Substring(de, db + 1))
+            EndIf
+            StorageUtil.StringListRemoveAt(None, "SNBaka.ST.DescQueue", di)
+        ElseIf asPick == "dskipall"
+            Int dn = StorageUtil.StringListCount(None, "SNBaka.ST.DescQueue")
+            Int dk = 0
+            While dk < dn
+                String se = StorageUtil.StringListGet(None, "SNBaka.ST.DescQueue", dk)
+                Int sb = StringUtil.Find(se, "|")
+                If sb > 0
+                    SNBakaUI.STSkipDescription(StringUtil.Substring(se, 0, sb), StringUtil.Substring(se, sb + 1))
+                EndIf
+                dk += 1
+            EndWhile
+            StorageUtil.StringListClear(None, "SNBaka.ST.DescQueue")
+            StorageUtil.SetStringValue(p, "SNBaka.ST.P.Tab", "tattoo")
+        ElseIf asPick == "ddone"
+            _TryOffAll("closed")   ; T2: not a stay action, the panel has closed
+            _Redress("panel closed")
+            Return    ; not a stay action: the panel has closed; unanswered requests stay queued
+        ElseIf asPick == "__back"
+            If StorageUtil.GetStringValue(p, "SNBaka.ST.P.Design", "") != ""
+                _BrowseOff()   ; T2
+                StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Design")
+            Else
+                StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Pack")
+            EndIf
+        ElseIf asPick == "undress"   ; T2: the preview's Undress switch
+            StorageUtil.SetIntValue(p, "SNBaka.ST.P.NoUndress", 1 - StorageUtil.GetIntValue(p, "SNBaka.ST.P.NoUndress", 0))
+            If StorageUtil.GetIntValue(p, "SNBaka.ST.P.NoUndress", 0) == 1
+                _Redress("Undress switched off")
+            EndIf
+        ElseIf asPick == "self"
+            _TryOffAll("subject changed")   ; T2
+            _Redress("subject changed")
+            StorageUtil.SetIntValue(p, "SNBaka.ST.P.Self", 1 - StorageUtil.GetIntValue(p, "SNBaka.ST.P.Self", 0))
+            StorageUtil.StringListClear(p, "SNBaka.ST.P.Queue")    ; the queue belongs to one subject
+            _PanelReset()
+        ElseIf StringUtil.Find(asPick, "pack:") == 0
+            _BrowseOff()   ; T2
+            StorageUtil.SetStringValue(p, "SNBaka.ST.P.Pack", StringUtil.Substring(asPick, 5))
+            StorageUtil.UnsetStringValue(p, "SNBaka.ST.P.Design")
+        ElseIf StringUtil.Find(asPick, "design:") == 0
+            StorageUtil.SetStringValue(p, "SNBaka.ST.P.Design", StringUtil.Substring(asPick, 7))
+            If _PreviewOn() && _MayApply(subj)   ; T2: put the design on to look at it
+                _BrowseOff()
+                String bSec = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Pack", "")
+                String bNm = StringUtil.Substring(asPick, 7)
+                If _TryOn(subj, bSec, bNm, -1)
+                    StorageUtil.SetStringValue(p, "SNBaka.ST.P.Browse", bSec + "|" + bNm)
+                EndIf
+            EndIf
+        ElseIf StringUtil.Find(asPick, "color:") == 0
+            String sec = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Pack", "")
+            String nm = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Design", "")
+            If sec != "" && nm != "" && _MayApply(subj)
+                StorageUtil.StringListAdd(p, "SNBaka.ST.P.Queue", sec + "|" + nm + "|" + StringUtil.Substring(asPick, 6), True)
+                Debug.Trace("[SNBaka.ST][PANEL] queued '" + nm + "' (" + sec + ") for " + subj.GetDisplayName() + " - " + StorageUtil.StringListCount(p, "SNBaka.ST.P.Queue") + " queued")
+                If _PreviewOn()   ; T2: the looked-at mark becomes the queued one, in its colour
+                    _BrowseOff()
+                    Int qc = -1
+                    If StringUtil.Substring(asPick, 6) != "default"
+                        qc = _HexToInt(StringUtil.Substring(asPick, 6))
+                    EndIf
+                    _TryOn(subj, sec, nm, qc)
+                EndIf
+            EndIf
+            _PanelReset()
+        ElseIf StringUtil.Find(asPick, "unq:") == 0
+            String ue = StorageUtil.StringListGet(p, "SNBaka.ST.P.Queue", StringUtil.Substring(asPick, 4) as Int)
+            StorageUtil.StringListRemoveAt(p, "SNBaka.ST.P.Queue", StringUtil.Substring(asPick, 4) as Int)
+            Int ua = StringUtil.Find(ue, "|")
+            If ua > 0   ; T2: a mark taken out of the queue comes off the body
+                String urest = StringUtil.Substring(ue, ua + 1)
+                Int ub = StringUtil.Find(urest, "|")
+                _TryOff(StringUtil.Substring(ue, 0, ua), StringUtil.Substring(urest, 0, ub))
+            EndIf
+        ElseIf asPick == "apply"
+            Bool describeNext = _QueueNeedsDescription()
+            _TryOffAll("Apply - the real marks go on next")   ; T2
+            _PanelApplyQueue(subj)
+            If !describeNext
+                _Redress("applied")   ; T2
+                Return    ; not a stay action: the panel has closed
+            EndIf
+            ; S327: Apply kept the menu open (Ask for Descriptions) - show what needs describing
+            If StorageUtil.StringListCount(None, "SNBaka.ST.DescQueue") > 0
+                StorageUtil.SetStringValue(p, "SNBaka.ST.P.Tab", "describe")
+            EndIf
+        ElseIf StringUtil.Find(asPick, "rm:") == 0
+            Int idx = StringUtil.Substring(asPick, 3) as Int
+            String[] parts = _EntryParts(StorageUtil.StringListGet(subj, "SNBaka.ST.Applied", idx))
+            If parts.Length >= 2 && parts[0] != "" && parts[1] != ""
+                RemoveTattoo(subj, parts[0], parts[1], True, "panel")
+            EndIf
+            StorageUtil.UnsetIntValue(p, "SNBaka.ST.P.Worn")
+        ElseIf asPick == "rmall"
+            RemoveAllFromActor(subj, "panel")
+        EndIf
+    EndIf
+    If _PreviewOn() && _PreviewTab(StorageUtil.GetStringValue(p, "SNBaka.ST.P.Tab", "tattoo")) && _MayApply(_PanelSubject(akTarget))
+        _Undress(_PanelSubject(akTarget))   ; T2: the preview shows skin (Undress switch)
+    EndIf
+    DeDService.PanelPush("slavetats", _PanelMainJson(akTarget))
+EndFunction
+
+Function _PanelApplyQueue(Actor akSubject) Global
+    Actor p = Game.GetPlayer()
+    Int n = StorageUtil.StringListCount(p, "SNBaka.ST.P.Queue")
+    If !_MayApply(akSubject)
+        Debug.Trace("[SNBaka.ST][PANEL] apply REFUSED - " + akSubject.GetDisplayName() + " has not agreed")
+        n = 0
+    EndIf
+    String mode = "picker"
+    If akSubject == p
+        mode = "self"
+    EndIf
+    Int ok = 0
+    Int i = 0
+    While i < n
+        String e = StorageUtil.StringListGet(p, "SNBaka.ST.P.Queue", i)
+        Int a = StringUtil.Find(e, "|")
+        String rest = StringUtil.Substring(e, a + 1)
+        Int b = StringUtil.Find(rest, "|")
+        String sec = StringUtil.Substring(e, 0, a)
+        String nm = StringUtil.Substring(rest, 0, b)
+        String hex = StringUtil.Substring(rest, b + 1)
+        Int color = -1
+        If hex != "default"
+            color = _HexToInt(hex)
+        EndIf
+        If ApplyTattoo(akSubject, sec, nm, color, True, mode)
+            ok += 1
+        EndIf
+        i += 1
+    EndWhile
+    Debug.Trace("[SNBaka.ST][PANEL] Apply: " + ok + " of " + n + " queued mark(s) applied to " + akSubject.GetDisplayName() + " method=" + _PanelMethod(akSubject))
+    If ok < n
+        ; S322 (dogfood: two self-marks refused silently): tell the player. SlaveTats' own refusal has no reason
+        ; code; on a character with many RaceMenu body overlays the usual cause is no free overlay slot.
+        Debug.Notification("SlaveTats could not apply " + (n - ok) + " of " + n + " mark(s).")
+        Debug.Trace("[SNBaka.ST][PANEL] Apply: SlaveTats refused " + (n - ok) + " mark(s) on " + akSubject.GetDisplayName() + " - no reason given by SlaveTats; check free overlay slots (skee64.ini iNumOverlays) and test the same design from SlaveTats' own MCM")
+    EndIf
+    StorageUtil.StringListClear(p, "SNBaka.ST.P.Queue")
+    _PanelReset()
+    If akSubject != p && ok > 0
+        StorageUtil.UnsetFormValue(p, "SNBaka.ST.Agreed")    ; the agreement covered this sitting
+    EndIf
+EndFunction
+
+String Function _PanelMainJson(Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    Actor subj = _PanelSubject(akTarget)
+    String method = _PanelMethod(subj)
+    Bool mayApply = _MayApply(subj)
+    String tab = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Tab", "tattoo")
+    Int toDescribe = StorageUtil.StringListCount(None, "SNBaka.ST.DescQueue")
+    If tab != "makeup" && tab != "worn" && !(tab == "describe" && toDescribe > 0)
+        tab = "tattoo"
+    EndIf
+    Int worn = StorageUtil.StringListCount(subj, "SNBaka.ST.Applied")
+    Int queued = StorageUtil.StringListCount(p, "SNBaka.ST.P.Queue")
+    String subjName = subj.GetDisplayName()
+    If subj == p
+        subjName = "Yourself"
+    EndIf
+    String status = "willing"
+    If method == "forced"
+        status = "forced: downed"
+    ElseIf subj != p && mayApply
+        status = "willing: agreed"
+    ElseIf subj != p
+        status = "has not agreed"
+    EndIf
+    If queued > 0
+        status += " - " + queued + " queued"
+    EndIf
+    String eyebrow = "Tattoo"
+    If tab == "makeup"
+        eyebrow = "Makeup"
+    ElseIf tab == "worn"
+        eyebrow = "Worn"
+    ElseIf tab == "describe"
+        eyebrow = "Describe"
+    EndIf
+    String items = ""
+    String steps = ""
+    String notice = ""
+    Int wornSel = StorageUtil.GetIntValue(p, "SNBaka.ST.P.Worn", -1)
+    If tab == "describe"
+        ; S327 (D-T8): every design waiting for a description - its edit row (Save) and a Skip tile
+        status = toDescribe + " new mark(s) to describe"
+        Int q = 0
+        While q < toDescribe
+            String e = StorageUtil.StringListGet(None, "SNBaka.ST.DescQueue", q)
+            Int bar = StringUtil.Find(e, "|")
+            String dSec = StringUtil.Substring(e, 0, bar)
+            String dNm = StringUtil.Substring(e, bar + 1)
+            If items != ""
+                items += ","
+            EndIf
+            items += "{\"id\":" + _Q("desc|" + dSec + "|" + dNm) + ",\"input\":true,\"label\":" + _Q(dNm + " (" + dSec + ")") + ",\"value\":\"\",\"placeholder\":" + _Q(DescriptionOf(dSec, dNm)) + ",\"button\":\"Save\",\"stay\":true}"
+            items += ",{\"id\":\"dskip:" + q + "\",\"label\":" + _Q("Skip: " + dNm) + ",\"stay\":true}"
+            q += 1
+        EndWhile
+    ElseIf tab == "worn" && wornSel >= 0 && wornSel < worn
+        ; S326: one worn mark - its description (editable) and Remove
+        String[] wp = _EntryParts(StorageUtil.StringListGet(subj, "SNBaka.ST.Applied", wornSel))
+        steps = "[\"Worn\"," + _Q(wp[1]) + "]"
+        status = DescriptionOf(wp[0], wp[1])
+        items = _DescEditItem(wp[0], wp[1])
+        items += ",{\"id\":\"rm:" + wornSel + "\",\"label\":\"Remove this mark\",\"state\":\"danger\",\"stay\":true}"
+    ElseIf tab == "worn"
+        steps = "[\"Worn\"]"
+        Int i = 0
+        While i < worn
+            String[] parts = _EntryParts(StorageUtil.StringListGet(subj, "SNBaka.ST.Applied", i))
+            If parts.Length >= 2 && parts[1] != ""
+                If items != ""
+                    items += ","
+                EndIf
+                items += "{\"id\":\"worn:" + i + "\",\"label\":" + _Q(parts[1] + " (" + parts[0] + ")") + ",\"stay\":true}"
+            EndIf
+            i += 1
+        EndWhile
+        If items == ""
+            notice = "{\"title\":\"Nothing worn\",\"text\":\"No marks applied by DeD.\"}"
+        EndIf
+    ElseIf !mayApply
+        notice = "{\"title\":\"They have not agreed\",\"text\":\"Ask them in conversation first.\"}"
+    Else
+        String sec = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Pack", "")
+        String nm = StorageUtil.GetStringValue(p, "SNBaka.ST.P.Design", "")
+        If sec == ""
+            steps = "[\"Pack\"]"
+            ; the queue first (tap to take one back out)
+            Int q = 0
+            While q < queued
+                String e = StorageUtil.StringListGet(p, "SNBaka.ST.P.Queue", q)
+                Int a = StringUtil.Find(e, "|")
+                String rest = StringUtil.Substring(e, a + 1)
+                Int b = StringUtil.Find(rest, "|")
+                If items != ""
+                    items += ","
+                EndIf
+                items += "{\"id\":\"unq:" + q + "\",\"label\":" + _Q("Queued: " + StringUtil.Substring(rest, 0, b) + " (" + StringUtil.Substring(e, 0, a) + ")") + ",\"state\":\"on\",\"stay\":true}"
+                q += 1
+            EndWhile
+            ; S321: the pack tiles are built natively (fast, and immune to Papyrus' case pooling).
+            String packItems = SNBakaUI.STPackItemsJson(tab, StorageUtil.StringListToArray(p, "SNBaka.ST.Off." + method),                 StorageUtil.StringListToArray(p, "SNBaka.ST.StyleMakeup"), StorageUtil.StringListToArray(p, "SNBaka.ST.StyleTattoo"))
+            If packItems != ""
+                If items != ""
+                    items += ","
+                EndIf
+                items += packItems
+            EndIf
+            If packItems == ""
+                notice = "{\"title\":\"No packs\",\"text\":\"No pack is switched on for this. See Settings.\"}"
+            EndIf
+        ElseIf nm == ""
+            steps = "[\"Pack\"," + _Q(sec) + "]"
+            String[] names = GetSetNames(sec)
+            Int i = 0
+            While i < names.Length
+                If names[i] != "" && _WearableBy(subj, sec, names[i])
+                    If items != ""
+                        items += ","
+                    EndIf
+                    items += "{\"id\":" + _Q("design:" + names[i]) + ",\"label\":" + _Q(names[i]) + ",\"stay\":true}"
+                EndIf
+                i += 1
+            EndWhile
+            If items == ""
+                notice = "{\"title\":\"Nothing wearable\",\"text\":\"No design in this pack fits this body.\"}"
+            EndIf
+        Else
+            steps = "[\"Pack\"," + _Q(sec) + "," + _Q(nm) + "]"
+            status = DescriptionOf(sec, nm)   ; S326
+            items = _DescEditItem(sec, nm) + ","
+            items += "{\"id\":\"color:default\",\"label\":\"Pack colour\",\"stay\":true},{\"id\":\"color:1a1a1a\",\"label\":\"Black\",\"stay\":true},{\"id\":\"color:8b1a1a\",\"label\":\"Red\",\"stay\":true},{\"id\":\"color:b01030\",\"label\":\"Crimson\",\"stay\":true},{\"id\":\"color:550a0a\",\"label\":\"Dark Red\",\"stay\":true},{\"id\":\"color:1a1a8b\",\"label\":\"Blue\",\"stay\":true},{\"id\":\"color:1a6b1a\",\"label\":\"Green\",\"stay\":true},{\"id\":\"color:5a1a8b\",\"label\":\"Purple\",\"stay\":true},{\"id\":\"color:c05a8b\",\"label\":\"Pink\",\"stay\":true}"
+        EndIf
+    EndIf
+    String footer = ""
+    If akTarget && akTarget != p
+        footer = "{\"id\":\"self\",\"kind\":\"toggle\",\"label\":\"Tattoo Self\",\"on\":" + _B(subj == p) + ",\"stay\":true}"
+    EndIf
+    If tab != "worn" && tab != "describe" && queued > 0 && mayApply
+        If footer != ""
+            footer += ","
+        EndIf
+        ; S327: with Ask for Descriptions on and a first-time design in the queue, Apply keeps the menu open on Describe
+        String applyStay = ""
+        If _QueueNeedsDescription()
+            applyStay = ",\"stay\":true"
+        EndIf
+        footer += "{\"id\":\"apply\",\"kind\":\"button\",\"label\":\"Apply (" + queued + ")\"" + applyStay + "}"
+    EndIf
+    Bool preview = _PreviewOn() && _PreviewTab(tab) && mayApply   ; T2 (S330)
+    If preview
+        If footer != ""
+            footer += ","
+        EndIf
+        footer += "{\"id\":\"undress\",\"kind\":\"toggle\",\"label\":\"Undress\",\"on\":" + _B(StorageUtil.GetIntValue(p, "SNBaka.ST.P.NoUndress", 0) == 0) + ",\"stay\":true}"
+    EndIf
+    If tab == "describe"
+        If footer != ""
+            footer += ","
+        EndIf
+        footer += "{\"id\":\"dskipall\",\"kind\":\"button\",\"label\":\"Skip All\",\"stay\":true},{\"id\":\"ddone\",\"kind\":\"button\",\"label\":\"Done\"}"
+    EndIf
+    If tab == "worn" && worn > 0
+        If footer != ""
+            footer += ","
+        EndIf
+        footer += "{\"id\":\"rmall\",\"kind\":\"button\",\"label\":\"Remove All\",\"stay\":true}"
+    EndIf
+    ; S321: the tab id goes out as a whole literal (a pooled variable could come back as "Tattoo").
+    String out = "{\"module\":\"slavetats\",\"section\":\"main\",\"tab\":\"tattoo\",\"layout\":\"list\""
+    If tab == "makeup"
+        out = "{\"module\":\"slavetats\",\"section\":\"main\",\"tab\":\"makeup\",\"layout\":\"list\""
+    ElseIf tab == "worn"
+        out = "{\"module\":\"slavetats\",\"section\":\"main\",\"tab\":\"worn\",\"layout\":\"list\""
+    ElseIf tab == "describe"
+        out = "{\"module\":\"slavetats\",\"section\":\"main\",\"tab\":\"describe\",\"layout\":\"list\""
+    EndIf
+    out += ",\"tabs\":[{\"id\":\"tattoo\",\"label\":\"Tattoo\"},{\"id\":\"makeup\",\"label\":\"Makeup\"},{\"id\":\"worn\",\"label\":\"Worn\",\"count\":" + worn + "}"
+    If toDescribe > 0
+        out += ",{\"id\":\"describe\",\"label\":\"Describe\",\"count\":" + toDescribe + "}"
+    EndIf
+    out += "]"
+    out += ",\"header\":{\"eyebrow\":\"" + eyebrow + "\",\"name\":" + _Q(subjName) + ",\"status\":" + _Q(status) + "}"
+    out += ",\"items\":[" + items + "]"
+    If steps != ""
+        out += ",\"steps\":" + steps
+    EndIf
+    If footer != ""
+        out += ",\"footer\":[" + footer + "]"
+    EndIf
+    If notice != ""
+        out += ",\"notice\":" + notice
+    EndIf
+    If preview
+        out += ",\"preview\":{\"actor\":\"" + subj.GetFormID() + "\"}"
+    EndIf
+    Return out + "}"
+EndFunction
+
+; Listed on a panel tab: a tattoo pack (never Baka's spank pack), ON for the method, filed under the tab's style.
+Bool Function _PackListed(String asSection, String asMethod, String asStyle) Global
+    Return asSection != "" && !_IsBakaPack(asSection) && PackOn(asSection, asMethod) && StyleOf(asSection) == asStyle
+EndFunction
+
+String Function _PanelSettingsJson() Global
+    Actor p = Game.GetPlayer()
+    ; S321: built natively (see SNBakaUI.STSettingsJson); the Papyrus body below is unreachable reference text.
+    Return SNBakaUI.STSettingsJson(StorageUtil.StringListToArray(p, "SNBaka.ST.Off.forced"), StorageUtil.StringListToArray(p, "SNBaka.ST.Off.voluntary"),         StorageUtil.StringListToArray(p, "SNBaka.ST.StyleMakeup"), StorageUtil.StringListToArray(p, "SNBaka.ST.StyleTattoo"),         StorageUtil.GetIntValue(p, "SNBaka.ST.Observe", 1) == 1, StorageUtil.GetIntValue(p, "SNBaka.ST.AmbientPct", 35), StorageUtil.GetIntValue(p, "SNBaka.ST.AmbientNarr", 0) == 1, \
+        StorageUtil.GetIntValue(p, "SNBaka.ST.Enabled", 1) == 1, _ColorPalette().Find(StorageUtil.GetIntValue(p, "SNBaka.ST.DefaultColor", 0)), \
+        StorageUtil.GetIntValue(p, "SNBaka.ST.RemoveOnRelease", 1) == 1, StorageUtil.GetFloatValue(p, "SNBaka.ST.AmbientFloor", 600.0), \
+        StorageUtil.GetIntValue(p, "SNBaka.ST.AskDesc", 0) == 1, StorageUtil.GetIntValue(p, "SNBaka.ST.AutoDesc", 1) == 1)
+    String[] sections = GetSections()
+    String forced = ""
+    String vol = ""
+    String style = ""
+    Int shown = 0
+    Int i = 0
+    While i < sections.Length
+        String s = sections[i]
+        If s != "" && !_IsBakaPack(s)
+            If forced != ""
+                forced += ","
+                vol += ","
+                style += ","
+            EndIf
+            forced += "{\"key\":" + _Q("on.forced." + s) + ",\"type\":\"toggle\",\"label\":" + _Q(s) + ",\"value\":" + _B(PackOn(s, "forced")) + "}"
+            vol += "{\"key\":" + _Q("on.voluntary." + s) + ",\"type\":\"toggle\",\"label\":" + _Q(s) + ",\"value\":" + _B(PackOn(s, "voluntary")) + "}"
+            style += "{\"key\":" + _Q("style." + s) + ",\"type\":\"choice\",\"label\":" + _Q(s) + ",\"value\":\"" + StyleOf(s) + "\",\"options\":[{\"value\":\"tattoo\",\"label\":\"Tattoo\"},{\"value\":\"makeup\",\"label\":\"Makeup\"}]}"
+            shown += 1
+        EndIf
+        i += 1
+    EndWhile
+    String out = "{\"module\":\"slavetats\",\"section\":\"settings\",\"settings\":["
+    out += "{\"group\":\"Packs\",\"settings\":[{\"key\":\"scan.info\",\"type\":\"text\",\"label\":\"Packs found\",\"desc\":\"Rescanned on every game load and when this menu opens.\",\"value\":\"" + shown + "\"}]}"
+    out += ",{\"group\":\"Forced (downed) packs\",\"settings\":[" + forced + "]}"
+    out += ",{\"group\":\"Voluntary packs\",\"settings\":[" + vol + "]}"
+    out += ",{\"group\":\"Tattoo or makeup\",\"settings\":[" + style + "]}"
+    out += ",{\"group\":\"Exposure\",\"settings\":["
+    out += "{\"key\":\"ambient.on\",\"type\":\"toggle\",\"label\":\"Ambient Observation Cues\",\"value\":" + _B(StorageUtil.GetIntValue(p, "SNBaka.ST.Observe", 1) == 1) + "}"
+    out += ",{\"key\":\"ambient.pct\",\"type\":\"slider\",\"label\":\"Ambient Exposure Chance\",\"value\":" + StorageUtil.GetIntValue(p, "SNBaka.ST.AmbientPct", 35) + ",\"min\":0,\"max\":100,\"step\":5,\"unit\":\"%\"}"
+    out += ",{\"key\":\"ambient.narr\",\"type\":\"toggle\",\"label\":\"Tattoo Ambient Narration\",\"value\":" + _B(StorageUtil.GetIntValue(p, "SNBaka.ST.AmbientNarr", 0) == 1) + "}"
+    out += "]}]}"
+    Return out
+EndFunction
+
+; asValue is the raw JSON value from the page: true / false / "text" / 35.
+Function _PanelSetting(String asKey, String asValue) Global
+    Actor p = Game.GetPlayer()
+    String v = asValue
+    If StringUtil.GetNthChar(v, 0) == "\""
+        v = StringUtil.Substring(v, 1, StringUtil.GetLength(v) - 2)
+    EndIf
+    Bool ok = True
+    If StringUtil.Find(asKey, "on.forced.") == 0
+        SetPackOn(StringUtil.Substring(asKey, 10), "forced", v == "true")
+    ElseIf StringUtil.Find(asKey, "on.voluntary.") == 0
+        SetPackOn(StringUtil.Substring(asKey, 13), "voluntary", v == "true")
+    ElseIf StringUtil.Find(asKey, "style.") == 0
+        SetStyle(StringUtil.Substring(asKey, 6), v)
+    ElseIf asKey == "ambient.on"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.Observe", (v == "true") as Int)
+    ElseIf asKey == "ambient.pct"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.AmbientPct", v as Int)
+    ElseIf asKey == "ambient.narr"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.AmbientNarr", (v == "true") as Int)
+    ; Phase 3 leg 2 (S324): the MCM page's remaining rows, same keys
+    ElseIf asKey == "ambient.floor"
+        StorageUtil.SetFloatValue(p, "SNBaka.ST.AmbientFloor", v as Float)
+    ElseIf asKey == "mod.enabled"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.Enabled", (v == "true") as Int)
+    ElseIf asKey == "mod.release"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.RemoveOnRelease", (v == "true") as Int)
+    ElseIf asKey == "mod.askdesc"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.AskDesc", (v == "true") as Int)
+    ElseIf asKey == "mod.autodesc"
+        StorageUtil.SetIntValue(p, "SNBaka.ST.AutoDesc", (v == "true") as Int)
+        Debug.Trace("[SNBaka.ST] Automatic Descriptions set to " + v + " -- S329")
+    ElseIf asKey == "mod.color"
+        Int[] pal = _ColorPalette()
+        Int ci = v as Int
+        If ci >= 0 && ci < pal.Length
+            StorageUtil.SetIntValue(p, "SNBaka.ST.DefaultColor", pal[ci])
+        Else
+            ok = False
+        EndIf
+    Else
+        ok = False
+    EndIf
+    String val = asValue
+    If val == ""
+        val = "null"
+    EndIf
+    Debug.Trace("[SNBaka.ST][PANEL] setting " + asKey + " = " + asValue + " ok=" + ok)
+    DeDService.PanelSettingResult("slavetats", "{\"key\":" + _Q(asKey) + ",\"value\":" + val + ",\"ok\":" + _B(ok) + "}")
+EndFunction
+
+; ------------------------------------------------------------------
+; S316 MAKEUP LANES (placeholder text; register entry 60)
+; ------------------------------------------------------------------
+; Down-tab "Force Makeup": a random Forced-method makeup pack entry the victim can wear.
+Bool Function ForcedMakeup(Actor akAggressor, Actor akVictim) Global
+    If !akAggressor || !akVictim || !Installed()
+        Debug.Trace("[SNBaka.ST] ForcedMakeup: REFUSED [null/absent]")
+        Return False
+    EndIf
+    String[] pick = CuratedLLMPick(akVictim, "forced", "makeup")
+    If pick.Length < 2 || pick[0] == "" || pick[1] == ""
+        Debug.Trace("[SNBaka.ST] ForcedMakeup: REFUSED [noeligible] - no enabled Forced makeup pack fits " + akVictim.GetDisplayName())
+        Return False
+    EndIf
+    Debug.Trace("[SNBaka.ST] ForcedMakeup: '" + pick[1] + "' (" + pick[0] + ") on " + akVictim.GetDisplayName())
+    Return ApplyTattoo(akVictim, pick[0], pick[1], -1, True, "forced")
+EndFunction
+
+; ApplyMakeup action (willing): a random Voluntary-method makeup pack entry the target can wear.
+Bool Function WillingMakeup(Actor akTarget) Global
+    If !akTarget || !Installed()
+        Return False
+    EndIf
+    String[] pick = CuratedLLMPick(akTarget, "voluntary", "makeup")
+    If pick.Length < 2 || pick[0] == "" || pick[1] == ""
+        Debug.Trace("[SNBaka.ST] WillingMakeup: REFUSED [noeligible] - no enabled Voluntary makeup pack fits " + akTarget.GetDisplayName())
+        Return False
+    EndIf
+    Debug.Trace("[SNBaka.ST] WillingMakeup: '" + pick[1] + "' (" + pick[0] + ") on " + akTarget.GetDisplayName())
+    Return ApplyTattoo(akTarget, pick[0], pick[1], -1, True, "makeup")
+EndFunction
+
+; The MCM's default-colour palette (DeD_MCM._ST_ColorPalette, same order; 0 = pack default). Phase 3 leg 2 (S324).
+Int[] Function _ColorPalette() Global
+    Int[] pal = new Int[9]
+    pal[0] = 0x000000
+    pal[1] = 0x1a1a1a
+    pal[2] = 0x8b1a1a
+    pal[3] = 0xb01030
+    pal[4] = 0x550a0a
+    pal[5] = 0x1a1a8b
+    pal[6] = 0x1a6b1a
+    pal[7] = 0x5a1a8b
+    pal[8] = 0xc05a8b
+    Return pal
+EndFunction
+
+; ------------------------------------------------------------------
+; S326 (tattoo-overhaul 9, step A): DESCRIPTIONS
+; ------------------------------------------------------------------
+; The text SkyrimNet sees for a design: the custom description, else the automatic one (the shared file
+; Data/SKSE/Plugins/DeD/TattooDescriptions.json, read natively), else 'name' (pack) as before.
+String Function DescriptionOf(String asSection, String asName) Global
+    String d = SNBakaUI.STDescription(asSection, asName)
+    If d != ""
+        Return d
+    EndIf
+    Return "'" + asName + "' (" + asSection + ")"
+EndFunction
+
+; The panel's edit row for one design. The id carries section and name, so the Baka DLL saves the text itself (never
+; through Papyrus, which pools strings case-insensitively) and then forwards the act here to re-push.
+String Function _DescEditItem(String asSection, String asName) Global
+    Return "{\"id\":" + _Q("desc|" + asSection + "|" + asName) + ",\"input\":true,\"label\":\"Description\",\"value\":" + _Q(SNBakaUI.STCustomDescription(asSection, asName)) + ",\"placeholder\":" + _Q(DescriptionOf(asSection, asName)) + ",\"button\":\"Save\",\"stay\":true}"
+EndFunction
+
+; ------------------------------------------------------------------
+; S329 (tattoo-overhaul 9, step D, D-T10): AUTOMATIC DESCRIPTIONS
+; ------------------------------------------------------------------
+; With "Automatic Descriptions" on (SNBaka.ST.AutoDesc, default on), a design that is applied, or worn and seen, and has
+; no description yet is queued natively; one at a time its texture facts (SNBakaUI, TattooVision.cpp) go to SkyrimNet
+; through ded_tattoo_describe, and the answer is saved as the design's automatic description in the shared file. The
+; callback is hosted on the framework's MCM quest (DeD_MCM.OnTattooDescribed), so no module needs another.
+Function _AutoDescribe(String asSection, String asName) Global
+    If StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.AutoDesc", 1) != 1
+        Return
+    EndIf
+    If SNBakaUI.STAutoDescribeQueue(asSection, asName)
+        Debug.Trace("[SNBaka.ST] auto description queued: '" + asName + "' (" + asSection + ") -- S329")
+    EndIf
+    _AutoDescribeKick()
+EndFunction
+
+Function _AutoDescribeKick() Global
+    If StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.AutoDesc", 1) != 1
+        Return
+    EndIf
+    String ctx = SNBakaUI.STAutoDescribeNext()
+    If ctx == ""
+        Return
+    EndIf
+    Quest host = Game.GetFormFromFile(0x800, "DeD_Framework.esp") as Quest
+    Int sent = 0
+    If host
+        sent = SkyrimNetApi.SendCustomPromptToLLM("ded_tattoo_describe", "", ctx, host, "DeD_MCM", "OnTattooDescribed")
+    EndIf
+    Debug.Trace("[SNBaka.ST] auto description ASK sent=" + sent + " ctx=" + ctx + " -- S329")
+    If sent != 1
+        SNBakaUI.STAutoDescribeDone("", 0)
+    EndIf
+EndFunction
+
+Function OnAutoDescribed(String asResponse, Int aiSuccess) Global
+    Bool saved = SNBakaUI.STAutoDescribeDone(asResponse, aiSuccess)
+    Debug.Trace("[SNBaka.ST] auto description ANSWER success=" + aiSuccess + " saved=" + saved + ": " + asResponse + " -- S329")
+    _AutoDescribeKick()
+EndFunction
+
+; DescriptionOf for a mark someone is wearing: also queues the automatic description when the design has none yet.
+String Function DescriptionOfWorn(String asSection, String asName) Global
+    _AutoDescribe(asSection, asName)
+    Return DescriptionOf(asSection, asName)
+EndFunction
+
+; ------------------------------------------------------------------
+; S327 (tattoo-overhaul 9, step B, D-T8): DESCRIPTION REQUESTS
+; ------------------------------------------------------------------
+; With "Ask for Descriptions" on (SNBaka.ST.AskDesc, default off), every successful apply of a design that has no custom
+; description and was not skipped adds "section|name" to SNBaka.ST.DescQueue (None key, no duplicates). Marks applied
+; outside this menu also get a corner notification; the queue shows as the tattoo section's Describe tab. The player's
+; own Apply (this menu) stays open on that tab. Saving a description or skipping removes the entry.
+Function _QueueDescription(String asSection, String asName, String asMode) Global
+    If StorageUtil.GetIntValue(Game.GetPlayer(), "SNBaka.ST.AskDesc", 0) != 1
+        Return
+    EndIf
+    If !SNBakaUI.STNeedsDescription(asSection, asName)
+        Return
+    EndIf
+    If StorageUtil.StringListFind(None, "SNBaka.ST.DescQueue", asSection + "|" + asName) >= 0
+        Return
+    EndIf
+    StorageUtil.StringListAdd(None, "SNBaka.ST.DescQueue", asSection + "|" + asName, False)
+    Debug.Trace("[SNBaka.ST] description request queued: '" + asName + "' (" + asSection + ") mode=" + asMode)
+    If asMode != "picker" && asMode != "self"
+        Debug.Notification("New mark: " + asName + ". Describe it in the DeD menu (SlaveTats, Describe).")
+    EndIf
+EndFunction
+
+; Does the panel's apply queue hold a design that will need a description (so Apply should keep the menu open)?
+Bool Function _QueueNeedsDescription() Global
+    Actor p = Game.GetPlayer()
+    If StorageUtil.GetIntValue(p, "SNBaka.ST.AskDesc", 0) != 1
+        Return False
+    EndIf
+    Int n = StorageUtil.StringListCount(p, "SNBaka.ST.P.Queue")
+    Int i = 0
+    While i < n
+        String e = StorageUtil.StringListGet(p, "SNBaka.ST.P.Queue", i)
+        Int a = StringUtil.Find(e, "|")
+        String rest = StringUtil.Substring(e, a + 1)
+        Int b = StringUtil.Find(rest, "|")
+        If SNBakaUI.STNeedsDescription(StringUtil.Substring(e, 0, a), StringUtil.Substring(rest, 0, b))
+            Return True
+        EndIf
+        i += 1
+    EndWhile
+    Return False
+EndFunction
+
+; Remove one "section|name" from the request queue (case-insensitive: Papyrus pools strings that way).
+Function _DescQueueDropKey(String asKey) Global
+    Int i = StorageUtil.StringListCount(None, "SNBaka.ST.DescQueue")
+    While i > 0
+        i -= 1
+        If StorageUtil.StringListGet(None, "SNBaka.ST.DescQueue", i) == asKey
+            StorageUtil.StringListRemoveAt(None, "SNBaka.ST.DescQueue", i)
+        EndIf
+    EndWhile
 EndFunction

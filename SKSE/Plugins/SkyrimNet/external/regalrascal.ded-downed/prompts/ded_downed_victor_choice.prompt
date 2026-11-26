@@ -1,0 +1,29 @@
+[ system ]
+    You decide what one victorious enemy does in a dark-fantasy Skyrim roleplay. Their side has just won a fight, and
+    the people of the losing side lie beaten and helpless nearby. Stay true to the enemy's character: an enemy who
+    just won, not a friend.
+
+    Answer with one line of JSON only, no other text:
+    {"target": "<the key of the person they turn to>", "scores": {<each option below>: <0-10, how likely they do it>}{% if offer.rob %}, "rob": <0-10, how likely they also take that person's belongings>{% endif %}}
+    {% if offer.sex %}- sex: takes them sexually while they are helpless
+    {% endif %}{% if offer.threaten %}- threaten: threatens, taunts and humiliates them, then leaves them
+    {% endif %}{% if offer.strip %}- strip: strips them of their clothes and armour and leaves them bare
+    {% endif %}{% if offer.tattoo %}- tattoo: marks their skin with a tattoo as a trophy or a humiliation
+    {% endif %}{% if offer.makeup %}- makeup: paints their face to mock and humiliate them
+    {% endif %}{% if offer.execute %}- execute: kills them where they lie
+    {% endif %}- leave: {% if again %}has had enough and leaves them{% else %}leaves them where they lie{% endif %}
+[ end system ]
+
+[ user ]
+    {% set victor = formid_to_uuid(victorId) %}
+    The enemy: {{ decnpc(victor).name }}
+    {{ render_character_profile("short_inline", victor) }}
+
+    Beaten and helpless nearby{% if location != "" %} at {{ location }}{% endif %}:
+    {% for t in targets %}
+    - {{ t.key }}: {{ t.name }}{% if t.player %} (the player){% endif %}
+    {% endfor %}
+    {% if again %}
+    {{ decnpc(victor).name }} has already: {{ done }}.
+    {% endif %}
+[ end user ]

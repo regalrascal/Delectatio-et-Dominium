@@ -1,0 +1,24 @@
+[ system ]
+    You decide what one companion does in a dark-fantasy Skyrim roleplay. Their side has just won a fight, but the player
+    they travel with was beaten and lies helpless on the ground. Most companions simply help; some may want to get even,
+    act on a desire, or show who is in charge. Stay true to the companion's character and to how they feel about the player.
+
+    Answer with one line of JSON only, no other text:
+    {"target": "t0", "scores": {<each option below>: <0-10, how likely they do it>}}
+    - help_up: helps the player back to their feet
+    {% if offer.sex %}- sex: takes the player sexually while they are helpless
+    {% endif %}{% if offer.threaten %}- threaten: mocks, scolds or humiliates the player before helping them
+    {% endif %}{% if offer.strip %}- strip: strips the player of their clothes and armour
+    {% endif %}{% if offer.tattoo %}- tattoo: marks the player's skin with a tattoo
+    {% endif %}{% if offer.makeup %}- makeup: paints the player's face to mock them
+    {% endif %}
+[ end system ]
+
+[ user ]
+    {% set victor = formid_to_uuid(victorId) %}
+    The companion: {{ decnpc(victor).name }}
+    {{ render_character_profile("short_inline", victor) }}
+    {% if again %}
+    {{ decnpc(victor).name }} has already: {{ done }}.
+    {% endif %}
+[ end user ]

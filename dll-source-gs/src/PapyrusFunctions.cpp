@@ -1,20 +1,20 @@
 #include "PapyrusFunctions.h"
 #include <SKSE/SKSE.h>
-#include "PrismaUIBridge.h"
+#include "DeDPanelClient.h"
 
 // Must match Scriptname in SNAnimGSUI.psc.
 static constexpr const char* kScriptName = "SNAnimGSUI";
 
 static bool SNAnimGSUI_IsAvailable(RE::StaticFunctionTag*) {
-    return PrismaUIBridge::IsAvailable();
+    return DeDPanelClient::IsAvailable();
 }
 
 static void SNAnimGSUI_OpenPoseGrid(RE::StaticFunctionTag*) {
-    PrismaUIBridge::OpenPoseGrid();
+    DeDPanelClient::OpenPoseGrid();
 }
 
 static void SNAnimGSUI_ClosePoseGrid(RE::StaticFunctionTag*) {
-    PrismaUIBridge::ClosePoseGrid();
+    DeDPanelClient::ClosePoseGrid();
 }
 
 bool PapyrusFunctions::Register(RE::BSScript::IVirtualMachine* vm) {

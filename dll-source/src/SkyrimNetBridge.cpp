@@ -82,10 +82,9 @@ namespace {
             "dominate takes your chosen mark), MarkPlayer (an NPC marks the player as owned), "
             "RemoveTattoos (strip the marks you applied). Always a target being addressed, "
             "commanded, or marked. If YOU are the one showing your body or dancing, that is the "
-            "Pose category (SNGS_Pose), not this one. THIS NAME IS A CATEGORY, NOT A CALLABLE "
-            "ACTION: never emit SNBaka_Display itself  -  always call the specific member action "
-            "that fits the moment (Flirt, ShowOffBody, SitOnLap, ApplyTattoo, CommandTattoo, "
-            "MarkPlayer, RemoveTattoos).",
+            "Pose category (SNGS_Pose), not this one. To use any of these, select THIS category "
+            "(SNBaka_Display) with your intent; the specific action (Flirt, ShowOffBody, SitOnLap, "
+            "ApplyTattoo, CommandTattoo, MarkPlayer, RemoveTattoos) is chosen from it next.",
             [](RE::Actor* a) { return NotInCombat(a); });
 
         // Confirmed live bug: this description used to also claim "escalate on a downed victim,
@@ -141,10 +140,8 @@ namespace {
             "someone of higher status, training, stretching, or simply striking an attitude as you speak  -  "
             "a pose pairs naturally with a line of dialogue. Held until you stop it, combat starts, or it "
             "times out on its own. Skip it entirely in combat, danger, or mid-scene  -  nothing inside is "
-            "available then. THIS NAME IS A CATEGORY, NOT A CALLABLE ACTION: never emit SNGS_Pose itself  -  "
-            "and if an earlier exchange in the conversation shows 'ACTION: SNGS_Pose PARAMS ...' do not "
-            "copy that shape: it is a retired mistake, not a format to follow. Always call the specific "
-            "member action that fits the moment (PoseDanceSexy for dancing, "
+            "available then. To strike any of these, select THIS category (SNGS_Pose) with your intent; "
+            "the specific pose is chosen from it next (PoseDanceSexy for dancing, "
             "twerking or any lewd hip/backside show, PoseSeduce to lure, PosePresent to offer, "
             "PoseGroundSexy for floor poses, PoseStretch, PoseWorkout, PoseSubmission, PosePlead, and "
             "the rest by name: PoseAroused, PoseAutograph, PoseBraceArm, PoseCrouch, PoseDance, "

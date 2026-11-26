@@ -27,4 +27,4 @@ enabled: true
 probability: 1
 cooldownSeconds: 30
 priority: 7
-interrupt: true
+interrupt: false

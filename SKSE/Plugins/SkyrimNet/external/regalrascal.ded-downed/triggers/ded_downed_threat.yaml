@@ -1,0 +1,21 @@
+name: "ded_downed_threat"
+description: "DeD Downed (S349, spec 7.2): a victorious enemy stands over a beaten, downed person (the player or a companion) to threaten, taunt and humiliate them before leaving."
+
+eventCriteria:
+  eventType: "ded_downed_threat"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} stands over the beaten {{ target }}, who lies on the ground unable to
+    fight back. {{ originator }} speaks: a threat, a taunt or a humiliation fitting who they are
+    and how the fight went, and makes plain who won. Keep it to this moment; they will leave
+    {{ target }} lying there afterwards.
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 5
+priority: 8

@@ -3,6 +3,7 @@
     "name": "dedservice",
     "version-string": "1.0.0",
     "dependencies": [
-        "commonlibsse-ng"
+        "commonlibsse-ng",
+        "nlohmann-json"
     ]
 }

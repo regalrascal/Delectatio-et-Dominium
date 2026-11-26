@@ -1,0 +1,30 @@
+name: ApplyMakeup
+description: |
+  The speaker paints the target's face - kohl, rouge, lip colour - because the target
+  asked for it or gladly agreed. Only for someone willing and standing; never on a
+  downed or unwilling person.
+
+  WHEN A CHARACTER WOULD DO THIS:
+  - Someone asks to have their face done, or happily accepts the offer
+  - Getting a friend, lover or companion ready for a night out or a performance
+  - A playful, intimate moment of dressing someone up
+
+  CONSEQUENCES:
+  - The makeup appears on the target's face and stays until removed
+  - Anyone who sees it can react to the look
+
+questEditorId: SkyrimNet_BakaIntegration
+scriptName: SkyrimNet_BakaIntegration
+executionFunctionName: ApplyMakeup_Execute
+
+parameterMapping:
+  - type: speaker
+    name: akInitiator
+    description: The character putting on the makeup.
+  - type: dynamic
+    name: akTarget
+    description: The willing person being made up - player or nearby NPC.
+
+enabled: true
+defaultPriority: 2
+customCategory: SNBaka_Display

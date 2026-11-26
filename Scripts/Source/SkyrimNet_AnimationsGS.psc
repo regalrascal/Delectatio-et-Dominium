@@ -227,7 +227,7 @@ Bool Function _IsBusyElsewhere(Actor ak)
             Return True
         EndIf
     EndIf
-    If StorageUtil.GetIntValue(ak, "SNAcheron.Held",  0) == 1
+    If DeDService.IsDowned(ak)
         Return True
     EndIf
     If ak.IsBleedingOut()
@@ -295,7 +295,7 @@ Int Function _IdleClass(Actor ak) Global
     If StorageUtil.GetIntValue(ak, "SNBaka.OnGround", 0) == 1
         Return -2
     EndIf
-    If StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1
+    If DeDService.IsDowned(ak)
         Return -2
     EndIf
     If ak.IsOnMount()
@@ -576,7 +576,9 @@ EndEvent
 
 Function _Setup()
     PlayerRef = Game.GetPlayer()
-    If OpenSelectorSpell && !PlayerRef.HasSpell(OpenSelectorSpell)
+    ; Magelight Phase 2 leg 6: with the combined panel available the one DeD power replaces this one
+    ; (DeDService grants it and removes this power on every load); granted only without the panel.
+    If OpenSelectorSpell && !PlayerRef.HasSpell(OpenSelectorSpell) && !DeDService.PanelAvailable()
         PlayerRef.AddSpell(OpenSelectorSpell, False)
     EndIf
     ; Pose pick (from the DLL) + NPC Senses "an NPC saw something".
@@ -602,7 +604,7 @@ Function OpenSelector()
         _PendingNpcTarget = None
     EndIf
     If !SNAnimGSUI.IsAvailable()
-        Debug.Notification("GS pose selector: UI not ready (PrismaUI / SNAnimGS_UI.dll missing?).")
+        Debug.Notification("GS pose selector: UI not ready (Magelight UI / SNAnimGS_UI.dll missing?).")
         _PendingNpcTarget = None
         Return
     EndIf
@@ -612,6 +614,25 @@ Function OpenSelector()
     ; mid-sweep a 15s re-register would stretch their 3s timeout sweep, so only kick
     ; when nobody is posing (and if someone is, the 3s sweep loop is alive anyway and
     ; the arbiter in OnUpdate picks the muse/overdrive intervals up from there).
+    If StorageUtil.FormListCount(None, "GSAnim.Posing") == 0
+        RegisterForSingleUpdate(15.0)
+    EndIf
+EndFunction
+
+; Magelight Phase 2 leg 4: the combined DeD panel opened the GS section by its own routing (not this
+; quest's power), so nothing captured a target yet. The GS DLL calls this with the panel's target
+; (None = pose the player), the same capture OpenSelector makes from the crosshair at cast time.
+Function PanelSession(Actor akTarget)
+    _EnsurePools()
+    _PendingNpcTarget = akTarget
+    If _PendingNpcTarget == PlayerRef
+        _PendingNpcTarget = None
+    EndIf
+    String tName = "none"
+    If _PendingNpcTarget
+        tName = _PendingNpcTarget.GetDisplayName()
+    EndIf
+    Debug.Trace("[SNAnimGS][PANEL] PanelSession: captured target " + tName)
     If StorageUtil.FormListCount(None, "GSAnim.Posing") == 0
         RegisterForSingleUpdate(15.0)
     EndIf
@@ -669,8 +690,24 @@ _StopActorPose(akStop, "player-stop")
     ; ── Phase 4: Performance Mode toggle (grid footer button sentinel — a blind send with
     ; no pipes, so it can never fall into the pose parse; Papyrus arbitrates ON/OFF, same
     ; pattern as STOP_POSE) ──
+    ; Magelight Phase 2 leg 5: the combined panel's Sheogorath / Sanguine on/off switches send
+    ; OVERDRIVE_SWITCH / MUSE_SWITCH. Same toggles, but the panel stays open after a switch, so the
+    ; captured pose target is KEPT (the old grid closed on its buttons, so clearing was harmless there).
+    Bool bKeepCapture = False
+    If asPose == "OVERDRIVE_SWITCH"
+        asPose = "OVERDRIVE_TOGGLE"
+        bKeepCapture = True
+    ElseIf asPose == "MUSE_SWITCH"
+        asPose = "MUSE_TOGGLE"
+        bKeepCapture = True
+    EndIf
+    If bKeepCapture
+        Debug.Trace("[SNAnimGS][PANEL] mode switch " + asPose + " from the panel - pose target kept")
+    EndIf
     If asPose == "OVERDRIVE_TOGGLE"
-        _PendingNpcTarget = None      ; the footer button ignores crosshair targeting — stay clean
+        If !bKeepCapture
+            _PendingNpcTarget = None      ; the footer button ignores crosshair targeting — stay clean
+        EndIf
         _EnsurePools()   ; Phase 4d: this toggle branch demonstrably runs FIRST in a stale instance (flag + notification succeed while everything array-touching downstream is None) — heal at the switch
         If StorageUtil.GetIntValue(None, "GSAnim.Overdrive", 0) == 1
             _OverdriveOff("Sheogorath Mode ended.")    ; 2nd press = OFF (full restore path)
@@ -689,7 +726,9 @@ _StopActorPose(akStop, "player-stop")
     ; preempts muse in the arbiter, so muse-while-overdrive just waits its turn (starts
     ; <=15s after overdrive ends or expires) — no extra code for that case.
     If asPose == "MUSE_TOGGLE"
-        _PendingNpcTarget = None      ; the footer button ignores crosshair targeting — stay clean
+        If !bKeepCapture
+            _PendingNpcTarget = None      ; the footer button ignores crosshair targeting — stay clean
+        EndIf
         _EnsurePools()   ; Phase 4d: stale-instance heal at the muse switch — the 4c arm transaction below is StorageUtil-only (member-safe, audited), but the _MuseTick chain behind the flag is not
         If StorageUtil.GetIntValue(None, "GSAnim.Muse", 0) == 1
             StorageUtil.SetIntValue(None, "GSAnim.Muse", 0)
@@ -1314,10 +1353,11 @@ Int Function _GSLaneEnabledSet(String asMode)
     If StorageUtil.GetIntValue(None, sPfx + "narr", 1) == 1
         m = m + 1
     EndIf
-    If StorageUtil.GetIntValue(None, sPfx + "thought", 0) == 1   ; [REV-174a D2e] NPC-thought lane DEFAULT OFF (user fallback ruling; toggle still available)
-        m = m + 2
-    EndIf
-    If StorageUtil.GetIntValue(None, sPfx + "pspeech", 1) == 1
+    ; [REV-184 Leg 4 -- D4] the THOUGHT bit is RETIRED ("gone, not off", user
+    ; ruling of record) across every GS prefix incl. Pose: bit 2 can never be
+    ; set, so the retired lane never fires/rotates/gets picked. PSpeech
+    ; DEFAULT flips OFF (the same ruling); PThought keeps its ON default.
+    If StorageUtil.GetIntValue(None, sPfx + "pspeech", 0) == 1
         m = m + 4
     EndIf
     If StorageUtil.GetIntValue(None, sPfx + "pthought", 1) == 1
@@ -1395,7 +1435,11 @@ Int Function _GSReactParseLanes(String asReact)
             ElseIf t == "narr"
                 mask = mask + 1
             ElseIf t == "thought"
-                mask = mask + 2
+                ; [REV-184 D4] npc-thought lane RETIRED: the keyword still
+                ; parses (REACT docs of record mention it) but contributes NO
+                ; lane (bit 2 never set); a pick naming it intersects the
+                ; enabled set empty -> rotation among the survivors.
+                mask = mask + 0
             ElseIf t == "pspeech"
                 mask = mask + 4
             ElseIf t == "pthought"
@@ -1409,8 +1453,10 @@ Int Function _GSReactParseLanes(String asReact)
     If !bAnyTok
         Return -1
     EndIf
+    ; [REV-184 D4] the ALL mask drops the retired thought bit: 15 -> 13
+    ; (narr 1 + pspeech 4 + pthought 8; bit 2 gone with the lane).
     If bAll
-        mask = 15
+        mask = 13
     EndIf
     If bNone && mask == 0
         Return 0
@@ -1664,6 +1710,12 @@ Int Function _GSLaneFire(String asMode, Actor ak, Actor akTarget, String asDesc,
             ; tables pair player-voiced response types with player-bound
             ; events; the previous None binding left the event NPC-attached
             ; and the renderer never surfaced the player speech/thought).
+            ; [S331] the pose lanes no longer interrupt by default (user ruling, REV-196 test);
+            ; "Pose Reactions Interrupt" on = the interrupting copy of the trigger (<lane>_int).
+            If asMode == "Pose" && v != 2 && StorageUtil.GetIntValue(None, "GSAnim.PoseLaneInterrupt", 0) == 1
+                sLane = sLane + "_int"
+                Debug.Trace("[SNAnimGS] lane interrupt ON: " + sPfx + sLane + " -- S331")
+            EndIf
             If v == 4 || v == 8
                 SkyrimNetApi.RegisterEvent(sPfx + sLane, asDesc, ak, PlayerRef)
             Else

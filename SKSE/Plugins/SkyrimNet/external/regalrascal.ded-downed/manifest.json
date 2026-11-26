@@ -1,0 +1,12 @@
+{
+  "id": "regalrascal.ded-downed",
+  "type": "bundle",
+  "title": "Delectatio et Dominium - DeD Downed",
+  "tagline": "Beaten, not dead.",
+  "description": "The decisions and prompts of the DeD Downed module: what victorious enemies do with a downed player and downed companions. Installed with the DeD Downed option.",
+  "author": "regalrascal",
+  "tags": ["nsfw", "decisions"],
+  "nsfw": true,
+  "version": "0.1.0",
+  "min_skyrimnet_version": "0.25.0"
+}

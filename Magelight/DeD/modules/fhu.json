@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "id": "fhu",
+  "name": "Fill Her Up",
+  "requires": "sr_FillHerUp.esp",
+  "panel": {
+    "tagline": "inflation status and settings",
+    "order": 50,
+    "rules": []
+  },
+  "views": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema": 2,
+  "id": "cum",
+  "name": "Cum Management",
+  "requires": "SkyrimNet_BakaIntegration.esp",
+  "panel": {
+    "tagline": "status and settings",
+    "order": 40,
+    "rules": [],
+    "settingsVia": "mcm"
+  },
+  "views": []
+}

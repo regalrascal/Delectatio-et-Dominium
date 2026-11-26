@@ -1,5 +1,5 @@
 #include "PCH.h"
-#include "PrismaUIBridge.h"
+#include "DeDPanelClient.h"
 #include "PapyrusFunctions.h"
 
 // REV-103 (S1 pack-split): SNGS_Pose fallback bridge. FORWARD DECLARATION ONLY —
@@ -26,8 +26,8 @@ public:
     RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_event,
                                           RE::BSTEventSource<RE::InputEvent*>*) override {
         if (!a_event) return RE::BSEventNotifyControl::kContinue;
-        const bool menuOpen = PrismaUIBridge::IsMenuOpen();
-        const bool watching = PrismaUIBridge::IsWatchingMovement();
+        const bool menuOpen = DeDPanelClient::IsMenuOpen();
+        const bool watching = DeDPanelClient::IsWatchingMovement();
         if (!menuOpen && !watching) return RE::BSEventNotifyControl::kContinue;
 
         for (auto* ev = *a_event; ev; ev = ev->next) {
@@ -39,8 +39,8 @@ public:
             constexpr std::uint32_t kEscape = 1;
             constexpr std::uint32_t kTab    = 15;
             // Grid open: Esc/Tab cancels (consume the key).
-            if (menuOpen && btn->IsDown() && (btn->idCode == kEscape || btn->idCode == kTab)) {
-                PrismaUIBridge::CancelMenu();
+            if (menuOpen && btn->IsDown() && (btn->GetIDCode() == kEscape || btn->GetIDCode() == kTab)) {
+                DeDPanelClient::CancelMenu();
                 return RE::BSEventNotifyControl::kStop;
             }
             // Posing: WASD / jump / sprint / sneak ends the held pose. Use IsPressed (held OR
@@ -48,9 +48,9 @@ public:
             // consume the key — let the player actually move; we just drop the idle.
             if (watching && btn->IsPressed()) {
                 constexpr std::uint32_t kW = 17, kA = 30, kS = 31, kD = 32, kSpace = 57, kLShift = 42, kC = 46;
-                const std::uint32_t c = btn->idCode;
+                const std::uint32_t c = btn->GetIDCode();
                 if (c == kW || c == kA || c == kS || c == kD || c == kSpace || c == kLShift || c == kC)
-                    PrismaUIBridge::StopPoseFromMovement();
+                    DeDPanelClient::StopPoseFromMovement();
             }
         }
         return RE::BSEventNotifyControl::kContinue;
@@ -71,20 +71,24 @@ static void SetupLog() {
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::Init(skse);
     SetupLog();
-    SKSE::log::info("[SNAnimGS] Plugin loaded.");
+    SKSE::log::info("[SNAnimGS] Plugin loaded. Runtime: Skyrim {} {}.", (REL::Module::IsVR() ? "VR" : (REL::Module::IsAE() ? "AE" : "SE")), REL::Module::get().version().string());
 
     SKSE::GetMessagingInterface()->RegisterListener([](SKSE::MessagingInterface::Message* msg) {
         switch (msg->type) {
         case SKSE::MessagingInterface::kPostLoad:
-            PrismaUIBridge::RequestAPI();
+            DeDPanelClient::RequestAPI();
             break;
         case SKSE::MessagingInterface::kDataLoaded:
-            PrismaUIBridge::CreatePoseView();
+            DeDPanelClient::CreatePoseView();
             RE::BSInputDeviceManager::GetSingleton()->AddEventSink(MenuInputHandler::GetSingleton());
             SKSE::log::info("[SNAnimGS] Input handler registered.");
             // REV-103 (S1 pack-split): SNGS_Pose fallback registration for GS-only
             // installs (esp-probe; silent when the Baka integration owns the def).
             SkyrimNetBridge::Init();
+            break;
+        case SKSE::MessagingInterface::kPostLoadGame:
+        case SKSE::MessagingInterface::kNewGame:
+            DeDPanelClient::PanelInit();
             break;
         }
     });

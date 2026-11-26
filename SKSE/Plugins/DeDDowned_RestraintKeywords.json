@@ -1,0 +1,6 @@
+{
+  "_comment": "DeD Downed (spec 8): keyword editor IDs added to the built-in lists. restraint = worn -> the actor is restrained (pacified until freed). locked = only its key removes it (Free from restraints leaves it on). give = equipped when handed over through Give restraints. Built in: restraint zad_DeviousHeavyBondage, zad_DeviousArmbinder, zad_DeviousArmbinderElbow, zad_DeviousYoke, zad_DeviousYokeBB, zad_DeviousStraitJacket, zad_DeviousPetSuit; locked zad_Lockable, zad_InventoryDevice; give zad_InventoryDevice.",
+  "restraint": [],
+  "locked": [],
+  "give": []
+}

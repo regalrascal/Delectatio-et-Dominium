@@ -1,0 +1,20 @@
+name: "ded_downed_assault_reset"
+description: "DeD Downed (S349, D-A53): a beaten enemy was assaulted while down or too hurt to fight; when it ended they are left on the ground again, back at the start of being downed."
+
+eventCriteria:
+  eventType: "ded_downed_assault_reset"
+
+response:
+  type: "direct_narration"
+  content: |
+    It is over, and {{ target }} is left lying where they were taken: beaten back down,
+    whatever strength they had gathered gone again. Narrate the moment after: their state,
+    and the reaction of whoever is near.
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 7

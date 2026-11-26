@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "id": "downed",
+  "name": "DeD Downed",
+  "requiresDll": "DeDDowned.dll",
+  "panel": {
+    "tagline": "beaten, not dead",
+    "order": 60,
+    "rules": []
+  },
+  "views": []
+}

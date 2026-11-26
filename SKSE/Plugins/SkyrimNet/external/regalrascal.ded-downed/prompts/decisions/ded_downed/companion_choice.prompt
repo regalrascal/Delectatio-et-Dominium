@@ -1,0 +1,41 @@
+{# DeD Downed (spec 15, D-A45, S352): the player's side won, but the player lies beaten; one companion decides what to do
+   with them ("Companions may take advantage" on). Context from DeDDowned.dll: victorId (the companion's FormID),
+   targets (the player only), location, offer (help_up always; the allowed outcomes; never execute), again, done.
+   Read by question id: target -> t0; action -> an offered key (weighted by DeDDowned.dll; help_up x3). LLM-facing;
+   DRAFT at the user's pen. #}
+{% set victor = formid_to_uuid(victorId) %}
+
+[ state companion ]
+    ### {{ decnpc(victor).name }}
+    {{ render_character_profile("short_inline", victor) }}
+[ end state ]
+
+[ state downed ]
+    {{ decnpc(victor).name }} travels with the player. Their side has just won a fight{% if location != "" %} at {{ location }}{% endif %}, but the player was beaten and lies helpless on the ground:
+    {% for t in targets %}
+    - {{ t.key }}: {{ t.name }} (the player): {{ render_character_profile("short_inline", formid_to_uuid(t.id)) }}
+    {% endfor %}
+    {% if again %}
+    {{ decnpc(victor).name }} has already: {{ done }}.
+    {% endif %}
+[ end state ]
+
+[ question target choice ]
+    Who does {{ decnpc(victor).name }} turn to?
+    [ criteria ]
+    {% for t in targets %}{{ t.key }}: {{ t.name }}
+    {% endfor %}
+    [ end criteria ]
+[ end question ]
+
+[ question action choice ]
+    What does {{ decnpc(victor).name }} do with the helpless player {% if again %}next{% else %}now{% endif %}, true to their character and to how they feel about the player in `companion`? Most companions simply help; some may want to get even, act on a desire, or show who is in charge.
+    [ criteria ]
+    help_up: helps the player back to their feet
+    {% if offer.sex %}sex: takes the player sexually while they are helpless
+    {% endif %}{% if offer.threaten %}threaten: mocks, scolds or humiliates the player before helping them
+    {% endif %}{% if offer.strip %}strip: strips the player of their clothes and armour
+    {% endif %}{% if offer.tattoo %}tattoo: marks the player's skin with a tattoo
+    {% endif %}{% if offer.makeup %}makeup: paints the player's face to mock them
+    {% endif %}[ end criteria ]
+[ end question ]

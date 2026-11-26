@@ -13,14 +13,13 @@ Scriptname SkyrimNet_BakaSL
 ; "confirmed absent" as a plain Int (this StorageUtil stub has no Form storage functions) is enough to
 ; skip every subsequent lookup once we know there's nothing to find.
 SexLabFramework Function _SL() Global
-    If StorageUtil.GetIntValue(None, "SNBakaSL.Absent", 0) == 1
+    ; S316 fix: the absence used to be cached in StorageUtil on the None key, which rides the
+    ; SAVE - a game first run without the mod never detected it after the mod was installed.
+    ; The SKSE load-order lookup below is error-free when the plugin is absent, so no cache.
+    If Game.GetModByName("SexLab.esm") == 255 && Game.GetLightModByName("SexLab.esm") == 65535
         Return None
     EndIf
-    SexLabFramework sl = Game.GetFormFromFile(0x000D62, "SexLab.esm") as SexLabFramework
-    If !sl
-        StorageUtil.SetIntValue(None, "SNBakaSL.Absent", 1)
-    EndIf
-    Return sl
+    Return Game.GetFormFromFile(0x000D62, "SexLab.esm") as SexLabFramework
 EndFunction
 
 Bool Function Installed() Global
@@ -198,6 +197,66 @@ Function ClearVictimOverride(Actor akVictim) Global
     EndIf
 EndFunction
 
+; [REV-187 / Spec ddng-force-strip-guard v1.2, Component 2.5 — upstream pre-clear]
+; Clear DDNG's stale per-actor strip bookkeeping at DeD's own pipeline exits, BEFORE it can
+; strand into the cosave (the ISSUE-6 bug class: the state survives save/load and re-strips
+; every redressed actor ~1s after each equip via DeviousDevices.dll+55D5).
+; DDNG presence-gated (honest degradation, zero behavior change when absent): plugin version
+; probe ("DeviousDevices"), cached on the None key (the SNBakaSL.Absent absence-cache pattern):
+; 0 = unknown, 1 = present, 2 = absent-confirmed (skip every call after).
+; The ONLY state mutation anywhere: zadNativeFunctions.SetActorStripped(akActor, false) —
+; and ONLY when DD's own queries PROVE staleness: IsActorStripped(actor) == true AND
+; GetDevices(actor).Length == 0 (zero worn devices). Constraint of record (user 2026-11-17):
+; devices present -> NEVER clear, NEVER interfere — log-and-defer, DD owns the actor.
+; Never touches the strip path: DeD strips via SexLab (StripActor above), not via DD state.
+; Idempotent and safe to repeat; call sites are belt-and-braces (redress / teardown / StopScene).
+Bool Function ClearStaleDDStrip(Actor akActor) Global
+    If !akActor
+        Return False
+    EndIf
+    ; DDNG presence fence (cached; 2 = absent-confirmed, no-op forever after)
+    Int ddState = StorageUtil.GetIntValue(None, "SNBakaSL.DDPresent", 0)
+    If ddState == 2
+        Return False
+    EndIf
+    If SKSE.GetPluginVersion("DeviousDevices") <= 0
+        StorageUtil.SetIntValue(None, "SNBakaSL.DDPresent", 2)
+        Debug.Trace("[SNBakaSL] DDFix: DeviousDevices plugin absent — stale-strip pre-clear permanently inert on this load")
+        Return False
+    EndIf
+    If ddState != 1
+        StorageUtil.SetIntValue(None, "SNBakaSL.DDPresent", 1)
+    EndIf
+    ; zadNativeFunctions is a Hidden global-native script (PapyrusUtil/StorageUtil pattern):
+    ; called by NAME, never via form resolve. The natives bind at load when DeviousDevices.dll
+    ; registers them — which the version probe above already confirmed.
+    ; Read-only probe first — never mutate on an actor carrying any device
+    Armor[] devices = zadNativeFunctions.GetDevices(akActor)
+    If devices && devices.Length > 0
+        Debug.Trace("[SNBakaSL] DDFix: devices present (" + devices.Length + ") on " + akActor.GetDisplayName() + " — deferring to DD (never clear)")
+        Return False
+    EndIf
+    If !zadNativeFunctions.IsActorStripped(akActor)
+        Return False    ; clean actor — silent (no log spam from the teardown sweep)
+    EndIf
+    zadNativeFunctions.SetActorStripped(akActor, False)
+    Debug.Trace("[SNBakaSL] DDFix: cleared stale DD strip state on " + akActor.GetDisplayName() + " (zero devices, IsActorStripped was true)")
+    Return True
+EndFunction
+
+; [REV-187 / Component 4] Arm the redress window for one actor (game-time stamp, actor-keyed).
+; Called at the Component 2.5 sweep sites — the DLL guard's strip-cycle callback only acts
+; inside this window (fDDGuardWindow, default 10s), so a DD unequip long after any redress is
+; log-only, never acted on. Idempotent; re-arming just re-stamps.
+Function NoteDDRedress(Actor akActor) Global
+    If !akActor
+        Return
+    EndIf
+    StorageUtil.SetFloatValue(akActor, "SNBaka.DDGuardRedressAt", Utility.GetCurrentGameTime())
+    ; [REV-187 / Component 4] single-slot retry budget resets with each redress window
+    StorageUtil.UnsetIntValue(akActor, "SNBaka.DDGuardRetriedForm")
+EndFunction
+
 ; Force-end a running scene immediately (Quickly=true skips the normal fade/orgasm wind-down) --
 ; used when real combat resumes around an animating actor and the scene has to stop right now rather
 ; than wait for it to end on its own.
@@ -206,7 +265,20 @@ Function StopScene(Int tid) Global
     If sl && tid >= 0
         sslThreadController tc = sl.GetController(tid)
         If tc
+            Actor[] sceneActors = tc.Positions   ; [REV-187] capture BEFORE EndAnimation — the controller may empty on stop
             tc.EndAnimation(true)
+            ; [REV-187 / Spec ddng-force-strip-guard v1.2, Component 2.5 call site (c)] The quick-stop
+            ; path skips SexLab's normal orgasm/wind-down stage, so any DDNG hook that would have run
+            ; at animation-end is skipped — this is the path most likely to strand DD's per-actor strip
+            ; bookkeeping into the cosave (ISSUE-6). Sweep every scene actor immediately after the stop.
+            If sceneActors
+                Int i = 0
+                While i < sceneActors.Length
+                    ClearStaleDDStrip(sceneActors[i])
+                    NoteDDRedress(sceneActors[i])
+                    i += 1
+                EndWhile
+            EndIf
         EndIf
     EndIf
 EndFunction
@@ -217,6 +289,17 @@ EndFunction
 ; above (SexLab absent -> empty array, caller no-ops). sslThreadController
 ; .Positions is signature-true to the installed P+ source; the compile stub
 ; (tools/compile/local/sslThreadController.psc) was extended to match.
+; [S331] The actors in akActor's SexLab scene (the thread roster), None when akActor is in no
+; scene or SexLab is absent. The spank key used a cell scan only, which missed a partner who
+; is not listed in the player's cell (REV-196 dogfood: Ronja in thread 0, "found 0 NPC(s)").
+Actor[] Function SceneActorsOf(Actor akActor) Global
+    SexLabFramework sl = _SL()
+    If !sl || !akActor
+        Return None
+    EndIf
+    Return SLThreadPositions(sl.FindActorController(akActor))
+EndFunction
+
 Actor[] Function SLThreadPositions(Int tid) Global
     SexLabFramework sl = _SL()
     If !sl || tid < 0

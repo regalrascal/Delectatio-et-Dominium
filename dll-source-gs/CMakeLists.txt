@@ -13,7 +13,7 @@ add_commonlibsse_plugin(${PROJECT_NAME}
     SOURCES
         src/Plugin.cpp
         src/PapyrusFunctions.cpp
-        src/PrismaUIBridge.cpp
+        src/DeDPanelClient.cpp
         src/SkyrimNetBridge.cpp   # REV-103: SNGS_Pose esp-probe fallback (pack-split)
 )
 
@@ -26,7 +26,7 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE src/PCH.h)
 set_property(TARGET ${PROJECT_NAME} PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-target_include_directories(${PROJECT_NAME} PRIVATE include src)
+target_include_directories(${PROJECT_NAME} PRIVATE include src external ../dll-source-ded/include)   # + vendored nlohmann-json (Phase 2 leg 4)   # DeDUI_API.h (Magelight workstream)
 
 if(DEFINED OUTPUT_FOLDER)
     set(DLL_FOLDER "${OUTPUT_FOLDER}/SKSE/Plugins")

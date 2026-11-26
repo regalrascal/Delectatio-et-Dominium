@@ -28,22 +28,22 @@
 {% if existsIn(marks, "marks") and isArray(marks.marks) %}
 {% for mk in marks.marks %}
 {% if mk.area == "Face" %}
-A tattoo is showing on your face: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+A tattoo is showing on your face: {{ default(mk.description, default(mk.name, "")) }}.
 {% elif mk.area == "Hands" %}
-A tattoo is showing on your bare hands: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+A tattoo is showing on your bare hands: {{ default(mk.description, default(mk.name, "")) }}.
 {% elif mk.area == "Feet" %}
-A tattoo is showing on your bare feet: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+A tattoo is showing on your bare feet: {{ default(mk.description, default(mk.name, "")) }}.
 {% elif mk.area == "Body" %}
-A tattoo is showing on your exposed torso: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+A tattoo is showing on your exposed torso: {{ default(mk.description, default(mk.name, "")) }}.
 {% else %}
-A tattoo is showing on your exposed skin: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }}).
+A tattoo is showing on your exposed skin: {{ default(mk.description, default(mk.name, "")) }}.
 {% endif %}
 {% endfor %}
 {% endif %}
 {% else %}
 ## Who Is Nearby
 {% if existsIn(marks, "marks") and isArray(marks.marks) %}
-{{ default(marks.wearer, "The marked person") }} has visible tattoos:{% for mk in marks.marks %}{% if mk.area == "Face" %} one on their face: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Hands" %} one on their bare hands: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Feet" %} one on their bare feet: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% elif mk.area == "Body" %} one on their exposed torso: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% else %} one on their exposed skin: '{{ default(mk.name, "") }}' ({{ default(mk.section, "") }});{% endif %}{% endfor %}
+{{ default(marks.wearer, "The marked person") }} has visible tattoos:{% for mk in marks.marks %}{% if mk.area == "Face" %} one on their face: {{ default(mk.description, default(mk.name, "")) }};{% elif mk.area == "Hands" %} one on their bare hands: {{ default(mk.description, default(mk.name, "")) }};{% elif mk.area == "Feet" %} one on their bare feet: {{ default(mk.description, default(mk.name, "")) }};{% elif mk.area == "Body" %} one on their exposed torso: {{ default(mk.description, default(mk.name, "")) }};{% else %} one on their exposed skin: {{ default(mk.description, default(mk.name, "")) }};{% endif %}{% endfor %}
 {% endif %}
 {% endif %}
 {% endif %}

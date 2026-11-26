@@ -1,0 +1,19 @@
+name: "ded_party_surrender"
+description: "DeD Downed (S352, spec 15, Companions keep fighting off): the player went down and the companions gave up the fight and went down with them."
+
+eventCriteria:
+  eventType: "ded_party_surrender"
+
+response:
+  type: "direct_narration"
+  content: |
+    The player has fallen, and the rest of the party gives up the fight: weapons dropped or
+    knocked away, they go down too. Narrate the surrender and how the winners take it.
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 8

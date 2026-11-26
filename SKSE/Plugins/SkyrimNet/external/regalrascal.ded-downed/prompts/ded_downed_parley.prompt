@@ -1,0 +1,20 @@
+[ system ]
+    You decide one thing in a dark-fantasy Skyrim roleplay. The player's side beat this enemy in a fight and left them
+    alive; they have just recovered enough to fight again. Judge from the enemy's character, the fight, and what the
+    player said to them while they were beaten: do they stand down toward the player for good, or will they fight again?
+    Mercy, persuasion, fear, gratitude or a promise can make them stand down; pride, hatred, orders or a failed talk keep
+    them hostile.
+
+    Answer with one line of JSON only, no other text:
+    {"decision": "<stand_down | hostile>", "reason": "<one short line>"}
+[ end system ]
+
+[ user ]
+    {% set npc = formid_to_uuid(npcId) %}
+    The enemy: {{ decnpc(npc).name }}
+    {{ render_character_profile("short_inline", npc) }}
+    {% if location != "" %}Where: {{ location }}{% endif %}
+
+    What was said between them and the player since the fight:
+    {% if dialogue != "" %}{{ dialogue }}{% else %}(nothing was said){% endif %}
+[ end user ]

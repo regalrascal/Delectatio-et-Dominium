@@ -1,0 +1,49 @@
+{# DeD Downed (spec 19.2 / 20, S347 + S351): what one victorious enemy does now that the player's side is beaten and downed.
+   Context from DeDDowned.dll: victorId (FormID), targets (list of {key, id, name, player}), location (text),
+   offer (object: an outcome key -> true when the user allows it and its module is installed; offer.rob = ask the
+   robbery question), again (true = "keep going" re-ask), done (what this victor already did, text).
+   Read by question id and option key: target -> a targets[].key; action -> an offered key (all probabilities kept,
+   DeDDowned.dll weights and rolls them, spec D-A66); rob -> yes / no (noul). LLM-facing; DRAFT at the user's pen. #}
+{% set victor = formid_to_uuid(victorId) %}
+
+[ state victor ]
+    ### {{ decnpc(victor).name }}
+    {{ render_character_profile("short_inline", victor) }}
+[ end state ]
+
+[ state downed ]
+    {{ decnpc(victor).name }}'s side has just won a fight{% if location != "" %} at {{ location }}{% endif %}. These people from the losing side lie beaten and helpless nearby:
+    {% for t in targets %}
+    - {{ t.key }}: {{ t.name }}{% if t.player %} (the player){% endif %}: {{ render_character_profile("short_inline", formid_to_uuid(t.id)) }}
+    {% endfor %}
+    {% if again %}
+    {{ decnpc(victor).name }} has already: {{ done }}.
+    {% endif %}
+[ end state ]
+
+[ question target choice ]
+    Which of the people in `downed` does {{ decnpc(victor).name }} turn to{% if again %} next{% endif %}? Judge from `victor`: who they want, resent or have business with.
+    [ criteria ]
+    {% for t in targets %}{{ t.key }}: {{ t.name }}
+    {% endfor %}
+    [ end criteria ]
+[ end question ]
+
+[ question action choice ]
+    What does {{ decnpc(victor).name }} do to that person {% if again %}next, after what they have already done{% else %}now{% endif %}, true to their character in `victor` (an enemy who just won, not a friend)?
+    [ criteria ]
+    {% if offer.sex %}sex: takes them sexually while they are helpless
+    {% endif %}{% if offer.threaten %}threaten: threatens, taunts and humiliates them, then leaves them
+    {% endif %}{% if offer.strip %}strip: strips them of their clothes and armour and leaves them bare
+    {% endif %}{% if offer.tattoo %}tattoo: marks their skin with a tattoo as a trophy or a humiliation
+    {% endif %}{% if offer.makeup %}makeup: paints their face to mock and humiliate them
+    {% endif %}{% if offer.execute %}execute: kills them where they lie
+    {% endif %}leave: {% if again %}has had enough and leaves them{% else %}leaves them where they lie{% endif %}
+    [ end criteria ]
+[ end question ]
+{% if offer.rob %}
+
+[ question rob noul ]
+    Does {{ decnpc(victor).name }} also go through that person's belongings and take what they want, true to their character in `victor`?
+[ end question ]
+{% endif %}

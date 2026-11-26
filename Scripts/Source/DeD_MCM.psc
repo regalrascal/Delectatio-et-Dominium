@@ -169,6 +169,11 @@ EndFunction
 
 Int _enabledOID = -1
 Int _panicOID = -1
+; S319 (user, S318): the DeD keys live in the MCM (Magelight cannot run DeD's routing from a key).
+Int _dedOpenKeyOID = -1
+Int _dedSpankKeyOID = -1
+Int _dedOpenUnbindOID = -1   ; S331: "Unbind" rows under each DeD key (user ask, REV-196 test)
+Int _dedSpankUnbindOID = -1
 Int _lapSitOID = -1
 Int _playerTargetOID = -1
 Int _femaleOnlyOID = -1
@@ -209,6 +214,7 @@ Int _spankFurnitureOID = -1
 Int _spankTatIntensityOID = -1
 Int _spankHealFactorOID = -1
 Int _sexBackendOID = -1
+Int _sceneHandoffOID = -1   ; S333
 Int _expressionsOID = -1
 Int _exprIntensityOID = -1
 Int _creatureEscOID = -1
@@ -334,6 +340,7 @@ Int _gsPoseLaneNarrOID     = -1
 Int _gsPoseLaneThoughtOID  = -1
 Int _gsPoseLanePSpeechOID  = -1
 Int _gsPoseLanePThoughtOID = -1
+Int _gsPoseLaneIntOID = -1   ; S331
 ; [REV-174 D3 A15] REACTION-LANE toggles -- the master + 8 Baka lane
 ; properties (Baka Interactions page) + the GS master/lane StorageUtil keys
 ; (GS Poses page). ALL ON by default (R-LANE-DEFAULTS; A15). Labels/tooltips
@@ -354,6 +361,7 @@ Int _bakaActLaneNarrOID    = -1
 Int _bakaActLaneThoughtOID = -1
 Int _bakaActLanePSpeechOID = -1
 Int _bakaActLanePThoughtOID = -1
+Int _bakaActLaneIntOID = -1   ; S331
 Int _gsReactArbOID        = -1
 Int _gsSangLaneNarrOID    = -1
 Int _gsSangLaneThoughtOID = -1
@@ -377,18 +385,12 @@ Int _cumFollowUpOID = -1
 ; REV-161 4.4: the cum ambient cadence slider (key SNBaka.CumAmbientCadence,
 ; default 60s = the REV-122 historic cadence; the accept re-arms the rule live).
 Int _cumAmbCadOID = -1
-; REV-68 "Downed State (Acheron Bridge)" settings (own "Acheron" page since REV-79) — consolidated from the
-; bridge's own MCM. Settings stay in StorageUtil (player-keyed, same SNAcheron.* keys and
-; defaults as the bridge MCM — no CK property link, no data migration; the bridge quest
-; reads them each tick via _LoadSettings).
-Int _achEnabledOID
-Int _achCueOID
-Int _achProxOID
-Int _achConfirmOID
-Int _achHandoffOID
-Int _achGetUpKeyOID
-Int _achEngageOID
-Int _achDebugOID
+; S354 (DeD Downed A5b): the REV-68 Acheron Bridge settings are gone with the bridge (S353).
+; acheron-stale-pacify-sweep spec (REV-186 production) — the manual release valve for stuck pacified
+; actors: the spec's cadenced sweep was scrapped by user ruling (upstream fix owns prevention), so
+; this button is the retained safety net for actors stuck by any route outside the fixed pipeline.
+Int _achPacifyReleaseOID = -1
+Int _achPrepareOID = -1   ; S342 (D-A58): "Prepare to Remove Acheron"
 ; REV-72 "SlaveTats Degradation Sets" section (own "SlaveTats" page since REV-79) — SNBaka_SlaveTatsModule state
 ; (SNBaka.ST.* StorageUtil keys, player-keyed). Set section/name values are picked from the
 ; PrismaUI SlaveTats menu (SNSlaveTats_Menu view) rather than typed here; the MCM exposes
@@ -429,6 +431,7 @@ Event OnConfigInit()
     ; REV-76 canary — first-registration sentinel (one-time, per-player): versioned
     ; marker + the one greppable line. Grep "[SNBaka] MCM canary" in Papyrus.0.log.
     StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v1", 1)
+    _RegisterDeDKeys()
     Debug.Trace("[SNBaka] MCM canary: Delectatio et Dominium registered (v" + GetVersion() + ", pages=" + Pages.Length + " [incl Acheron + SlaveTats], Main=" + Main + ")")
 EndEvent
 
@@ -445,8 +448,69 @@ Event OnGameReload()
     ; the OLD quest's instance never received on the Hadrian save; grep
     ; "[SNBaka] MCM canary reload").
     Debug.Trace("[SNBaka] MCM canary reload: OnGameReload delivered, Main=" + Main)
+    _AcheronHandover()   ; S342 (D-A58): Acheron's toggle -> DeDService, the spec 14 cleanup, the switched-off handover
     If Main
         Main.Setup()
+    EndIf
+    _RegisterDeDKeys()
+EndEvent
+
+; ============================================================================
+; S319 - THE DeD KEYS (user ruling S318: assignable in the MCM, which keeps the
+; DeD version number and the key assignments while the rest moves to Magelight).
+; Both unbound by default (D-P3). Keys are StorageUtil ints on the None key:
+;   DeD.Key.Open   "Open DeD" - exactly what casting DeD Interact does (DeDService
+;                  routing; without the panel, Baka's PowerPressed like the old power)
+;   DeD.Key.Spank  "Spank (in a scene)" - only during a sex scene: one partner is
+;                  spanked at once, more than one opens the "Spank who?" choice
+; ============================================================================
+String Function DeDVersionText()
+    Return "0.6.0"   ; S355: 0.6.0 = DeD Downed replaces Acheron (REV-201)
+EndFunction
+
+; S331: the Unbind row is greyed out while its key is unbound.
+Int Function _UnbindFlag(String asKey)
+    If StorageUtil.GetIntValue(None, asKey, -1) > 0
+        Return OPTION_FLAG_NONE
+    EndIf
+    Return OPTION_FLAG_DISABLED
+EndFunction
+
+Function _RegisterDeDKeys()
+    UnregisterForAllKeys()
+    Int kOpen = StorageUtil.GetIntValue(None, "DeD.Key.Open", -1)
+    Int kSpank = StorageUtil.GetIntValue(None, "DeD.Key.Spank", -1)
+    If kOpen > 0
+        RegisterForKey(kOpen)
+    EndIf
+    If kSpank > 0
+        RegisterForKey(kSpank)
+    EndIf
+    Debug.Trace("[DeDService][PANEL] DeD keys registered: open=" + kOpen + " spank=" + kSpank)
+EndFunction
+
+Event OnKeyDown(Int keyCode)
+    If Utility.IsInMenuMode() || UI.IsTextInputEnabled()
+        Return
+    EndIf
+    Actor p = Game.GetPlayer()
+    If keyCode == StorageUtil.GetIntValue(None, "DeD.Key.Open", -1)
+        Debug.Trace("[DeDService][PANEL] Open DeD key pressed")
+        If !DeDService.OpenPanel(p)
+            If Main
+                Debug.Trace("[DeDService][PANEL] Open DeD key: no panel - Baka's power routing instead")
+                Actor tgt = None
+                If !Main.IsInSexAnimation(p)
+                    tgt = SNBakaUI.GetInteractTarget()
+                EndIf
+                Main.PowerPressed(p, tgt)
+            EndIf
+        EndIf
+    ElseIf keyCode == StorageUtil.GetIntValue(None, "DeD.Key.Spank", -1)
+        Debug.Trace("[SNBaka] Spank key pressed")
+        If Main
+            Main.SpankKeyPressed()
+        EndIf
     EndIf
 EndEvent
 
@@ -607,7 +671,17 @@ Int Function GetVersion()
     ; [REV-179] v25 (render-seam + CASE compose-time toggle): canary marker -
     ; pages rebuilt FIRST (the v2 lesson, standing). No data migration (new
     ; keys GSAnim.CaseInCue / SNBaka.CaseInCue default; no rows renamed).
-    Return 25
+    ; [REV-184 D3] TWENTY-SIXTH canonical bump (v25 -> v26): "Baka
+    ; Interactions" SPLITS into two pages -- page 1 keeps the head sections
+    ; (General/Ambient Modes/Mode Selection/Reaction Lanes/Mode Reaction
+    ; Lanes/Capture, ~60 rows), page 2 "Baka Escalation & Struggle" takes the
+    ; tail (Timing/Resist/Spank/Scenes & FX/Humanoids/Lap Sitting, ~49 rows).
+    ; The 64-column SkyUI ceiling orphaned the tail rows (S262 D3 census: 45
+    ; rows invisible). KEYS UNCHANGED -- OIDs are position-free, handlers
+    ; unchanged, nothing orphaned; only the Pages[] array grows. Also carries
+    ; the D4 retirements (thought rows gone) + pspeech default flips.
+    ; S353 (A5a): v27 - the Acheron Bridge is retired; the Acheron page shows only while Acheron is installed.
+    Return 27
 EndFunction
 
 Event OnVersionUpdate(Int aVersion)
@@ -693,6 +767,17 @@ Event OnVersionUpdate(Int aVersion)
     StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v22", 1)
     _SelVocabMigrate4()
     ; REV-178 v23 (the narrative-selection surface): canary marker - the
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v25", 1)
+    ; [REV-184 D3/D4] v26 (0.4.1 hotfix tranche 2): canary marker - pages
+    ; rebuilt FIRST (the v2 lesson, standing). The Baka page SPLIT (page 2
+    ; "Baka Escalation & Struggle", keys unchanged) + the npc-thought lane
+    ;; MCM rows RETIRED (orphaned SNBaka.Action.Lane_thought /
+    ;; GSAnim.<Mode>Lane_thought keys harmless in old saves) + pspeech lane
+    ;; defaults OFF (existing saves keep saved values; fresh installs OFF).
+    ; Marker SNBaka.MCMDeD.v26.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v26", 1)
+    _BuildPages()
+    Debug.Trace("[SNBaka] MCM canary: v26 OnVersionUpdate (REV-184 0.4.1 hotfix: Baka page split - Escalation & Struggle page 2, thought rows retired, pspeech defaults OFF; pages: " + Pages.Length + ", Main=" + Main + ")")
     ; MIGRATION runs BEFORE the rebuild (the v21 lesson, standing). Marker
     ; SNBaka.MCMDeD.v23.
     StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v23", 1)
@@ -709,6 +794,11 @@ Event OnVersionUpdate(Int aVersion)
     StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v25", 1)
     _BuildPages()
     Debug.Trace("[SNBaka] MCM canary: v25 OnVersionUpdate (REV-179: render-seam yaml closer strip + GSAnim.CaseInCue / SNBaka.CaseInCue compose-time toggles, default ON; pages: " + Pages.Length + ", Main=" + Main + ")")
+    ; S353 (DeD Downed A5a) v27: the Acheron Bridge is retired; pages rebuilt (the Acheron page only while
+    ; Acheron is installed). No data migration. Marker SNBaka.MCMDeD.v27.
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.MCMDeD.v27", 1)
+    _BuildPages()
+    Debug.Trace("[SNBaka] MCM canary: v27 OnVersionUpdate (S353 A5a: bridge retired; pages: " + Pages.Length + ") -- S353")
 EndEvent
 
 ; ============================================================================
@@ -753,22 +843,24 @@ Function _BuildPages()
         ; five "Baka - " prefix pages and the Lap Sitting page are GONE as
         ; left-pane entries - replaced, not patched.
         If _GSInstalled()
+            Pages    = new String[8]
+            Pages[0] = "Settings"
+            Pages[1] = "Baka Interactions"
+            Pages[2] = "Baka Escalation & Struggle"
+            Pages[3] = "Cum Effects"
+            Pages[4] = "Fill Her Up"
+            Pages[5] = "Acheron"
+            Pages[6] = "SlaveTats"
+            Pages[7] = "GS Poses"
+        Else
             Pages    = new String[7]
             Pages[0] = "Settings"
             Pages[1] = "Baka Interactions"
-            Pages[2] = "Cum Effects"
-            Pages[3] = "Fill Her Up"
-            Pages[4] = "Acheron"
-            Pages[5] = "SlaveTats"
-            Pages[6] = "GS Poses"
-        Else
-            Pages    = new String[6]
-            Pages[0] = "Settings"
-            Pages[1] = "Baka Interactions"
-            Pages[2] = "Cum Effects"
-            Pages[3] = "Fill Her Up"
-            Pages[4] = "Acheron"
-            Pages[5] = "SlaveTats"
+            Pages[2] = "Baka Escalation & Struggle"
+            Pages[3] = "Cum Effects"
+            Pages[4] = "Fill Her Up"
+            Pages[5] = "Acheron"
+            Pages[6] = "SlaveTats"
         EndIf
     ElseIf _GSInstalled()
         ; REV-109: the Settings page rides the motherboard gate in this session:
@@ -785,16 +877,43 @@ Function _BuildPages()
         Pages[0] = "Acheron"
         Pages[1] = "SlaveTats"
     EndIf
+    If !Game.IsPluginInstalled("Acheron.esm")   ; S353 (A5a): the Acheron page only while Acheron is installed
+        Pages = _WithoutPage(Pages, "Acheron")
+    EndIf
+EndFunction
+
+String[] Function _WithoutPage(String[] akPages, String asPage)
+    Int n = 0
+    Int i = 0
+    While i < akPages.Length
+        If akPages[i] != asPage
+            n += 1
+        EndIf
+        i += 1
+    EndWhile
+    String[] out = Utility.CreateStringArray(n)
+    Int j = 0
+    i = 0
+    While i < akPages.Length
+        If akPages[i] != asPage
+            out[j] = akPages[i]
+            j += 1
+        EndIf
+        i += 1
+    EndWhile
+    Return out
 EndFunction
 
 Event OnPageReset(String page)
+    _achPacifyReleaseOID = -1   ; S354 (A5b): stale Acheron-page ids never match another page's options
+    _achPrepareOID = -1
     ; REV-106 S4a (count amended REV-109b): the module pages (Baka
     ; Interactions incl. Lap Sitting, Cum Effects, Fill Her Up) carry a motherboard presence rider —
     ; when the motherboard is absent they are never in Pages[] (see _BuildPages);
     ; this belt-and-suspenders guard makes the render bodies unreachable even if a
     ; stale cached Pages array ever named one (defensive only — no behavior delta
     ; in any combo reachable today; activates with the S4b quest-record move).
-    If page == "Settings" && Main
+    If page == "Settings"
         ; REV-109 MCM RESTRUCTURE (era roadmap item 7): the framework-level
         ; configurables page. Ships with WHAT EXISTS TODAY (the no-stubbing
         ; rule): master enable, the global action cooldown, the stuck-state
@@ -807,7 +926,15 @@ Event OnPageReset(String page)
         SetCursorFillMode(TOP_TO_BOTTOM)
         AddHeaderOption("Delectatio et Dominium")
         AddTextOption("Bedroom drama for SkyrimNet", "", OPTION_FLAG_DISABLED)
+        AddTextOption("Version", DeDVersionText(), OPTION_FLAG_DISABLED)
         AddEmptyOption()
+        AddHeaderOption("Keys")
+        _dedOpenKeyOID  = AddKeyMapOption("Open DeD",           StorageUtil.GetIntValue(None, "DeD.Key.Open", -1),  OPTION_FLAG_WITH_UNMAP)
+        _dedOpenUnbindOID = AddTextOption("", "Unbind", _UnbindFlag("DeD.Key.Open"))
+        _dedSpankKeyOID = AddKeyMapOption("Spank (in a scene)", StorageUtil.GetIntValue(None, "DeD.Key.Spank", -1), OPTION_FLAG_WITH_UNMAP)
+        _dedSpankUnbindOID = AddTextOption("", "Unbind", _UnbindFlag("DeD.Key.Spank"))
+        AddEmptyOption()
+      If Main
         AddHeaderOption("Framework")
         _enabledOID        = AddToggleOption("Enable Mod",            Main.bEnabled)
         _cooldownOID       = AddSliderOption("AI Action Cooldown",    Main.fNPCGlobalCooldown, "{0}s")
@@ -822,6 +949,7 @@ Event OnPageReset(String page)
         ; any loaded actor -- for actors stuck non-aggressive/untargetable after something went wrong.
         ; Leaves genuinely downed/defeated actors alone (HelpUp / the get-up key is their way out).
         _panicOID = AddTextOption("EMERGENCY: reset stuck actor states", "RUN")
+      EndIf
     ElseIf page == "Baka Interactions" && Main
         ; REV-109c (user ruling, MCM restructure pass 3, 2026-10-1X): ONE page,
         ; the six family sections STACKED in the body - NO navigation, NO state
@@ -919,17 +1047,18 @@ Event OnPageReset(String page)
         ; LLM/player-initiated interactions ONLY -- daemon/mode fires keep the
         ; mode-branded lanes below; defaults mirror A15).
         _bakaActLaneNarrOID     = AddToggleOption("Narration Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_narr", 1) == 1)
-        _bakaActLaneThoughtOID  = AddToggleOption("Thought Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_thought", 0) == 1)
-        _bakaActLanePSpeechOID  = AddToggleOption("Speech Reaction Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 1) == 1)
+        ; [REV-184 D4] the Thought Lane row is RETIRED (npc-thought "gone, not off").
+        _bakaActLanePSpeechOID  = AddToggleOption("Speech Reaction Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 0) == 1)
         _bakaActLanePThoughtOID = AddToggleOption("Private Thought Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pthought", 1) == 1)
+        _bakaActLaneIntOID      = AddToggleOption("Reaction Lanes Interrupt", StorageUtil.GetIntValue(None, "SNBaka.Action.LaneInterrupt", 0) == 1)   ; S331
         AddEmptyOption()
         AddHeaderOption("Mode Reaction Lanes")
         _mephLaneNarrOID      = AddToggleOption("Mephala Narration Lane", Main.bMephalaLaneNarr)
-        _mephLaneThoughtOID   = AddToggleOption("Mephala Thought Lane", Main.bMephalaLaneThought)
+        ; [REV-184 D4] Mephala Thought row RETIRED (npc-thought lane "gone").
         _mephLanePSpeechOID   = AddToggleOption("Mephala Speech Reaction Lane", Main.bMephalaLanePSpeech)
         _mephLanePThoughtOID  = AddToggleOption("Mephala Private Thought Lane", Main.bMephalaLanePThought)
         _molagLaneNarrOID     = AddToggleOption("Molag Bal Narration Lane", Main.bMolagBalLaneNarr)
-        _molagLaneThoughtOID  = AddToggleOption("Molag Bal Thought Lane", Main.bMolagBalLaneThought)
+        ; [REV-184 D4] Molag Bal Thought row RETIRED (npc-thought lane "gone").
         _molagLanePSpeechOID  = AddToggleOption("Molag Bal Speech Reaction Lane", Main.bMolagBalLanePSpeech)
         _molagLanePThoughtOID = AddToggleOption("Molag Bal Private Thought Lane", Main.bMolagBalLanePThought)
         ; [REV-178b Leg 2.2] the bottom-stuck "Action Reaction Lanes" section
@@ -959,6 +1088,16 @@ Event OnPageReset(String page)
         ; (framework-level, per the restructure); the Execute-gate stays here -
         ; it is capture behavior, not framework state.
         _execGateOID = AddMenuOption("Execution Action Use", _execGateName(_ExecGateLevel()))
+        ; [REV-184 D3] the TAIL sections (Timing / Resist / Spank / Scenes & FX /
+        ; Humanoids / Lap Sitting) MOVED to the new page 2 "Baka Escalation &
+        ; Struggle" -- the 64-column SkyUI ceiling orphaned them here (S262
+        ; census: 45 invisible rows). Keys/OIDs/handlers unchanged (position-free).
+    ElseIf page == "Baka Escalation & Struggle" && Main
+        ; [REV-184 D3] page 2 of the Baka split: the escalation/struggle tail.
+        ; Same body as before the split (moved verbatim); every key unchanged.
+        SetCursorFillMode(TOP_TO_BOTTOM)
+        AddHeaderOption("Baka Escalation & Struggle")
+        AddEmptyOption()
         ; ---- Timing (the former "Baka - Timing" body, moved verbatim) ----
         AddHeaderOption("Timing")
         AddEmptyOption()
@@ -1003,6 +1142,7 @@ Event OnPageReset(String page)
         AddEmptyOption()
         AddHeaderOption("Sex Framework")
         _sexBackendOID    = AddMenuOption("Scene Framework", _backendName(Main.iSexBackend))
+        _sceneHandoffOID  = AddToggleOption("Hand Off Scene Setup", StorageUtil.GetIntValue(None, "SNBaka.SceneHandoff", 1) == 1)   ; S333
         AddEmptyOption()
         AddHeaderOption("Expressions")
         _expressionsOID   = AddToggleOption("Facial Expressions",  Main.bExpressionsEnabled)
@@ -1132,34 +1272,17 @@ Event OnPageReset(String page)
         EndIf
 
     ElseIf page == "Acheron"
-        ; REV-79 restructure: the Downed State bridge promoted from a Plugins section to
-        ; its own page (one integration, one page). Absent state is page-level: every
-        ; option greyed + the header names the missing mod (per-section gate, extended).
+        ; S353 (DeD Downed A5a): the Acheron Bridge is retired. This page shows only while Acheron is installed
+        ; (spec D-A58: keep Acheron switched off, or prepare to remove it). Texts: placeholders (register 83).
         SetCursorFillMode(TOP_TO_BOTTOM)
-        AddHeaderOption("Downed State (Acheron Bridge)")
-        Actor _achP = Game.GetPlayer()
-        If !_achP
-            _achP = Game.GetPlayer()
-        EndIf
-        If Game.GetFormFromFile(0x800, "SkyrimNet_AcheronIntegration.esp") != None   ; REV-106 S4a: de-Mained — same probe the motherboard module-arm uses (SkyrimNet_BakaIntegration L586); the Acheron page no longer consults the motherboard
-            _achEnabledOID  = AddToggleOption("Bridge Enabled",            StorageUtil.GetIntValue(_achP,   "SNAcheron.Enabled",           1) == 1)
-            _achCueOID      = AddSliderOption("Reminder Cue Interval",     StorageUtil.GetFloatValue(_achP, "SNAcheron.CueInterval",       30.0),  "{0} s")
-            _achProxOID     = AddSliderOption("Creature Check Interval",   StorageUtil.GetFloatValue(_achP, "SNAcheron.ProxInterval",      10.0),  "{0} s")
-            _achConfirmOID  = AddSliderOption("Auto Get-Up Timer",         StorageUtil.GetFloatValue(_achP, "SNAcheron.AutoGetUpSeconds",  600.0), "{0} s")
-            _achHandoffOID  = AddToggleOption("Creature Pounce On Recovery", StorageUtil.GetIntValue(_achP, "SNAcheron.CreatureHandoff",    1) == 1)
-            _achGetUpKeyOID = AddKeyMapOption("Get-Up Key (hold 3s)",      StorageUtil.GetIntValue(_achP,   "SNAcheron.GetUpKey",          51))
-            _achEngageOID   = AddSliderOption("Creature Engagement Chance", StorageUtil.GetFloatValue(_achP, "SNAcheron.CreatureEngageChance", 50.0), "{0}%")
-            _achDebugOID    = AddToggleOption("Enable Debug Logging",      StorageUtil.GetIntValue(_achP,   "SNAcheron.DebugLog",          1) == 1)
+        AddHeaderOption("Acheron")
+        If Acheron.IsProcessingDisabled()
+            AddTextOption("Acheron is switched off", "DeD Downed in charge", OPTION_FLAG_DISABLED)
         Else
-            _achEnabledOID  = AddToggleOption("Bridge Enabled (not installed)", False, OPTION_FLAG_DISABLED)
-            _achCueOID      = -1
-            _achProxOID     = -1
-            _achConfirmOID  = -1
-            _achHandoffOID  = -1
-            _achGetUpKeyOID = -1
-            _achEngageOID   = -1
-            _achDebugOID    = -1
+            AddTextOption("Acheron is switched on", "DeD Downed waits", OPTION_FLAG_DISABLED)
         EndIf
+        _achPacifyReleaseOID = AddTextOption("Release Stuck Pacified (all)", "Release")
+        _achPrepareOID = AddTextOption("Prepare to Remove Acheron", "Run")   ; S342 placeholder (register 75)
     ElseIf page == "SlaveTats"
         ; REV-79 restructure: the SlaveTats degradation-set section promoted from the
         ; Plugins page to its own page (one integration, one page — the page the picker
@@ -1177,17 +1300,18 @@ Event OnPageReset(String page)
         EndIf
         If SNBaka_SlaveTatsModule.Installed()
             _stEnabledOID = AddToggleOption("Module Enabled",               StorageUtil.GetIntValue(_stP,  "SNBaka.ST.Enabled",           1) == 1)
-            AddEmptyOption()
-            AddHeaderOption("Auto-Apply Sets")
-            _stIntroOID = AddTextOption("Sets are picked in the Tattoo Menu.", "", OPTION_FLAG_DISABLED)
-            _stSpankOID   = AddToggleOption("Apply Set On Spank",           StorageUtil.GetIntValue(_stP,  "SNBaka.ST.ApplyOnSpank",      1) == 1)
-            _stDefeatOID  = AddToggleOption("Apply Set On Defeat",          StorageUtil.GetIntValue(_stP,  "SNBaka.ST.ApplyOnDefeat",     1) == 1)
-            _stEscalOID   = AddToggleOption("Apply Set On Escalation",      StorageUtil.GetIntValue(_stP,  "SNBaka.ST.ApplyOnEscalation", 0) == 1)
+            ; Tattoo T1 / leg 5: the auto-apply slot sets (D-T1, D-T2), the set picker and the manual
+            ; Refresh are retired - packs rescan on every game load and per-pack choices live in the
+            ; combined DeD menu's Settings.
+            _stIntroOID   = -1
+            _stSpankOID   = -1
+            _stDefeatOID  = -1
+            _stEscalOID   = -1
+            _stRefreshOID = -1
+            _stPickOID    = -1
             AddEmptyOption()
             AddHeaderOption("Packs & Marks")
-            _stRefreshOID = AddTextOption("Refresh Pack List",             "Refresh")
             _stStatusOID  = AddTextOption("Sections Available",             StorageUtil.GetIntValue(_stP, "SNBaka.ST.SectionCount", 0) + " sections")
-            _stPickOID    = AddTextOption("Open Set Picker (In-Game)",     "Open")
             ; REV-74 Task 4: module-wide default color (picker per-set colors override),
             ; removal-on-release, and the ambient observation pass toggle.
             _stDefaultColorOID   = AddTextOption("Default Mark Color",     _ST_ColorLabel(StorageUtil.GetIntValue(_stP, "SNBaka.ST.DefaultColor", 0)))
@@ -1247,9 +1371,10 @@ Event OnPageReset(String page)
         AddHeaderOption("Reaction Lanes")
         _gsReactArbOID         = AddToggleOption("LLM Reaction Arbitration", StorageUtil.GetIntValue(None, "GSAnim.ReactArbitration", 1) == 1)
         _gsPoseLaneNarrOID     = AddToggleOption("Pose Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_narr", 1) == 1)
-        _gsPoseLaneThoughtOID  = AddToggleOption("Pose Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_thought", 0) == 1)
-        _gsPoseLanePSpeechOID  = AddToggleOption("Pose Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_pspeech", 1) == 1)
+        ; [REV-184 D4] Pose Thought row RETIRED (npc-thought lane "gone"); pspeech default OFF.
+        _gsPoseLanePSpeechOID  = AddToggleOption("Pose Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_pspeech", 0) == 1)
         _gsPoseLanePThoughtOID = AddToggleOption("Pose Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_pthought", 1) == 1)
+        _gsPoseLaneIntOID      = AddToggleOption("Pose Reactions Interrupt", StorageUtil.GetIntValue(None, "GSAnim.PoseLaneInterrupt", 0) == 1)   ; S331
         AddEmptyOption()
         AddHeaderOption("Mode Cadence")
         ; [REV-174e Leg 4] the two Mode Narration rows REMOVED (user ruling
@@ -1287,12 +1412,11 @@ Event OnPageReset(String page)
         AddEmptyOption()
         AddHeaderOption("Mode Reaction Lanes")
         _gsSangLaneNarrOID     = AddToggleOption("Sanguine Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_narr", 1) == 1)
-        _gsSangLaneThoughtOID  = AddToggleOption("Sanguine Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_thought", 1) == 1)
-        _gsSangLanePSpeechOID  = AddToggleOption("Sanguine Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_pspeech", 1) == 1)
+        ; [REV-184 D4] Sanguine/Sheogorath Thought rows RETIRED (npc-thought "gone"); pspeech defaults OFF.
+        _gsSangLanePSpeechOID  = AddToggleOption("Sanguine Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_pspeech", 0) == 1)
         _gsSangLanePThoughtOID = AddToggleOption("Sanguine Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_pthought", 1) == 1)
         _gsSheoLaneNarrOID     = AddToggleOption("Sheogorath Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_narr", 1) == 1)
-        _gsSheoLaneThoughtOID  = AddToggleOption("Sheogorath Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_thought", 1) == 1)
-        _gsSheoLanePSpeechOID  = AddToggleOption("Sheogorath Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_pspeech", 1) == 1)
+        _gsSheoLanePSpeechOID  = AddToggleOption("Sheogorath Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_pspeech", 0) == 1)
         _gsSheoLanePThoughtOID = AddToggleOption("Sheogorath Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_pthought", 1) == 1)
         ; [REV-179 Leg 2] the CASE compose-time toggle (ruling of record (c),
         ; 178d dogfood): GSAnim.CaseInCue, None-keyed, DEFAULT ON, read fresh
@@ -1304,6 +1428,20 @@ Event OnPageReset(String page)
 EndEvent
 
 Event OnOptionSelect(Int option)
+    If option == _dedOpenUnbindOID || option == _dedSpankUnbindOID   ; S331
+        String uKey = "DeD.Key.Open"
+        Int uOID = _dedOpenKeyOID
+        If option == _dedSpankUnbindOID
+            uKey = "DeD.Key.Spank"
+            uOID = _dedSpankKeyOID
+        EndIf
+        StorageUtil.SetIntValue(None, uKey, -1)
+        SetKeyMapOptionValue(uOID, -1)
+        SetOptionFlags(option, OPTION_FLAG_DISABLED)
+        Debug.Trace("[DeDService][PANEL] " + uKey + " unbound from the MCM -- S331")
+        _RegisterDeDKeys()
+        Return
+    EndIf
     If option == _enabledOID
         Main.bEnabled = !Main.bEnabled
         SetToggleOptionValue(_enabledOID, Main.bEnabled)
@@ -1395,40 +1533,23 @@ Event OnOptionSelect(Int option)
         Else
             Debug.Notification("Ambient Narration disabled.")
         EndIf
-    ElseIf option == _achEnabledOID
-        ; REV-68 bridge master switch — same SNAcheron.Enabled key the bridge MCM wrote; the
-        ; bridge quest re-reads it on its next tick. Nudges the motherboard lifecycle surface
-        ; (per the §68 ruling: toggles nudge Main._ArmModules()) so the bridge picks the change
-        ; up immediately instead of on its own self-heal cadence.
-        Actor achP1 = Game.GetPlayer()
-        If !achP1
-            achP1 = Game.GetPlayer()
+    ElseIf option == _achPrepareOID && _achPrepareOID != -1   ; S342 (D-A58): the removal path's first step
+        Int freed = _ReleaseAllAcheron("prepare to remove")
+        StorageUtil.SetIntValue(Game.GetPlayer(), "SNAcheron.Enabled", 0)
+        Debug.MessageBox("Acheron let go of " + freed + " person(s). Save now, then turn off Acheron in your mod manager.")   ; S353: no bridge any more
+    ElseIf option == _achPacifyReleaseOID && _achPacifyReleaseOID != -1
+        ; REV-186 production release valve (acheron-stale-pacify-sweep spec; probe buttons retired):
+        ; release every loaded stuck-signature pacified actor via Acheron.ReleaseActor. Acheron's
+        ; own recovery/rescue paths are untouched; legitimately downed/scene-owned actors are
+        ; filtered out inside the bridge call (see _ReleaseAllStuckPacified). Crosshair targeting
+        ; is impossible while the MCM is open, so it targets ALL stuck actors at once.
+        ; S353 (A5a): the bridge is retired; DeD_MCM releases Acheron's holds itself.
+        Int released = _ReleaseAllAcheron("button")
+        If released == 0
+            Debug.Notification("Acheron: no stuck pacified people to release.")
+        Else
+            Debug.Notification("Acheron: released " + released + " stuck pacified person(s).")
         EndIf
-        Int vAch = 1 - StorageUtil.GetIntValue(achP1, "SNAcheron.Enabled", 1)
-        StorageUtil.SetIntValue(achP1, "SNAcheron.Enabled", vAch)
-        SetToggleOptionValue(_achEnabledOID, vAch == 1)
-        ; REV-106 S4a: the lifecycle nudge is motherboard-dependent — guard it so
-        ; this Acheron-page toggle works with the motherboard absent too (the bridge
-        ; re-reads the key on its own self-heal cadence either way, per §68).
-        If Main
-            Main._ArmModules()
-        EndIf
-    ElseIf option == _achHandoffOID
-        Actor achP2 = Game.GetPlayer()
-        If !achP2
-            achP2 = Game.GetPlayer()
-        EndIf
-        Int vHand = 1 - StorageUtil.GetIntValue(achP2, "SNAcheron.CreatureHandoff", 1)
-        StorageUtil.SetIntValue(achP2, "SNAcheron.CreatureHandoff", vHand)
-        SetToggleOptionValue(_achHandoffOID, vHand == 1)
-    ElseIf option == _achDebugOID
-        Actor achP3 = Game.GetPlayer()
-        If !achP3
-            achP3 = Game.GetPlayer()
-        EndIf
-        Int vDbg = 1 - StorageUtil.GetIntValue(achP3, "SNAcheron.DebugLog", 1)
-        StorageUtil.SetIntValue(achP3, "SNAcheron.DebugLog", vDbg)
-        SetToggleOptionValue(_achDebugOID, vDbg == 1)
     ElseIf option == _stEnabledOID
         _ST_Toggle("SNBaka.ST.Enabled", _stEnabledOID, 1)
     ElseIf option == _stSpankOID
@@ -1525,12 +1646,13 @@ Event OnOptionSelect(Int option)
     ; None-keyed, default mirrors A15; register DRAFT tooltips).
     ElseIf option == _gsPoseLaneNarrOID
         _GS_Toggle("GSAnim.PoseLane_narr", _gsPoseLaneNarrOID, 1)
-    ElseIf option == _gsPoseLaneThoughtOID
-        _GS_Toggle("GSAnim.PoseLane_thought", _gsPoseLaneThoughtOID, 0)
+    ; [REV-184 D4] PoseLane thought handler RETIRED with the row (npc-thought "gone").
     ElseIf option == _gsPoseLanePSpeechOID
-        _GS_Toggle("GSAnim.PoseLane_pspeech", _gsPoseLanePSpeechOID, 1)
+        _GS_Toggle("GSAnim.PoseLane_pspeech", _gsPoseLanePSpeechOID, 0)
     ElseIf option == _gsPoseLanePThoughtOID
         _GS_Toggle("GSAnim.PoseLane_pthought", _gsPoseLanePThoughtOID, 1)
+    ElseIf option == _gsPoseLaneIntOID   ; S331
+        _GS_Toggle("GSAnim.PoseLaneInterrupt", _gsPoseLaneIntOID, 0)
     ; [REV-179 Leg 2] the CASE compose-time toggles (GSAnim.CaseInCue /
     ; SNBaka.CaseInCue, None-keyed, DEFAULT ON; plain desc everywhere
     ; downstream when OFF -- the composers read the key fresh per fire).
@@ -1556,9 +1678,7 @@ Event OnOptionSelect(Int option)
     ElseIf option == _mephLaneNarrOID
         Main.bMephalaLaneNarr = !Main.bMephalaLaneNarr
         SetToggleOptionValue(_mephLaneNarrOID, Main.bMephalaLaneNarr)
-    ElseIf option == _mephLaneThoughtOID
-        Main.bMephalaLaneThought = !Main.bMephalaLaneThought
-        SetToggleOptionValue(_mephLaneThoughtOID, Main.bMephalaLaneThought)
+    ; [REV-184 D4] Mephala/Molag Bal thought handlers RETIRED with the rows.
     ElseIf option == _mephLanePSpeechOID
         Main.bMephalaLanePSpeech = !Main.bMephalaLanePSpeech
         SetToggleOptionValue(_mephLanePSpeechOID, Main.bMephalaLanePSpeech)
@@ -1568,9 +1688,6 @@ Event OnOptionSelect(Int option)
     ElseIf option == _molagLaneNarrOID
         Main.bMolagBalLaneNarr = !Main.bMolagBalLaneNarr
         SetToggleOptionValue(_molagLaneNarrOID, Main.bMolagBalLaneNarr)
-    ElseIf option == _molagLaneThoughtOID
-        Main.bMolagBalLaneThought = !Main.bMolagBalLaneThought
-        SetToggleOptionValue(_molagLaneThoughtOID, Main.bMolagBalLaneThought)
     ElseIf option == _molagLanePSpeechOID
         Main.bMolagBalLanePSpeech = !Main.bMolagBalLanePSpeech
         SetToggleOptionValue(_molagLanePSpeechOID, Main.bMolagBalLanePSpeech)
@@ -1581,29 +1698,27 @@ Event OnOptionSelect(Int option)
         _GS_Toggle("GSAnim.ReactArbitration", _gsReactArbOID, 1)
     ElseIf option == _gsSangLaneNarrOID
         _GS_Toggle("GSAnim.SanguineLane_narr", _gsSangLaneNarrOID, 1)
-    ElseIf option == _gsSangLaneThoughtOID
-        _GS_Toggle("GSAnim.SanguineLane_thought", _gsSangLaneThoughtOID, 1)
+    ; [REV-184 D4] Sanguine thought handler RETIRED with the row.
     ElseIf option == _gsSangLanePSpeechOID
-        _GS_Toggle("GSAnim.SanguineLane_pspeech", _gsSangLanePSpeechOID, 1)
+        _GS_Toggle("GSAnim.SanguineLane_pspeech", _gsSangLanePSpeechOID, 0)
     ElseIf option == _gsSangLanePThoughtOID
         _GS_Toggle("GSAnim.SanguineLane_pthought", _gsSangLanePThoughtOID, 1)
     ElseIf option == _gsSheoLaneNarrOID
         _GS_Toggle("GSAnim.SheogorathLane_narr", _gsSheoLaneNarrOID, 1)
-    ElseIf option == _gsSheoLaneThoughtOID
-        _GS_Toggle("GSAnim.SheogorathLane_thought", _gsSheoLaneThoughtOID, 1)
+    ; [REV-184 D4] Sheogorath thought handler RETIRED with the row.
     ElseIf option == _gsSheoLanePSpeechOID
-        _GS_Toggle("GSAnim.SheogorathLane_pspeech", _gsSheoLanePSpeechOID, 1)
+        _GS_Toggle("GSAnim.SheogorathLane_pspeech", _gsSheoLanePSpeechOID, 0)
     ElseIf option == _gsSheoLanePThoughtOID
         _GS_Toggle("GSAnim.SheogorathLane_pthought", _gsSheoLanePThoughtOID, 1)
-    ; [REV-174f Leg 4.4] Baka ACTION lanes (None-keyed; thought defaults OFF)
+    ; [REV-174f Leg 4.4; REV-184 D4 thought RETIRED + pspeech default OFF]
     ElseIf option == _bakaActLaneNarrOID
         _GS_Toggle("SNBaka.Action.Lane_narr", _bakaActLaneNarrOID, 1)
-    ElseIf option == _bakaActLaneThoughtOID
-        _GS_Toggle("SNBaka.Action.Lane_thought", _bakaActLaneThoughtOID, 0)
     ElseIf option == _bakaActLanePSpeechOID
-        _GS_Toggle("SNBaka.Action.Lane_pspeech", _bakaActLanePSpeechOID, 1)
+        _GS_Toggle("SNBaka.Action.Lane_pspeech", _bakaActLanePSpeechOID, 0)
     ElseIf option == _bakaActLanePThoughtOID
         _GS_Toggle("SNBaka.Action.Lane_pthought", _bakaActLanePThoughtOID, 1)
+    ElseIf option == _bakaActLaneIntOID   ; S331
+        _GS_Toggle("SNBaka.Action.LaneInterrupt", _bakaActLaneIntOID, 0)
     ElseIf option == _sellSlaveryOID
         Main.bSellToSlavery = !Main.bSellToSlavery
         SetToggleOptionValue(_sellSlaveryOID, Main.bSellToSlavery)
@@ -1632,6 +1747,8 @@ Event OnOptionSelect(Int option)
     ElseIf option == _spankFurnitureOID
         Main.bSpankFurnitureTriggers = !Main.bSpankFurnitureTriggers
         SetToggleOptionValue(_spankFurnitureOID, Main.bSpankFurnitureTriggers)
+    ElseIf option == _sceneHandoffOID   ; S333
+        _GS_Toggle("SNBaka.SceneHandoff", _sceneHandoffOID, 1)
     ElseIf option == _expressionsOID
         Main.bExpressionsEnabled = !Main.bExpressionsEnabled
         SetToggleOptionValue(_expressionsOID, Main.bExpressionsEnabled)
@@ -1675,13 +1792,21 @@ EndEvent
 ; SNAcheron.GetUpKey StorageUtil key the bridge's own MCM used (identical defaults/handling;
 ; the bridge quest reads it every tick, so no nudge is needed for a keybind).
 Event OnOptionKeyMapChange(Int option, Int keyCode, String conflictControl, String conflictName)
-    If option == _achGetUpKeyOID
-        Actor achPk = Game.GetPlayer()
-        If !achPk
-            achPk = Game.GetPlayer()
+    If option == _dedOpenKeyOID || option == _dedSpankKeyOID
+        ; S319: -1 = unmapped (OPTION_FLAG_WITH_UNMAP); re-register at once.
+        If option == _dedOpenKeyOID
+            StorageUtil.SetIntValue(None, "DeD.Key.Open", keyCode)
+        Else
+            StorageUtil.SetIntValue(None, "DeD.Key.Spank", keyCode)
         EndIf
-        StorageUtil.SetIntValue(achPk, "SNAcheron.GetUpKey", keyCode)
-        SetKeyMapOptionValue(_achGetUpKeyOID, keyCode)
+        SetKeyMapOptionValue(option, keyCode)
+        If option == _dedOpenKeyOID   ; S331: the Unbind row follows the key
+            SetOptionFlags(_dedOpenUnbindOID, _UnbindFlag("DeD.Key.Open"))
+        Else
+            SetOptionFlags(_dedSpankUnbindOID, _UnbindFlag("DeD.Key.Spank"))
+        EndIf
+        _RegisterDeDKeys()
+        Return
     EndIf
 EndEvent
 
@@ -2605,26 +2730,6 @@ Event OnOptionSliderOpen(Int option)
         SetSliderDialogDefaultValue(25.0)
         SetSliderDialogRange(0.0, 100.0)
         SetSliderDialogInterval(5.0)
-    ElseIf option == _achCueOID
-        SetSliderDialogStartValue(StorageUtil.GetFloatValue(Game.GetPlayer(), "SNAcheron.CueInterval", 30.0))
-        SetSliderDialogDefaultValue(60.0)
-        SetSliderDialogRange(10.0, 120.0)
-        SetSliderDialogInterval(5.0)
-    ElseIf option == _achProxOID
-        SetSliderDialogStartValue(StorageUtil.GetFloatValue(Game.GetPlayer(), "SNAcheron.ProxInterval", 10.0))
-        SetSliderDialogDefaultValue(10.0)
-        SetSliderDialogRange(5.0, 60.0)
-        SetSliderDialogInterval(5.0)
-    ElseIf option == _achConfirmOID
-        SetSliderDialogStartValue(StorageUtil.GetFloatValue(Game.GetPlayer(), "SNAcheron.AutoGetUpSeconds", 600.0))
-        SetSliderDialogDefaultValue(600.0)
-        SetSliderDialogRange(60.0, 3600.0)
-        SetSliderDialogInterval(30.0)
-    ElseIf option == _achEngageOID
-        SetSliderDialogStartValue(StorageUtil.GetFloatValue(Game.GetPlayer(), "SNAcheron.CreatureEngageChance", 50.0))
-        SetSliderDialogDefaultValue(50.0)
-        SetSliderDialogRange(0.0, 100.0)
-        SetSliderDialogInterval(5.0)
     ; [REV-174a A36c] the Target Link Weight slider legs REMOVED with the row
     ; (RP is prompt-side; no mechanical two-tier draws remain to weight).
     EndIf
@@ -2749,22 +2854,20 @@ Event OnOptionSliderAccept(Int option, Float value)
     ElseIf option == _creatureGroupSizeOID
         Main.iCreatureGroupMaxSize = value as Int
         SetSliderOptionValue(_creatureGroupSizeOID, value, "{0}")
-    ElseIf option == _achCueOID
-        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNAcheron.CueInterval", value)
-        SetSliderOptionValue(_achCueOID, value, "{0} s")
-    ElseIf option == _achProxOID
-        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNAcheron.ProxInterval", value)
-        SetSliderOptionValue(_achProxOID, value, "{0} s")
-    ElseIf option == _achConfirmOID
-        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNAcheron.AutoGetUpSeconds", value)
-        SetSliderOptionValue(_achConfirmOID, value, "{0} s")
-    ElseIf option == _achEngageOID
-        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNAcheron.CreatureEngageChance", value)
-        SetSliderOptionValue(_achEngageOID, value, "{0}%")
     EndIf
 EndEvent
 
 Event OnOptionHighlight(Int option)
+    If option == _dedOpenKeyOID
+        SetInfoText("Opens the DeD menu, the same as casting DeD Interact. Unbound by default.")
+        Return
+    ElseIf option == _dedSpankKeyOID
+        SetInfoText("During a sex scene: spanks your partner (or asks who, with more than one partner). Unbound by default.")
+        Return
+    ElseIf option == _dedOpenUnbindOID || option == _dedSpankUnbindOID   ; S331 placeholder text
+        SetInfoText("Clears the key above, so nothing is bound to it.")
+        Return
+    EndIf
     ; REV-134d (R2, user-ruled 2026-10-21, texts VERBATIM): the Cum-page
     ; descriptions are now TOOLTIPS (SetInfoText, shown on highlight), not
     ; subtext rows (the REV-134c static rows are removed per the ruling).
@@ -2827,10 +2930,10 @@ Event OnOptionHighlight(Int option)
         SetInfoText("Send the reaction cues when autonomous or emergent forces pose an NPC (default on).")
     ElseIf option == _poseNarrPlOID
         SetInfoText("Send the reaction cues when you pose an NPC or gesture for them to stop (default on).")
-    ElseIf option == _gsPoseLaneNarrOID || option == _gsPoseLaneThoughtOID
-        SetInfoText("Fanned narration or NPC-thought reaction lane on emergent and player-initiated pose fires (rotates, never the same lane twice in a row; default narration on, thought off).")
+    ElseIf option == _gsPoseLaneNarrOID
+        SetInfoText("Fanned narration reaction lane on emergent and player-initiated pose fires (rotates, never the same lane twice in a row; default on).")
     ElseIf option == _gsPoseLanePSpeechOID || option == _gsPoseLanePThoughtOID
-        SetInfoText("Fanned player-speech or player-private-thought reaction lane on emergent and player-initiated pose fires (default on).")
+        SetInfoText("Fanned player-speech or player-private-thought reaction lane on emergent and player-initiated pose fires (speech defaults off, private thought on).")
     ; [REV-178 L3] the pool-surface tooltips (register DRAFT batch -- the
     ; user's pen owns final wording; §8.1 class discipline).
     ; [REV-174a A35 -> REV-174d Leg 1] the selection-surface tooltip; Bio Led +
@@ -2860,16 +2963,17 @@ Event OnOptionHighlight(Int option)
         SetInfoText("The narration reaction lane: a visible narration event asking nearby characters to witness and react (default on).")
     ElseIf option == _bakaActLaneNarrOID
         SetInfoText("[DRAFT] The action narration lane: on LLM- or player-initiated interactions, a visible narration event asking nearby characters to witness and react (default on). Daemon/mode fires use the mode-branded lanes instead.")
-    ElseIf option == _mephLaneThoughtOID || option == _molagLaneThoughtOID || option == _gsSangLaneThoughtOID || option == _gsSheoLaneThoughtOID
-        SetInfoText("The (public) thought reaction lane: a spoken-aloud inner thought for nearby characters (default on).")
+    ; [REV-184 D4] the public/THOUGHT tooltip block RETIRED with the npc-thought lane ("gone, not off").
     ElseIf option == _mephLanePSpeechOID || option == _molagLanePSpeechOID || option == _gsSangLanePSpeechOID || option == _gsSheoLanePSpeechOID
-        SetInfoText("The speech reaction lane: nearby characters may comment out loud (default on).")
+        SetInfoText("The speech reaction lane: nearby characters may comment out loud (default off).")
     ElseIf option == _bakaActLanePSpeechOID
-        SetInfoText("[DRAFT] The action speech lane: nearby characters may comment out loud on LLM- or player-initiated interactions (default on). Daemon/mode fires use the mode-branded lanes instead.")
+        SetInfoText("[DRAFT] The action speech lane: nearby characters may comment out loud on LLM- or player-initiated interactions (default off). Daemon/mode fires use the mode-branded lanes instead.")
     ElseIf option == _mephLanePThoughtOID || option == _molagLanePThoughtOID || option == _gsSangLanePThoughtOID || option == _gsSheoLanePThoughtOID
         SetInfoText("The private thought reaction lane: a private inner thought for nearby characters, spoken to no one (default on).")
-    ElseIf option == _bakaActLaneThoughtOID || option == _bakaActLanePThoughtOID
-        SetInfoText("[DRAFT] The action thought / private-thought lanes: inner-thought reactions to LLM- or player-initiated interactions (thought defaults OFF; private thought defaults on). Daemon/mode fires use the mode-branded lanes instead.")
+    ElseIf option == _bakaActLaneIntOID || option == _gsPoseLaneIntOID   ; S331 placeholder
+        SetInfoText("When on, the reaction lanes may cut into dialogue or narration that is already playing. Off by default.")
+    ElseIf option == _bakaActLanePThoughtOID
+        SetInfoText("[DRAFT] The action private-thought lane: inner-thought reactions to LLM- or player-initiated interactions (default on). Daemon/mode fires use the mode-branded lanes instead.")
     ElseIf option == _enabledOID
         SetInfoText("Master switch for all Baka motion interactions.")
     ElseIf option == _animatedTearsOID
@@ -2932,6 +3036,8 @@ Event OnOptionHighlight(Int option)
         SetInfoText("How many GAME hours a tied prisoner stays bound on the ground. While tied they cannot get up on their own - only Help Up (which cuts them loose) or the bindings lapsing frees them. Default 12 h.")
     ElseIf option == _sexBackendOID
         SetInfoText("Which framework plays escalation sex scenes: Auto (SexLab if present, else OStim), or force one. Neither is required; without one, escalation just narrates.")
+    ElseIf option == _sceneHandoffOID   ; S333 placeholder
+        SetInfoText("When on (default), scenes go to SkyrimNet-SexLab Integration or OStimNet when installed: they pick the animation, may let you choose it, and run the scene. Off: DeD picks the animation itself.")
     ElseIf option == _expressionsOID
         SetInfoText("Apply facial expressions (fear, pain, etc.) to actors during scenes. Requires MfgFix.")
     ElseIf option == _exprIntensityOID
@@ -2970,23 +3076,10 @@ Event OnOptionHighlight(Int option)
         SetInfoText("A hostile HUMANOID's melee hit on a follower or the player can attempt a Struggle right there, mid-combat - the humanoid counterpart of the creature option above. Uses the normal Struggle rules on top (QTE for the player, sex filter, 'Player Can Be Target', locks). Default OFF.")
     ElseIf option == _humanHitChanceOID
         SetInfoText("Chance that a hostile humanoid's melee hit attempts the Struggle at all (shares the same 3s per-victim cooldown as the creature version). Lower this if it triggers too often. Default 25%.")
-    ElseIf option == _achEnabledOID
-        SetInfoText("Master switch for the downed-state bridge (holding, downed cues, recovery).")
-    ElseIf option == _achCueOID
-        SetInfoText("How often, while an actor is down, we send a short 'still downed' reminder. Purely narrative - does not affect recovery timing. Default 30 s.")
-    ElseIf option == _achProxOID
-        SetInfoText("How often we check for a nearby CREATURE, purely to give Baka's creature-escalation pipeline a shot. Does not affect recovery - proximity no longer gates getting up at all. Default 10 s.")
-    ElseIf option == _achConfirmOID
-        ; [REV-181 T3] fix-2 semantics note + the defer-to-host guidance (register DRAFT - user pen).
-        SetInfoText("NPCs ONLY: hard ceiling on how long an abandoned, unattended down lasts before they get up on their own - NPCs have no get-up key, so this stands in for it. The PLAYER never auto-recovers: get-up key, being helped, or winning a QTE are the only ways up. Resets to the full duration whenever someone interacts with the victim (a struggle, choke, inspect, escalation, etc.), so it never expires mid-scene. While a fight is still live, anyone able standing nearby postpones it a minute at a time; once the fight is over, only the player's presence still does, and it buys a single 60 s extension - recovery then lands about a minute after the last witnessed moment. If Acheron's own downed system (or another defeat mod) still manages this actor, defer to the host mod's timer for anything it controls - this ceiling only governs the downs DeD holds. Default 600 s (10 min).")
-    ElseIf option == _achHandoffOID
-        SetInfoText("When a downed actor is about to recover because nobody's around, give Baka's creature-escalation pipeline one shot at taking them first, instead of just calming the creature and standing them up. Requires Baka's own 'Creature Escalation' switch (and, for the player, 'Can Target the Player') to ALSO be on in Baka's MCM - this only gates the attempt on the Acheron side. Default ON; harmless if Baka is absent or its own switches are off.")
-    ElseIf option == _achGetUpKeyOID
-        SetInfoText("Hold this key for 3 seconds while downed (by any means) to attempt a struggle QTE and stand up on your own, independent of any NPC or LLM ever helping you up. Winning frees you immediately with a cue; losing fires its own 'tried and failed' cue so the LLM can react. Default: Comma.")
-    ElseIf option == _achEngageOID
-        SetInfoText("Chance a nearby creature bothers engaging at all once nobody able is around, rolled fresh every confirm cycle - not one-shot. After a scene ends, it can roll again and re-engage. At 100% this can loop indefinitely by design; lower it if you want downed actors to reliably get free. Default 50%.")
-    ElseIf option == _achDebugOID
-        SetInfoText("Write the Acheron bridge's detailed traces to the Papyrus log. Keep ON while testing/reporting issues; turn OFF for less script-engine load during normal play.")
+    ElseIf option == _achPrepareOID && _achPrepareOID != -1
+        SetInfoText("Before removing Acheron from a running playthrough: gets everyone Acheron has down back up and ends every Acheron pacify. Then save and remove Acheron; DeD Downed takes over.")
+    ElseIf option == _achPacifyReleaseOID && _achPacifyReleaseOID != -1
+        SetInfoText("Emergency valve: release every loaded pacified actor that matches the stuck signature (not defeated/bleeding out/dead, not in an active scene, no scene keys set) from Acheron's Pacified list via Acheron.ReleaseActor, and gets everyone Acheron has down back up. See the Papyrus log for who was released.")
     ElseIf option == _stEnabledOID
         SetInfoText("Master switch for the SlaveTats degradation-set module. When off, no event applies any set. The spank-heat marks Baka itself applies are separate and unaffected.")
     ElseIf option == _stSpankOID
@@ -3095,4 +3188,665 @@ String Function _OnOff(Int aiV)
         Return "enabled"
     EndIf
     Return "disabled"
+EndFunction
+
+; ============================================================================
+; MAGELIGHT PHASE 3 LEG 1 (S323) - THE PANEL'S SETTINGS, SERVED FROM HERE
+; ============================================================================
+; DeDService routes the combined panel's Settings requests and writes for every module whose descriptor says
+; "settingsVia": "mcm" (baka, gs-poses, cum) to PanelSettingsMsg below. Rows read and write the SAME properties /
+; StorageUtil keys, with the SAME ranges, defaults and side effects as this MCM's own rows (the handlers above), so
+; the panel and the MCM never disagree and Phase 3 is a move, not a migration. Labels and descriptions are the MCM's
+; own (already-registered) text. Answers go back through DeDService.PanelPush / PanelSettingResult; the true / false
+; words built here can come back Papyrus-cased and are repaired by DeDService (S321).
+; kind "req" -> push the module's groups; kind "set" -> apply key = value (raw JSON) and confirm.
+; ============================================================================
+
+String Function _pB(Bool b)
+    If b
+        Return "true"
+    EndIf
+    Return "false"
+EndFunction
+
+String Function _pQ(String s)
+    String o = ""
+    If StringUtil.Find(s, "\"") < 0 && StringUtil.Find(s, "\\") < 0
+        o = s
+    Else
+        Int n = StringUtil.GetLength(s)
+        Int i = 0
+        While i < n
+            String c = StringUtil.GetNthChar(s, i)
+            If c == "\"" || c == "\\"
+                o += "\\"
+            EndIf
+            o += c
+            i += 1
+        EndWhile
+    EndIf
+    Return "\"" + o + "\""
+EndFunction
+
+String Function _pT(String asKey, String asLabel, Bool abVal, String asDesc = "")
+    String o = "{\"key\":\"" + asKey + "\",\"type\":\"toggle\",\"label\":" + _pQ(asLabel) + ",\"value\":" + _pB(abVal)
+    If asDesc != ""
+        o += ",\"desc\":" + _pQ(asDesc)
+    EndIf
+    Return o + "}"
+EndFunction
+
+String Function _pS(String asKey, String asLabel, Float afVal, Float afMin, Float afMax, Float afStep, String asUnit, String asDesc = "")
+    String o = "{\"key\":\"" + asKey + "\",\"type\":\"slider\",\"label\":" + _pQ(asLabel) + ",\"value\":" + afVal + ",\"min\":" + afMin + ",\"max\":" + afMax + ",\"step\":" + afStep
+    If asUnit != ""
+        o += ",\"unit\":" + _pQ(asUnit)
+    EndIf
+    If asDesc != ""
+        o += ",\"desc\":" + _pQ(asDesc)
+    EndIf
+    Return o + "}"
+EndFunction
+
+; A choice row: option values are the menu indexes as strings ("0", "1", ...).
+String Function _pC(String asKey, String asLabel, Int aiIndex, String[] akNames, String asDesc = "")
+    String opts = ""
+    Int i = 0
+    While i < akNames.Length
+        If i > 0
+            opts += ","
+        EndIf
+        opts += "{\"value\":\"" + i + "\",\"label\":" + _pQ(akNames[i]) + "}"
+        i += 1
+    EndWhile
+    String o = "{\"key\":\"" + asKey + "\",\"type\":\"choice\",\"label\":" + _pQ(asLabel) + ",\"value\":\"" + aiIndex + "\",\"options\":[" + opts + "]"
+    If asDesc != ""
+        o += ",\"desc\":" + _pQ(asDesc)
+    EndIf
+    Return o + "}"
+EndFunction
+
+String Function _pX(String asKey, String asLabel, String asValue, String asDesc = "")
+    String o = "{\"key\":\"" + asKey + "\",\"type\":\"text\",\"label\":" + _pQ(asLabel) + ",\"value\":" + _pQ(asValue)
+    If asDesc != ""
+        o += ",\"desc\":" + _pQ(asDesc)
+    EndIf
+    Return o + "}"
+EndFunction
+
+String Function _pBtn(String asKey, String asLabel, String asButton, String asDesc = "")
+    String o = "{\"key\":\"" + asKey + "\",\"type\":\"button\",\"label\":" + _pQ(asLabel) + ",\"value\":" + _pQ(asButton)
+    If asDesc != ""
+        o += ",\"desc\":" + _pQ(asDesc)
+    EndIf
+    Return o + "}"
+EndFunction
+
+; One group. abFold = collapsible and starts folded.
+String Function _pG(String asGroup, String asRows, Bool abFold = True)
+    String o = "{\"group\":" + _pQ(asGroup)
+    If abFold
+        o += ",\"collapsible\":true,\"collapsed\":true"
+    EndIf
+    Return o + ",\"settings\":[" + asRows + "]}"
+EndFunction
+
+; S329: SkyrimNet's answer to ded_tattoo_describe (SlaveTats automatic descriptions). Hosted here, on the framework
+; quest, so the SlaveTats module needs no other module.
+Function OnTattooDescribed(String response, Int success)
+    SNBaka_SlaveTatsModule.OnAutoDescribed(response, success)
+EndFunction
+
+Function PanelSettingsMsg(String asKind, String asModule, String asKey, String asValue)
+    Debug.Trace("[DeDService][PANEL] MCM settings " + asKind + " module=" + asModule + " key=" + asKey + " value=" + asValue)
+    If asKind == "set"
+        String v = asValue
+        If StringUtil.GetNthChar(v, 0) == "\""
+            v = StringUtil.Substring(v, 1, StringUtil.GetLength(v) - 2)
+        EndIf
+        Bool ok = _PanelApply(asKey, v)
+        String val = asValue
+        If val == ""
+            val = "null"
+        EndIf
+        If StringUtil.Find(asKey, "fw.panic") == 0
+            val = "\"RUN\""
+        EndIf
+        DeDService.PanelSettingResult(asModule, "{\"key\":\"" + asKey + "\",\"value\":" + val + ",\"ok\":" + _pB(ok) + "}")
+        Return
+    EndIf
+    String groups = ""
+    If asModule == "framework"
+        groups = _PanelFrameworkGroups()   ; S328: the rail-foot Settings (global DeD rows)
+    ElseIf asModule == "baka"
+        groups = _PanelBakaGroups()
+    ElseIf asModule == "gs-poses"
+        groups = _PanelGSGroups()
+    ElseIf asModule == "cum"
+        groups = _PanelCumGroups()
+    EndIf
+    DeDService.PanelPush(asModule, "{\"module\":\"" + asModule + "\",\"section\":\"settings\",\"settings\":[" + groups + "]}")
+EndFunction
+
+String Function _PanelBakaGroups()
+    If !Main
+        Return _pG("Baka Interactions", _pX("none", "Not available", "the Baka quest is not loaded"), False)
+    EndIf
+    String g = ""
+    String r = ""
+
+    r = _pT("bi.playertarget", "NPCs May Target You", _PlayerTargetPolicyOn(), "When on, NPCs and creatures may choose you as the target of their autonomous actions (the Baka module's single central gate; your own initiations are never blocked). When off, nothing targets you unless you start it.")
+    r += "," + _pC("bi.targetsex", "Ambient Target Policy", Main._TargetSexLevel() - 1, _targetSexLevelNames(), "The three-level target-sex policy for NPC-initiated actions and the ambient modes: only female targets; male and female targets with male aggressors; or anything goes. Anatomically-specific actions always require female bodies regardless. Existing saves started from their old Target Sex setting.")
+    r += "," + _pT("bi.tears", "Animated Tears", Main.bAnimatedTearsEnabled, "Apply animated 3D tears to female victims during aggressive scenes. Requires Emotional Tears Effect SE (EmoTears4NPCs.esp). Has no effect if that mod is not installed.")
+    g = _pG("General", r, False)
+
+    r = _pS("bi.mephcad", "Mephala Tick Interval", StorageUtil.GetFloatValue(None, "SNBaka.MephalaCadence", 60.0), 15.0, 240.0, 5.0, "s", "Seconds between Mephala Mode action opportunities (default 60s).")
+    r += "," + _pS("bi.molagcad", "Molag Bal Tick Interval", StorageUtil.GetFloatValue(None, "SNBaka.MolagBalCadence", 60.0), 15.0, 240.0, 5.0, "s", "Seconds between Molag Bal Mode action opportunities (default 60s).")
+    r += "," + _pT("bi.casecue", "Reasoning Line in Cues", StorageUtil.GetIntValue(None, "SNBaka.CaseInCue", 1) == 1, "When on (default), mode action cues end with the model's one-line why-now motive and the witness closing line. Turn off for plain cues: just who did what to whom -- no reasoning line and no closer, in cues and narration alike.")
+    g += "," + _pG("Ambient Modes", r)
+
+    String mDesc = "Narrative Selection: the AI reads the scene and each candidate's facts (bio, relationship with you, arousal, mood) and picks the subject that makes the best story. Random: pure chance. (Default: Narrative; Sheogorath defaults to Random.)"
+    String sDesc = "Choose who can initiate this mode's actions: anyone eligible (default), your companions only, or non-companion NPCs only. The player is never picked as the initiator."
+    String tDesc = "Choose who this mode's actions can happen to: anyone eligible (default), you only (needs this module's player-targeting toggle on, auto-enabled), your companions only, or non-companion NPCs only."
+    r = _pC("bi.mephmethod", "Mephala Selection Method", StorageUtil.GetIntValue(None, "SNBaka.MephalaSelectionMethod", 1), _selMethodNames(), mDesc)
+    r += "," + _pC("bi.mephsub", "Mephala Subject Pool", StorageUtil.GetIntValue(None, "SNBaka.MephalaSubject", 0), _selSubjectNames(), sDesc)
+    r += "," + _pC("bi.mephtgt", "Mephala Target Pool", StorageUtil.GetIntValue(None, "SNBaka.MephalaTarget", 0), _selTargetNames(), tDesc)
+    r += "," + _pC("bi.molagmethod", "Molag Bal Selection Method", StorageUtil.GetIntValue(None, "SNBaka.MolagBalSelectionMethod", 1), _selMethodNames(), mDesc)
+    r += "," + _pC("bi.molagsub", "Molag Bal Subject Pool", StorageUtil.GetIntValue(None, "SNBaka.MolagBalSubject", 0), _selSubjectNames(), sDesc)
+    r += "," + _pC("bi.molagtgt", "Molag Bal Target Pool", StorageUtil.GetIntValue(None, "SNBaka.MolagBalTarget", 0), _selTargetNames(), tDesc)
+    g += "," + _pG("Mode Selection", r)
+
+    r = _pT("bi.reactarb", "LLM Reaction Arbitration", Main.bReactArbitration, "When on (default), the AI's REACT pick decides which reaction lanes fire per event; a missing or invalid pick fails open (all enabled lanes). When off, all enabled lanes always fire.")
+    r += "," + _pT("bi.lanenarr", "Narration Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_narr", 1) == 1)
+    r += "," + _pT("bi.lanespeech", "Speech Reaction Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 0) == 1)
+    r += "," + _pT("bi.lanethought", "Private Thought Lane", StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pthought", 1) == 1)
+    r += "," + _pT("bi.laneint", "Reaction Lanes Interrupt", StorageUtil.GetIntValue(None, "SNBaka.Action.LaneInterrupt", 0) == 1, "When on, the reaction lanes may cut into dialogue or narration that is already playing. Off by default.")   ; S331
+    g += "," + _pG("Reaction Lanes", r)
+
+    String lnD = "The narration reaction lane: a visible narration event asking nearby characters to witness and react (default on)."
+    String lsD = "The speech reaction lane: nearby characters may comment out loud (default off)."
+    String ltD = "The private thought reaction lane: a private inner thought for nearby characters, spoken to no one (default on)."
+    r = _pT("bi.mephnarr", "Mephala Narration Lane", Main.bMephalaLaneNarr, lnD)
+    r += "," + _pT("bi.mephspeech", "Mephala Speech Reaction Lane", Main.bMephalaLanePSpeech, lsD)
+    r += "," + _pT("bi.mephthought", "Mephala Private Thought Lane", Main.bMephalaLanePThought, ltD)
+    r += "," + _pT("bi.molagnarr", "Molag Bal Narration Lane", Main.bMolagBalLaneNarr, lnD)
+    r += "," + _pT("bi.molagspeech", "Molag Bal Speech Reaction Lane", Main.bMolagBalLanePSpeech, lsD)
+    r += "," + _pT("bi.molagthought", "Molag Bal Private Thought Lane", Main.bMolagBalLanePThought, ltD)
+    g += "," + _pG("Mode Reaction Lanes", r)
+
+    r = ""
+    If Main.IsSimpleSlaveryInstalled()
+        r = _pT("bi.sell", "Allow Sell to Slavery", Main.bSellToSlavery, "ON offers the Sell-to-Slavery action (Simple Slavery Plus Plus hand-off; no-ops without SS++). Targets the DEFEATED PLAYER only. OFF removes it from the LLM's menu entirely.")
+    Else
+        r = _pX("bi.sell", "Allow Sell to Slavery", "not installed")
+    EndIf
+    If Main.IsFollowerSlaveryInstalled()
+        r += "," + _pT("bi.follower", "Allow Follower Enslavement", Main.bFollowerSlavery, "ON lets NPCs enslave a DOWNED FOLLOWER via the Follower Slavery Mod - only while the player is downed too or farther than the distance slider. Never targets the player (that's Sell to Slavery). PERMANENT until freed through FSM; default OFF.")
+    Else
+        r += "," + _pX("bi.follower", "Follower Enslavement", "not installed")
+    EndIf
+    r += "," + _pS("bi.slavedist", "Player Distance to Allow It", Main.fSlaveryPlayerDistance, 500.0, 6000.0, 100.0, "", "Follower Enslavement only fires if the player is at least this far from the downed follower (or downed themselves) - close enough to intervene means it never happens. Default 1500 (~21m).")
+    r += "," + _pS("bi.tiedhours", "Tied Prisoner Duration", Main.fTiedHours, 1.0, 72.0, 1.0, " h", "How many GAME hours a tied prisoner stays bound on the ground. While tied they cannot get up on their own - only Help Up (which cuts them loose) or the bindings lapsing frees them. Default 12 h.")
+    r += "," + _pC("bi.execgate", "Execution Action Use", _ExecGateLevel(), _execGateNames(), "REV-93: how the Execute action may be used. Unlimited = no gate. Companions ask / Always ask = the confirm dialog appears (companion-initiated only, or every time). Player hotkey Execute bypasses this gate.")
+    g += "," + _pG("Capture", r)
+
+    r = _pS("es.hug", "Hug Loop Duration", Main.fHugLoopDuration, 2.0, 30.0, 1.0, "s", "How long BackHug and FrontHug loop phases last.")
+    r += "," + _pS("es.molest", "Molest Loop Duration", Main.fMolestLoopDuration, 2.0, 30.0, 1.0, "s", "How long BackHugMolest loop phase lasts.")
+    r += "," + _pS("es.kiss", "Kiss Duration (per stage)", Main.fKissLoopDuration, 2.0, 20.0, 1.0, "s", "Time held on each stage of kiss animations.")
+    r += "," + _pS("es.touch", "Touch Duration", Main.fTouchLoopDuration, 2.0, 20.0, 1.0, "s", "Duration of single-shot touch animations.")
+    r += "," + _pS("es.stage", "Sequence Stage Duration", Main.fSequenceStageTimer, 1.0, 15.0, 0.5, "s", "Seconds per stage in multi-stage sequences (Struggle, ChokeHug, Drunk, etc.).")
+    g += "," + _pG("Animation Durations", r)
+
+    r = _pT("es.resist", "Enable Resist Minigame", Main.bResistEnabled, "When enabled, the Flash Games QTE overlay appears during forced animations. Player can fight back using the configured keys.")
+    r += "," + _pS("es.resistdiff", "Escape Difficulty", Main.fResistDifficulty, 10.0, 95.0, 5.0, "%", "How easy it is to escape the main QTE. 70 = default. Higher = easier. Lower = harder.")
+    r += "," + _pX("es.qtekeys", "QTE Keys", "Flash Games - Struggling QTE", "Struggle QTE keys: WASD / d-pad. Not configured here - set them in the 'Flash Games' mod's Struggling QTE section.")
+    g += "," + _pG("Struggle QTE", r)
+
+    r = _pS("es.npcescape", "Victim Escape Chance", Main.fNPCEscapeChance, 0.0, 100.0, 5.0, "%", "NPC-vs-NPC struggles (no player involved, no QTE): the victim's % chance to break free, auto-rolled. Lower = the attacker wins more often. Default 35%.")
+    r += "," + _pS("es.npcstage", "Stage Duration", Main.fNPCStageTime, 1.0, 15.0, 0.5, "s", "NPC-vs-NPC struggles: how long each animation stage holds before advancing to the next. Default 5s.")
+    r += "," + _pS("es.grace", "Post-Escape Grace", Main.fEscapeGraceDuration, 0.0, 30.0, 1.0, "s", "Mercy window: at every exit from a struggle or sex scene (won QTE, NPC escape, get-up key, or the scene simply ending), the victim stays untouchable for this many seconds instead of being spawn-killed the frame protection drops. They can still fight and move during it. 0 disables. Default 4s.")
+    g += "," + _pG("NPC-vs-NPC Struggle (no QTE, auto-rolled)", r)
+
+    r = _pS("es.escwindow", "Escalation Window", Main.fEscalationWindow, 5.0, 60.0, 5.0, "s", "FALLBACK ONLY (used when Acheron is not installed): seconds the attacker has to escalate after a QTE defeat. With Acheron, the downed state is owned by the Acheron bridge instead.")
+    r += "," + _pS("es.escdiff", "Escalation QTE", Main.fEscalationDifficulty, 10.0, 95.0, 5.0, "%", "Difficulty of the second QTE (choke hold) in the fallback defeat window. Same scale as Escape Difficulty.")
+    g += "," + _pG("Defeat window (fallback only)", r)
+
+    r = _pT("es.furniture", "Furniture Reactions", Main.bSpankFurnitureTriggers, "Enable special reactions when the target is using furniture (alchemy lab, forge, etc).")
+    r += "," + _pS("es.spanks", "Spanks Per Stage", Main.SpankTatIntensity as Float, 1.0, 10.0, 1.0, "", "How many spanks are needed to advance one mark stage. At 2: 2 spanks = light marks, 4 = medium, 6 = heavy. Men never receive marks.")
+    r += "," + _pS("es.heal", "Hours Per Stage", Main.SpankHealFactor as Float, 1.0, 10.0, 1.0, " hr", "In-game hours for each mark stage to heal away. At 2: full marks heal in about 8 in-game hours.")
+    g += "," + _pG("Spank", r)
+
+    r = _pC("es.backend", "Scene Framework", Main.iSexBackend, _backendNames(), "Which framework plays escalation sex scenes: Auto (SexLab if present, else OStim), or force one. Neither is required; without one, escalation just narrates.")
+    r += "," + _pT("es.handoff", "Hand Off Scene Setup", StorageUtil.GetIntValue(None, "SNBaka.SceneHandoff", 1) == 1, "When on (default), scenes go to SkyrimNet-SexLab Integration or OStimNet when installed: they pick the animation, may let you choose it, and run the scene. Off: DeD picks the animation itself.")   ; S333
+    r += "," + _pT("es.expr", "Facial Expressions", Main.bExpressionsEnabled, "Apply facial expressions (fear, pain, etc.) to actors during scenes. Requires MfgFix.")
+    r += "," + _pS("es.exprint", "Expression Intensity", Main.fExpressionIntensity, 0.0, 1.0, 0.05, "", "Strength of the facial expressions, 0.0-1.0. Default 0.5.")
+    g += "," + _pG("Scenes & FX", r)
+
+    r = _pT("cr.enable", "Enable Creature Escalation", Main.bCreatureEscalation, "Master switch for creatures forcing themselves on downed/losing humans. OFF by default (opt-in).")
+    r += "," + _pT("cr.onpc", "Can Target the Player", Main.bCreatureOnPlayer, "Allow creatures to target the PLAYER (not just NPCs). Requires Creature Escalation to be on.")
+    r += "," + _pT("cr.combat", "Allow Mid-Combat", Main.bCreatureCombatAllowed, "Allow a creature to STRUGGLE a victim down mid-combat. The creature's sex scene itself still waits until combat is fully over.")
+    r += "," + _pT("cr.onhit", "Escalate on Hit Mid-Combat (followers + player)", Main.bCreatureEscalateFollowersOnHit, "A creature's own melee hit on a follower or the player can attempt the struggle directly, mid-combat, without waiting for them to go down first. Player also needs 'Can Target the Player' on. Requires Allow Mid-Combat and Creature Escalation too.")
+    r += "," + _pT("cr.scene", "Escalate to Sex After Win", Main.bCreatureSceneAllowed, "ON: a creature winning its struggle claims the victim in a sex scene (needs matching animations installed). OFF: struggles still happen - read as a beast mauling its prey - but a win just leaves the victim downed; no scene ever starts.")
+    r += "," + _pT("cr.llmgate", "LLM Decides Escalations", Main.bLLMGateEscalation, "Before a creature claims a DOWNED victim, ask the SkyrimNet LLM a yes/no ('should this escalation happen right now?'). NO backs that victim off ~30s; any LLM error counts as YES. On-hit mid-combat grapples are not gated (an LLM round-trip is too slow for live melee).")
+    r += "," + _pT("cr.tattooask", "LLM Chooses Tattoo Designs", Main.bTattooSelectAsk, "When on (default), tattoo actions have the model choose the actual design from the packs installed for that body -- a second look at the scene, recent dialogue, and the full list of options. When off, the action's suggested pack and name are validated against your installed packs instead (curated pick, no second look).")
+    r += "," + _pT("cr.notify", "Show Corner Notifications", Main.bShowNotifications, "Show this mod's top-left corner messages ('X collapses...', 'What will you do to...', etc.). Turn OFF for a clean HUD - narration, dialogue and log traces are unaffected.")
+    r += "," + _pC("cr.backend", "Creature Framework", Main.iCreatureBackend, _backendNames(), "Which framework plays creature sex scenes (Auto / SexLab / OStim).")
+    r += "," + _pS("cr.success", "NPC Success Chance", Main.iCreatureSuccessPct as Float, 0.0, 100.0, 5.0, "%", "Chance a creature's struggle succeeds against an NPC, whether or not they're already downed. Default 50%.")
+    r += "," + _pS("cr.hitchance", "Chance to Struggle on Hit", Main.iCreatureHitEngageChance as Float, 0.0, 100.0, 5.0, "%", "Chance that a creature's melee hit on a follower attempts the struggle at all (see 'Escalate on Followers Mid-Combat'). Lower this if it triggers too often. Default 25%.")
+    r += "," + _pS("cr.struggle", "Struggle Duration", Main.fCreatureStruggleDuration, 5.0, 40.0, 1.0, "s", "How long the mid-combat struggle animation holds before the outcome is decided. Default 20s.")
+    r += "," + _pS("cr.grace", "Post-Defeat Grace", Main.fPostDefeatGraceDuration, 0.0, 300.0, 10.0, "s", "After a victim loses a struggle, how many seconds creatures leave them alone before reconsidering them - ends early if real combat resumes. Default 100s.")
+    r += "," + _pS("cr.group", "Max Group Size", Main.iCreatureGroupMaxSize as Float, 1.0, 3.0, 1.0, "", "Once a scene is actually starting, look for up to this many creatures of the same kind nearby to join in (2v1/3v1). 1 = always solo. Decided fresh each time, after the outcome is known.")
+    g += "," + _pG("Creatures (opt-in)", r)
+
+    r = _pT("hu.onhit", "Escalate on Hit Mid-Combat (followers + player)", Main.bHumanEscalateOnHit, "A hostile HUMANOID's melee hit on a follower or the player can attempt a Struggle right there, mid-combat - the humanoid counterpart of the creature option above. Uses the normal Struggle rules on top (QTE for the player, sex filter, 'Player Can Be Target', locks). Default OFF.")
+    r += "," + _pS("hu.hitchance", "Chance to Struggle on Hit", Main.iHumanHitEngageChance as Float, 0.0, 100.0, 5.0, "%", "Chance that a hostile humanoid's melee hit attempts the Struggle at all (shares the same 3s per-victim cooldown as the creature version). Lower this if it triggers too often. Default 25%.")
+    g += "," + _pG("Humanoids (mid-combat)", r)
+
+    If Main.IsLapSitInstalled()
+        r = _pT("ls.enable", "Enable Lap Sitting Actions", Main.bLapSitEnabled)
+    Else
+        r = _pX("ls.enable", "Lap Sitting Actions", "not installed")
+    EndIf
+    g += "," + _pG("Immersive Lap Sitting", r)
+    Return g
+EndFunction
+
+String Function _PanelGSGroups()
+    String g = ""
+    String r = ""
+    r = _pC("gs.gender", "Pose Gender Policy", StorageUtil.GetIntValue(None, "GSAnim.GenderPolicy", 0), _gsGenderPolicyNames())
+    g = _pG("Pose Gender Policy", r, False)
+    r = _pT("gs.narrem", "Emergent Pose Reactions", StorageUtil.GetIntValue(None, "GSAnim.PoseNarrEmergent", 1) == 1)
+    r += "," + _pT("gs.narrpl", "Player Initiated Pose Reactions", StorageUtil.GetIntValue(None, "GSAnim.PoseNarrPlayer", 1) == 1)
+    g += "," + _pG("General Pose Reactions", r, False)
+    r = _pT("gs.reactarb", "LLM Reaction Arbitration", StorageUtil.GetIntValue(None, "GSAnim.ReactArbitration", 1) == 1, "When on (default), the AI's REACT pick decides which reaction lanes fire per event; a missing or invalid pick fails open (all enabled lanes). When off, all enabled lanes always fire.")
+    r += "," + _pT("gs.lanenarr", "Pose Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_narr", 1) == 1)
+    r += "," + _pT("gs.lanespeech", "Pose Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_pspeech", 0) == 1)
+    r += "," + _pT("gs.lanethought", "Pose Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.PoseLane_pthought", 1) == 1)
+    r += "," + _pT("gs.laneint", "Pose Reactions Interrupt", StorageUtil.GetIntValue(None, "GSAnim.PoseLaneInterrupt", 0) == 1, "When on, the reaction lanes may cut into dialogue or narration that is already playing. Off by default.")   ; S331
+    g += "," + _pG("Reaction Lanes", r)
+    r = _pS("gs.sangcad", "Sanguine Tick Interval", StorageUtil.GetFloatValue(None, "GSAnim.NudgeInterval", 60.0), 15.0, 240.0, 5.0, "s")
+    r += "," + _pS("gs.sheocad", "Sheogorath Tick Interval", StorageUtil.GetFloatValue(None, "GSAnim.T3Interval", 60.0), 15.0, 240.0, 5.0, "s")
+    g += "," + _pG("Mode Cadence", r)
+    String mDesc = "Narrative Selection: the AI reads the scene and each candidate's facts (bio, relationship with you, arousal, mood) and picks the subject that makes the best story. Random: pure chance. (Default: Narrative; Sheogorath defaults to Random.)"
+    String sDesc = "Choose who can initiate this mode's actions: anyone eligible (default), your companions only, or non-companion NPCs only. The player is never picked as the initiator."
+    String tDesc = "Choose who this mode's actions can happen to: anyone eligible (default), you only (needs this module's player-targeting toggle on, auto-enabled), your companions only, or non-companion NPCs only."
+    r = _pC("gs.sangmethod", "Sanguine Selection Method", StorageUtil.GetIntValue(None, "GSAnim.SanguineSelectionMethod", 1), _selMethodNames(), mDesc)
+    r += "," + _pC("gs.sangsub", "Sanguine Subject Pool", StorageUtil.GetIntValue(None, "GSAnim.SanguineSubject", 0), _selSubjectNames(), sDesc)
+    r += "," + _pC("gs.sangtgt", "Sanguine Target Pool", StorageUtil.GetIntValue(None, "GSAnim.SanguineTarget", 0), _selTargetNames(), tDesc)
+    r += "," + _pC("gs.sheomethod", "Sheogorath Selection Method", StorageUtil.GetIntValue(None, "GSAnim.SheogorathSelectionMethod", 0), _selMethodNames(), mDesc)
+    r += "," + _pC("gs.sheosub", "Sheogorath Subject Pool", StorageUtil.GetIntValue(None, "GSAnim.SheogorathSubject", 0), _selSubjectNames(), sDesc)
+    r += "," + _pC("gs.sheotgt", "Sheogorath Target Pool", StorageUtil.GetIntValue(None, "GSAnim.SheogorathTarget", 0), _selTargetNames(), tDesc)
+    r += "," + _pT("gs.sheosel", "Sheogorath Selection", StorageUtil.GetIntValue(None, "GSAnim.SheoSelection", 1) == 1)
+    r += "," + _pT("gs.playertgt", "Player can be targeted", StorageUtil.GetIntValue(None, "GSAnim.PlayerTargetable", 0) == 1)
+    g += "," + _pG("Mode Selection", r)
+    String lnD = "The narration reaction lane: a visible narration event asking nearby characters to witness and react (default on)."
+    String lsD = "The speech reaction lane: nearby characters may comment out loud (default off)."
+    String ltD = "The private thought reaction lane: a private inner thought for nearby characters, spoken to no one (default on)."
+    r = _pT("gs.sangnarr", "Sanguine Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_narr", 1) == 1, lnD)
+    r += "," + _pT("gs.sangspeech", "Sanguine Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_pspeech", 0) == 1, lsD)
+    r += "," + _pT("gs.sangthought", "Sanguine Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SanguineLane_pthought", 1) == 1, ltD)
+    r += "," + _pT("gs.sheonarr", "Sheogorath Narration Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_narr", 1) == 1, lnD)
+    r += "," + _pT("gs.sheospeech", "Sheogorath Speech Reaction Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_pspeech", 0) == 1, lsD)
+    r += "," + _pT("gs.sheothought", "Sheogorath Private Thought Lane", StorageUtil.GetIntValue(None, "GSAnim.SheogorathLane_pthought", 1) == 1, ltD)
+    g += "," + _pG("Mode Reaction Lanes", r)
+    r = _pT("gs.casecue", "Reasoning Line in Cues", StorageUtil.GetIntValue(None, "GSAnim.CaseInCue", 1) == 1)
+    g += "," + _pG("Cue Shape", r)
+    Return g
+EndFunction
+
+String Function _PanelCumGroups()
+    If !Main || !Main._OCumInstalled()
+        Return _pG("Cum Detection (OCum / SexLab)", _pX("none", "Cum Cues", "OCum not installed"), False)
+    EndIf
+    String r = _pT("cum.enable", "Cum Cues Module Toggle", Main.bCumDetectionEnabled, "Enable/disable the SkyrimNet cum detection cues created by this module.")
+    r += "," + _pC("cum.decal", "Decal Source Selection", _decalSourceMenuIndex(Main.iDecalSource), _decalSourceNames(), "Pick the cum decal source for this module to apply and track.")
+    r += "," + _pT("cum.more", "More Cum", Main.bMoreCumEnabled, "Adds additional location friendly cum decals on orgasm events.")
+    r += "," + _pT("cum.followup", "Follow-up Prompt", Main.bCumFollowUpNarration, "Additional direct narration for cum application events")
+    r += "," + _pS("cum.ambcad", "Ambient Cue Interval", StorageUtil.GetFloatValue(None, "SNBaka.CumAmbientCadence", 60.0), 15.0, 240.0, 5.0, "s")
+    Return _pG("Cum Detection (OCum / SexLab)", r, False)
+EndFunction
+
+; Apply one panel write with the MCM handler's own semantics. v is the bare value: "true" / "false" / number / index.
+Bool Function _PanelApply(String k, String v)
+    Bool b = v == "true"
+    Float f = v as Float
+    Int i = v as Int
+    ; ---- GS Poses (StorageUtil, None key) ----
+    If StringUtil.Find(k, "gs.") == 0
+        If k == "gs.gender"
+            If i < 0 || i > 2
+                i = 0
+            EndIf
+            StorageUtil.SetIntValue(None, "GSAnim.GenderPolicy", i)
+        ElseIf k == "gs.narrem"
+            StorageUtil.SetIntValue(None, "GSAnim.PoseNarrEmergent", b as Int)
+        ElseIf k == "gs.narrpl"
+            StorageUtil.SetIntValue(None, "GSAnim.PoseNarrPlayer", b as Int)
+        ElseIf k == "gs.reactarb"
+            StorageUtil.SetIntValue(None, "GSAnim.ReactArbitration", b as Int)
+        ElseIf k == "gs.lanenarr"
+            StorageUtil.SetIntValue(None, "GSAnim.PoseLane_narr", b as Int)
+        ElseIf k == "gs.lanespeech"
+            StorageUtil.SetIntValue(None, "GSAnim.PoseLane_pspeech", b as Int)
+        ElseIf k == "gs.lanethought"
+            StorageUtil.SetIntValue(None, "GSAnim.PoseLane_pthought", b as Int)
+        ElseIf k == "gs.laneint"   ; S331
+            StorageUtil.SetIntValue(None, "GSAnim.PoseLaneInterrupt", b as Int)
+        ElseIf k == "gs.sangcad"
+            StorageUtil.SetFloatValue(None, "GSAnim.NudgeInterval", f)
+        ElseIf k == "gs.sheocad"
+            StorageUtil.SetFloatValue(None, "GSAnim.T3Interval", f)
+        ElseIf k == "gs.sangmethod"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineSelectionMethod", _pClamp(i, 1, 1))
+        ElseIf k == "gs.sheomethod"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathSelectionMethod", _pClamp(i, 1, 0))
+        ElseIf k == "gs.sangsub"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineSubject", _pClamp(i, 2, 0))
+        ElseIf k == "gs.sheosub"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathSubject", _pClamp(i, 2, 0))
+        ElseIf k == "gs.sangtgt"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineTarget", _pClamp(i, 3, 0))
+        ElseIf k == "gs.sheotgt"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathTarget", _pClamp(i, 3, 0))
+        ElseIf k == "gs.sheosel"
+            StorageUtil.SetIntValue(None, "GSAnim.SheoSelection", b as Int)
+        ElseIf k == "gs.playertgt"
+            StorageUtil.SetIntValue(None, "GSAnim.PlayerTargetable", b as Int)
+        ElseIf k == "gs.sangnarr"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineLane_narr", b as Int)
+        ElseIf k == "gs.sangspeech"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineLane_pspeech", b as Int)
+        ElseIf k == "gs.sangthought"
+            StorageUtil.SetIntValue(None, "GSAnim.SanguineLane_pthought", b as Int)
+        ElseIf k == "gs.sheonarr"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathLane_narr", b as Int)
+        ElseIf k == "gs.sheospeech"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathLane_pspeech", b as Int)
+        ElseIf k == "gs.sheothought"
+            StorageUtil.SetIntValue(None, "GSAnim.SheogorathLane_pthought", b as Int)
+        ElseIf k == "gs.casecue"
+            StorageUtil.SetIntValue(None, "GSAnim.CaseInCue", b as Int)
+        Else
+            Return False
+        EndIf
+        Return True
+    EndIf
+    If !Main
+        Return False
+    EndIf
+    ; ---- Framework (Settings page) ----
+    If k == "fw.enabled"
+        Main.bEnabled = b
+    ElseIf k == "fw.cooldown"
+        Main.fNPCGlobalCooldown = f
+    ElseIf k == "fw.debuglog"
+        Main.bDebugLog = b
+    ElseIf k == "fw.debugnotify"
+        StorageUtil.SetIntValue(None, "GSAnim.DebugNotify", b as Int)
+    ElseIf k == "fw.panic"
+        Int stuck = Main.PanicReset()
+        Debug.Notification("Baka: emergency reset done - " + stuck + " actor(s) had a stuck state.")
+    ; ---- Baka Interactions ----
+    ElseIf k == "bi.playertarget"
+        StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.PlayerTargetPolicy", b as Int)
+    ElseIf k == "bi.targetsex"
+        StorageUtil.SetIntValue(None, "SNBaka.TargetSexLevel", _pClamp(i, 2, 0) + 1)
+    ElseIf k == "bi.tears"
+        Main.bAnimatedTearsEnabled = b
+        If b && !Main.TearSpell
+            Main.TearSpell = Game.GetFormFromFile(0x000802, "EmoTears4NPCs.esp") as Spell
+        EndIf
+    ElseIf k == "bi.mephcad"
+        StorageUtil.SetFloatValue(None, "SNBaka.MephalaCadence", f)
+    ElseIf k == "bi.molagcad"
+        StorageUtil.SetFloatValue(None, "SNBaka.MolagBalCadence", f)
+    ElseIf k == "bi.casecue"
+        StorageUtil.SetIntValue(None, "SNBaka.CaseInCue", b as Int)
+    ElseIf k == "bi.mephmethod"
+        StorageUtil.SetIntValue(None, "SNBaka.MephalaSelectionMethod", _pClamp(i, 1, 1))
+    ElseIf k == "bi.molagmethod"
+        StorageUtil.SetIntValue(None, "SNBaka.MolagBalSelectionMethod", _pClamp(i, 1, 1))
+    ElseIf k == "bi.mephsub"
+        StorageUtil.SetIntValue(None, "SNBaka.MephalaSubject", _pClamp(i, 2, 0))
+    ElseIf k == "bi.molagsub"
+        StorageUtil.SetIntValue(None, "SNBaka.MolagBalSubject", _pClamp(i, 2, 0))
+    ElseIf k == "bi.mephtgt" || k == "bi.molagtgt"
+        i = _pClamp(i, 3, 0)
+        If k == "bi.mephtgt"
+            StorageUtil.SetIntValue(None, "SNBaka.MephalaTarget", i)
+        Else
+            StorageUtil.SetIntValue(None, "SNBaka.MolagBalTarget", i)
+        EndIf
+        If i == 1
+            ; "you only" needs player targeting on (the MCM handler's auto-enable)
+            StorageUtil.SetIntValue(Game.GetPlayer(), "SNBaka.PlayerTargetPolicy", 1)
+            Debug.Notification("Player targeting enabled (NPCs May Target You)")
+        EndIf
+    ElseIf k == "bi.reactarb"
+        Main.bReactArbitration = b
+    ElseIf k == "bi.lanenarr"
+        StorageUtil.SetIntValue(None, "SNBaka.Action.Lane_narr", b as Int)
+    ElseIf k == "bi.lanespeech"
+        StorageUtil.SetIntValue(None, "SNBaka.Action.Lane_pspeech", b as Int)
+    ElseIf k == "bi.lanethought"
+        StorageUtil.SetIntValue(None, "SNBaka.Action.Lane_pthought", b as Int)
+    ElseIf k == "bi.laneint"   ; S331
+        StorageUtil.SetIntValue(None, "SNBaka.Action.LaneInterrupt", b as Int)
+    ElseIf k == "bi.mephnarr"
+        Main.bMephalaLaneNarr = b
+    ElseIf k == "bi.mephspeech"
+        Main.bMephalaLanePSpeech = b
+    ElseIf k == "bi.mephthought"
+        Main.bMephalaLanePThought = b
+    ElseIf k == "bi.molagnarr"
+        Main.bMolagBalLaneNarr = b
+    ElseIf k == "bi.molagspeech"
+        Main.bMolagBalLanePSpeech = b
+    ElseIf k == "bi.molagthought"
+        Main.bMolagBalLanePThought = b
+    ElseIf k == "bi.sell"
+        Main.bSellToSlavery = b
+        If !b
+            SkyrimNetApi.UnregisterAction("SellToSlavery")
+        EndIf
+    ElseIf k == "bi.follower"
+        Main.bFollowerSlavery = b
+        If !b
+            SkyrimNetApi.UnregisterAction("EnslaveFollower")
+        EndIf
+    ElseIf k == "bi.slavedist"
+        Main.fSlaveryPlayerDistance = f
+    ElseIf k == "bi.tiedhours"
+        Main.fTiedHours = f
+    ElseIf k == "bi.execgate"
+        _SetExecGateLevel(i)
+    ; ---- Escalation & Struggle ----
+    ElseIf k == "es.hug"
+        Main.fHugLoopDuration = f
+    ElseIf k == "es.molest"
+        Main.fMolestLoopDuration = f
+    ElseIf k == "es.kiss"
+        Main.fKissLoopDuration = f
+    ElseIf k == "es.touch"
+        Main.fTouchLoopDuration = f
+    ElseIf k == "es.stage"
+        Main.fSequenceStageTimer = f
+    ElseIf k == "es.resist"
+        Main.bResistEnabled = b
+    ElseIf k == "es.resistdiff"
+        Main.fResistDifficulty = f
+    ElseIf k == "es.npcescape"
+        Main.fNPCEscapeChance = f
+    ElseIf k == "es.npcstage"
+        Main.fNPCStageTime = f
+    ElseIf k == "es.grace"
+        Main.fEscapeGraceDuration = f
+        StorageUtil.SetFloatValue(Game.GetPlayer(), "SNBaka.EscapeGraceDuration", f)
+    ElseIf k == "es.escwindow"
+        Main.fEscalationWindow = f
+    ElseIf k == "es.escdiff"
+        Main.fEscalationDifficulty = f
+    ElseIf k == "es.furniture"
+        Main.bSpankFurnitureTriggers = b
+    ElseIf k == "es.spanks"
+        Main.SpankTatIntensity = f as Int
+    ElseIf k == "es.heal"
+        Main.SpankHealFactor = f as Int
+        Main.ApplyFadeSettings()
+    ElseIf k == "es.backend"
+        Main.iSexBackend = i
+    ElseIf k == "es.handoff"   ; S333
+        StorageUtil.SetIntValue(None, "SNBaka.SceneHandoff", b as Int)
+    ElseIf k == "es.expr"
+        Main.bExpressionsEnabled = b
+    ElseIf k == "es.exprint"
+        Main.fExpressionIntensity = f
+    ElseIf k == "cr.enable"
+        Main.bCreatureEscalation = b
+    ElseIf k == "cr.onpc"
+        Main.bCreatureOnPlayer = b
+    ElseIf k == "cr.combat"
+        Main.bCreatureCombatAllowed = b
+    ElseIf k == "cr.onhit"
+        Main.bCreatureEscalateFollowersOnHit = b
+    ElseIf k == "cr.scene"
+        Main.bCreatureSceneAllowed = b
+    ElseIf k == "cr.llmgate"
+        Main.bLLMGateEscalation = b
+    ElseIf k == "cr.tattooask"
+        Main.bTattooSelectAsk = b
+    ElseIf k == "cr.notify"
+        Main.bShowNotifications = b
+    ElseIf k == "cr.backend"
+        Main.iCreatureBackend = i
+    ElseIf k == "cr.success"
+        Main.iCreatureSuccessPct = f as Int
+    ElseIf k == "cr.hitchance"
+        Main.iCreatureHitEngageChance = f as Int
+    ElseIf k == "cr.struggle"
+        Main.fCreatureStruggleDuration = f
+    ElseIf k == "cr.grace"
+        Main.fPostDefeatGraceDuration = f
+    ElseIf k == "cr.group"
+        Main.iCreatureGroupMaxSize = f as Int
+    ElseIf k == "hu.onhit"
+        Main.bHumanEscalateOnHit = b
+    ElseIf k == "hu.hitchance"
+        Main.iHumanHitEngageChance = f as Int
+    ElseIf k == "ls.enable"
+        Main.bLapSitEnabled = b
+        If !b
+            SkyrimNetApi.UnregisterAction("SitOnLap")
+        EndIf
+    ; ---- Cum Effects ----
+    ElseIf k == "cum.enable"
+        Main.bCumDetectionEnabled = b
+        If b
+            Main.Setup()
+        EndIf
+    ElseIf k == "cum.decal"
+        Int[] vals = _decalSourceValues()
+        If i < 0 || i >= vals.Length
+            Return False
+        EndIf
+        Main.iDecalSource = vals[i]
+    ElseIf k == "cum.more"
+        Main.bMoreCumEnabled = b
+    ElseIf k == "cum.followup"
+        Main.bCumFollowUpNarration = b
+    ElseIf k == "cum.ambcad"
+        StorageUtil.SetFloatValue(None, "SNBaka.CumAmbientCadence", f)
+        If Main._OCumInstalled() && Main.bCumDetectionEnabled
+            DeDService.RemoveTimerRule("cum", "ambient")
+            DeDService.AddTimerRule("cum", "ambient", f, 1, None, "cum.present", 600.0, "sdb_cum_ambient_due")
+        EndIf
+    Else
+        Return False
+    EndIf
+    Return True
+EndFunction
+
+; The MCM menu handlers' clamp: an out-of-range index falls back to the row's default.
+Int Function _pClamp(Int aiIndex, Int aiMax, Int aiDefault)
+    If aiIndex < 0 || aiIndex > aiMax
+        Return aiDefault
+    EndIf
+    Return aiIndex
+EndFunction
+
+; S328 (D-T7): the global DeD settings - the rail-foot Settings shows only these (plus the panel's own Look & Keys).
+; Same rows, keys and side effects as the MCM Settings page's Framework + Maintenance sections.
+String Function _PanelFrameworkGroups()
+    If !Main
+        Return _pG("Framework", _pT("fw.debugnotify", "Debug Notifications", StorageUtil.GetIntValue(None, "GSAnim.DebugNotify", 0) == 1, "Show a corner notification when this framework's mode/pose reaction lanes fire (default off; a debugging aid)."), False)
+    EndIf
+    String g = ""
+    String r = ""
+    r = _pT("fw.enabled", "Enable Mod", Main.bEnabled, "Master switch for all Baka motion interactions.")
+    r += "," + _pS("fw.cooldown", "AI Action Cooldown", Main.fNPCGlobalCooldown, 0.0, 120.0, 5.0, "s", "Minimum real-time seconds between NPC-initiated actions. Default 30s.")
+    r += "," + _pT("fw.debuglog", "Enable Debug Logging", Main.bDebugLog, "Write this mod's detailed traces to the Papyrus log. Keep ON while testing/reporting issues (the log is how problems get diagnosed); turn OFF for less script-engine load during normal play.")
+    r += "," + _pT("fw.debugnotify", "Debug Notifications", StorageUtil.GetIntValue(None, "GSAnim.DebugNotify", 0) == 1, "Show a corner notification when this framework's mode/pose reaction lanes fire (default off; a debugging aid).")
+    r += "," + _pBtn("fw.panic", "EMERGENCY: reset stuck actor states", "RUN")
+    g = _pG("Framework", r, False)
+    Return g
+EndFunction
+
+; S340 (DeD Downed A3b leg 3, spec section 14): the first reload with the DeD Downed module armed (so Acheron is gone)
+; clears every SNAcheron.* StorageUtil key the old bridge left on any actor, and the player's ghost flag the bridge
+; could leave set; DeDDowned.dll has already restored the player's controls. Once per save (DeDService flag).
+Function _DownedMigrate()
+    If !DeDService.IsDownedModuleActive() || DeDService.IsDownedMigrated()
+        Return
+    EndIf
+    Int n = StorageUtil.ClearAllPrefix("SNAcheron.")
+    Game.GetPlayer().SetGhost(False)
+    DeDService.SetDownedMigrated()
+    Debug.Trace("[DeDDowned] MIGRATE: Acheron bridge state cleared - " + n + " SNAcheron.* key(s) removed, player ghost off -- S340")
+EndFunction
+
+; S342 (DeD Downed A4 leg 1, spec D-A58): Acheron may stay installed but switched off (its own MCM "Enabled"), or be
+; removed. Each reload: report Acheron's toggle to DeDService (DeD Downed acts only while it is off), run the one-shot
+; cleanup of saves that ran the bridge (spec 14), and while Acheron is installed but off, release whatever Acheron
+; still holds (its cosave re-applies pacifies on every load) and keep the old bridge switched off.
+Function _AcheronHandover()
+    Bool installed = Game.IsPluginInstalled("Acheron.esm")
+    Bool processing = False
+    If installed
+        processing = !Acheron.IsProcessingDisabled()
+        DeDService.SetAcheronProcessing(processing)
+    EndIf
+    _DownedMigrate()
+    If !installed || processing || !DeDService.IsDownedModuleActive()
+        Debug.Trace("[DeDDowned] HANDOVER: Acheron installed=" + installed + " processing=" + processing + " DeD Downed active=" + DeDService.IsDownedModuleActive() + " -- S342")
+        Return
+    EndIf
+    Int n = _ReleaseAllAcheron("Acheron switched off")
+    StorageUtil.SetIntValue(Game.GetPlayer(), "SNAcheron.Enabled", 0)
+    Debug.Trace("[DeDDowned] HANDOVER: Acheron is installed but switched off - DeD Downed active, " + n + " Acheron hold(s) released, bridge off -- S342")
+EndFunction
+
+; Everyone Acheron has defeated gets up (rescued + released); every Acheron pacify ends. Returns how many actors.
+Int Function _ReleaseAllAcheron(String asWhy)
+    Int n = 0
+    Actor[] downed = Acheron.GetDefeated(False)
+    Int i = 0
+    While i < downed.Length
+        If downed[i]
+            Acheron.RescueActor(downed[i], True)
+            Acheron.ReleaseActor(downed[i])
+            n += 1
+        EndIf
+        i += 1
+    EndWhile
+    Actor[] calm = Acheron.GetPacified(False)
+    i = 0
+    While i < calm.Length
+        If calm[i]
+            Acheron.ReleaseActor(calm[i])
+            n += 1
+        EndIf
+        i += 1
+    EndWhile
+    Debug.Trace("[DeDDowned] ACHERON-RELEASE (" + asWhy + "): " + downed.Length + " defeated rescued, " + calm.Length + " pacified released -- S342")
+    Return n
 EndFunction

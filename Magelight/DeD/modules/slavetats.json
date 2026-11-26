@@ -1,0 +1,43 @@
+{
+  "schema": 2,
+  "id": "slavetats",
+  "name": "SlaveTats",
+  "requires": "SlaveTats.esp",
+  "panel": {
+    "tagline": "ink and marks",
+    "order": 30,
+    "rules": [
+      {
+        "priority": 4,
+        "when": {
+          "target": "any"
+        },
+        "open": {
+          "tab": "tattoo",
+          "mode": "interact"
+        }
+      },
+      {
+        "priority": 0,
+        "when": {
+          "target": "none"
+        },
+        "open": {
+          "tab": "tattoo",
+          "mode": "notarget"
+        }
+      }
+    ]
+  },
+  "views": [
+    {
+      "name": "picker",
+      "page": "views/slavetats/picker/index.html",
+      "layer": "panel",
+      "listeners": [
+        "snbaka_chose"
+      ],
+      "captureEscape": true
+    }
+  ]
+}

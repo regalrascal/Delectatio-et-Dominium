@@ -24,11 +24,10 @@ project(
 )
 
 set(PROJECT_OUTPUT_NAME "${PROJECT_NAME}-v${PROJECT_VERSION}")
-if(DEFINED ENV{SKYRIM_MODS_FOLDER} AND IS_DIRECTORY "$ENV{SKYRIM_MODS_FOLDER}")
-    set(OUTPUT_FOLDER "$ENV{SKYRIM_MODS_FOLDER}/${PROJECT_OUTPUT_NAME}")
-else()
-    set(OUTPUT_FOLDER "${CMAKE_SOURCE_DIR}/../dist/${PROJECT_OUTPUT_NAME}")
-endif()
+# No automatic copy of the built DLL (DeD S287). The old default wrote a copy into ../dist/ on every
+# build (it tripped the dist hygiene step), and the SKYRIM_MODS_FOLDER branch would have written into
+# the MO2 mods folder (DeD ruleset rule 1: the user deploys). The DLL stays in build/release/; the
+# release flow copies it into SKSE/Plugins/ with a hash check. Opt-in only: -DOUTPUT_FOLDER=<dir>.
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -40,11 +39,18 @@ include(commonlibsse)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/external/nlohmann/..)   # vendored nlohmann-json 3.12.0 (MIT), S316
+# Magelight workstream Phase 1: the DeDService UI host contract (header-only, resolved at runtime).
+include_directories(${CMAKE_SOURCE_DIR}/../dll-source-ded/include)
 
 add_commonlibsse_plugin(${PROJECT_NAME}
     SOURCES
     src/Plugin.cpp
-    src/PrismaUIBridge.cpp
+    src/DeDPanelClient.cpp
+    src/BakaPanel.cpp
+    src/SlaveTatsPanel.cpp
+    src/SlaveTatsNative.cpp
+    src/TattooVision.cpp
     src/PapyrusFunctions.cpp
     src/SkyrimNetBridge.cpp
     src/HitEventSink.cpp
@@ -73,9 +79,5 @@ if(DEFINED OUTPUT_FOLDER)
         VERBATIM
     )
 else()
-    message(WARNING
-        "SKYRIM_MODS_FOLDER is not set — the built DLL will NOT be auto-copied. "
-        "Set the SKYRIM_MODS_FOLDER environment variable to your mod manager's mods folder "
-        "(the parent of the SkyrimNet_BakaIntegration mod), or copy the built DLL manually to "
-        "<your SkyrimNet_BakaIntegration mod>/SKSE/Plugins/SkyrimNet_BakaIntegration.dll")
+    message(STATUS "No OUTPUT_FOLDER given: the built DLL stays in the build folder (no auto-copy).")
 endif()

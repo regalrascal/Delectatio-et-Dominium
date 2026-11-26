@@ -17,7 +17,7 @@
 	     Player-facing titles per the REV-68 section-7 rider; technical paths
 	     (folder names, manifest id regalrascal.baka-gs-integration) are legacy
 	     Beta 25 load-bearing. -->
-	<moduleName>Delectatio et Dominium (0.3.0-alpha)</moduleName>
+	<moduleName>Delectatio et Dominium (0.6.0)</moduleName>
 	<moduleImage path="fomod\images\Delectatio_et_Dominium_Cover.jpg" showImage="true" showFade="true" height="-1"/>
 	<requiredInstallFiles>
 		<!-- FRAMEWORK (always installed): the MCM host esp + the core the MCM,
@@ -34,11 +34,17 @@
 		<file source="SKSE/Plugins/DeDService.dll" destination="SKSE/Plugins/DeDService.dll"/>
 		<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.baka-gs-integration" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.baka-gs-integration"/>
 		<folder source="Sound" destination="Sound"/>
-		<folder source="Interface" destination="Interface"/>
-		<folder source="PrismaUI/views/SNBaka_Menu" destination="PrismaUI/views/SNBaka_Menu"/>
-		<folder source="PrismaUI/views/SNBaka_ExecuteConfirm" destination="PrismaUI/views/SNBaka_ExecuteConfirm"/>
-		<folder source="PrismaUI/views/SNBaka_Hud" destination="PrismaUI/views/SNBaka_Hud"/>
-		<folder source="PrismaUI/views/GSAnim_Menu/images" destination="PrismaUI/views/GSAnim_Menu/images"/>
+		<!-- S357: the Interface folder is gone (its only file, the Acheron Bridge option icon, retired). -->
+		<!-- Magelight Phase 2 (S317): the combined DeD panel page is framework surface (DeDService hosts it; each
+		     module fills its own section through its descriptor + handler). -->
+		<folder source="Magelight/DeD/views/panel" destination="Magelight/DeD/views/panel"/>
+		<!-- S328: the framework settings target (the rail-foot Settings: global DeD rows); no rail entry. -->
+		<file source="Magelight/DeD/modules/framework.json" destination="Magelight/DeD/modules/framework.json"/>
+		<!-- Magelight workstream Phase 1 (S284; docs/workstreams/magelight-ui.md): PrismaUI is gone.
+		     DeDService.dll (above) hosts every DeD menu through Magelight UI (a separate, required
+		     download). Each module installs its own pages (Magelight/DeD/views/<module>/) and its
+		     descriptor (Magelight/DeD/modules/<module>.json) in its option below; no module UI lives
+		     in the framework (ruleset rule 16). -->
 	</requiredInstallFiles>
 	<installSteps order="Explicit">
 		<installStep name="Delectatio et Dominium">
@@ -78,29 +84,36 @@
 						<plugin name="Framework (always installed)">
 							<description>The heart of DeD: the MCM, the interaction menus, the service DLL that keeps every module's state save-safe, and the shared content pack the LLM reads. One framework, every module hanging off it - and it never gets in the way.
 
-Always installed regardless of this checkbox; the module options below are the real file toggles.</description>
+Always installed regardless of this checkbox; the module options below are the real file toggles.
+
+Requires Magelight UI 1.9.0 or newer, a separate download: every DeD menu runs on it.</description>
 							<files/>
 							<typeDescriptor>
 								<type name="Recommended"/>
 							</typeDescriptor>
 						</plugin>
 						<plugin name="Baka Interactions">
-							<description>The interaction core: flirt, harass, escalate, capture, spank - affectionate, forced, and sexual actions through the Interact power, with resistance, struggle, and slavery. A background daemon (Mephala / Molag Bal modes) lets dominant NPCs escalate on their own initiative. Every emergent NSFW moment in DeD starts here.</description>
+							<description>The interaction core: flirt, harass, escalate, capture, spank - affectionate, forced, and sexual actions through the DeD Interact power, with resistance, struggle, and slavery. A background daemon (Mephala / Molag Bal modes) lets dominant NPCs escalate on their own initiative. Every emergent NSFW moment in DeD starts here.</description>
 							<files>
 								<file source="SkyrimNet_BakaIntegration.esp" destination="SkyrimNet_BakaIntegration.esp"/>
+								<folder source="Magelight/DeD/views/baka" destination="Magelight/DeD/views/baka"/>
+								<file source="Magelight/DeD/modules/baka.json" destination="Magelight/DeD/modules/baka.json"/>
+								<file source="Magelight/DeD/modules/cum.json" destination="Magelight/DeD/modules/cum.json"/>
+								<!-- S317: the spank packs (SkyrimNet Spank heat marks, Spank That Ass) are Baka's own (user ruling S316). -->
+								<folder source="textures/actors/character/SlaveTats" destination="textures/actors/character/SlaveTats"/>
 							</files>
 							<typeDescriptor>
 								<type name="Recommended"/>
 							</typeDescriptor>
 						</plugin>
 						<plugin name="GS Poses">
-							<description>Solo posing, made ambient: a PrismaUI pose grid for you or any targeted NPC, plus Sanguine Mode, the background daemon that puts idle NPCs into mood-fitting poses - the LLM picks both the pose and the exact move from live scene context. Sheogorath Mode raises the intensity when you want a livelier room.</description>
+							<description>Solo posing, made ambient: a pose grid for you or any targeted NPC, plus Sanguine Mode, the background daemon that puts idle NPCs into mood-fitting poses - the LLM picks both the pose and the exact move from live scene context. Sheogorath Mode raises the intensity when you want a livelier room.</description>
 							<files>
 								<file source="SkyrimNet_AnimationsGS.esp" destination="SkyrimNet_AnimationsGS.esp"/>
 								<file source="SKSE/Plugins/SNAnimGS_UI.dll" destination="SKSE/Plugins/SNAnimGS_UI.dll"/>
 								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.gs-poses" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.gs-poses"/>
-								<file source="PrismaUI/views/GSAnim_Menu/index.html" destination="PrismaUI/views/GSAnim_Menu/index.html"/>
-								<file source="PrismaUI/views/GSAnim_Menu/poses.js" destination="PrismaUI/views/GSAnim_Menu/poses.js"/>
+								<folder source="Magelight/DeD/views/gs-poses" destination="Magelight/DeD/views/gs-poses"/>
+								<file source="Magelight/DeD/modules/gs-poses.json" destination="Magelight/DeD/modules/gs-poses.json"/>
 							</files>
 							<typeDescriptor>
 								<type name="Recommended"/>
@@ -121,6 +134,7 @@ Always installed regardless of this checkbox; the module options below are the r
 Unchecking this removes the cue pack only; the module's logic stays installed and simply idles - nothing breaks either way.</description>
 							<files>
 								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.fhu-inflation" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.fhu-inflation"/>
+								<file source="Magelight/DeD/modules/fhu.json" destination="Magelight/DeD/modules/fhu.json"/>
 							</files>
 							<typeDescriptor>
 								<dependencyType>
@@ -137,12 +151,14 @@ Unchecking this removes the cue pack only; the module's logic stays installed an
 							</typeDescriptor>
 						</plugin>
 						<plugin name="SlaveTats">
-							<description>Marks that linger: degradation tattoos - spank marks, tears, drool, the defeated look - applied by the LLM with in-character reactions, plus ambient rolls narrating who notices the marks a character is wearing. The body keeps the story.
+							<description>Marks that linger: tattoos and makeup from the combined DeD menu - on yourself, on a downed captive, or on someone who agreed to it - plus LLM tattoo and makeup actions with in-character reactions, and ambient rolls narrating who notices the marks a character is wearing. Installed tattoo packs are picked up automatically.
 
-Unchecking this removes the tattoo assets and the set-picker UI only; the content layer stays installed and inert - nothing breaks either way.</description>
+Unchecking this removes the tattoo actions, the tattoo menu section and its settings; nothing else breaks.</description>
 							<files>
-								<folder source="textures/actors/character/SlaveTats" destination="textures/actors/character/SlaveTats"/>
-								<file source="PrismaUI/views/SNSlaveTats_Menu/index.html" destination="PrismaUI/views/SNSlaveTats_Menu/index.html"/>
+								<!-- S317: the tattoo / makeup actions + triggers ship only here, so the LLM is offered them only with this option. -->
+								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.slavetats" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.slavetats"/>
+								<folder source="Magelight/DeD/views/slavetats" destination="Magelight/DeD/views/slavetats"/>
+								<file source="Magelight/DeD/modules/slavetats.json" destination="Magelight/DeD/modules/slavetats.json"/>
 							</files>
 							<typeDescriptor>
 								<dependencyType>
@@ -158,26 +174,18 @@ Unchecking this removes the tattoo assets and the set-picker UI only; the conten
 								</dependencyType>
 							</typeDescriptor>
 						</plugin>
-						<plugin name="Acheron Bridge">
-							<description>Defeat with consequences: the downed-state bridge between Acheron and DeD - downed actors get the interact menu, the Downed State MCM page, and capped consequence cues. Losing a fight becomes a scene, not a game over.</description>
+						<!-- S353 (DeD Downed A5a): the Acheron Bridge option is retired (ded-build/retired-surfaces/acheron-bridge-s353);
+						     DeD Downed replaces Acheron. Text: placeholder (register 83). -->
+						<plugin name="DeD Downed">
+							<description>Beaten, not dead: losing a fight downs you instead of killing you, and the winners decide what happens next - robbery, threats, humiliation or worse - before you come to somewhere nearby. Enemies you beat go down too, and can be talked into standing down. Replaces Acheron: if Acheron is installed, switch it off in its MCM (or use Prepare to Remove Acheron in the DeD MCM).</description>
 							<files>
-								<file source="SkyrimNet_AcheronIntegration.esp" destination="SkyrimNet_AcheronIntegration.esp"/>
-								<folder source="SKSE/Acheron/Consequences" destination="SKSE/Acheron/Consequences"/>
-								<folder source="SKSE/Plugins/SkyrimNet/external/around906.acheron-integration" destination="SKSE/Plugins/SkyrimNet/external/around906.acheron-integration"/>
+								<file source="SKSE/Plugins/DeDDowned.dll" destination="SKSE/Plugins/DeDDowned.dll"/>
+								<file source="SKSE/Plugins/DeDDowned_RestraintKeywords.json" destination="SKSE/Plugins/DeDDowned_RestraintKeywords.json"/>
+								<folder source="SKSE/Plugins/SkyrimNet/external/regalrascal.ded-downed" destination="SKSE/Plugins/SkyrimNet/external/regalrascal.ded-downed"/>
+								<file source="Magelight/DeD/modules/downed.json" destination="Magelight/DeD/modules/downed.json"/>
 							</files>
 							<typeDescriptor>
-								<dependencyType>
-									<defaultType name="Optional"/>
-									<patterns>
-										<pattern>
-											<dependencies operator="Or">
-												<fileDependency file="Acheron.esm" state="Active"/>
-												<fileDependency file="Acheron.esp" state="Active"/>
-											</dependencies>
-											<type name="Recommended"/>
-										</pattern>
-									</patterns>
-								</dependencyType>
+								<type name="Recommended"/>
 							</typeDescriptor>
 						</plugin>
 					</plugins>

@@ -1,0 +1,12 @@
+{
+  "id": "regalrascal.slavetats",
+  "type": "bundle",
+  "title": "Delectatio et Dominium - SlaveTats",
+  "tagline": "Marks that linger.",
+  "description": "The tattoo and makeup actions and their narration triggers for the DeD SlaveTats module. Installed only with the SlaveTats option, so the LLM is offered tattoo actions only when SlaveTats is present.",
+  "author": "regalrascal",
+  "tags": ["nsfw", "actions", "triggers"],
+  "nsfw": true,
+  "version": "0.1.0",
+  "min_skyrimnet_version": "0.25.0"
+}

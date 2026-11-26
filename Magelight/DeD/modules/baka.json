@@ -1,0 +1,64 @@
+{
+  "schema": 2,
+  "id": "baka",
+  "name": "Baka Interactions",
+  "requires": "SkyrimNet_BakaIntegration.esp",
+  "panel": {
+    "tagline": "touch, force, take",
+    "order": 10,
+    "rules": [
+      {
+        "priority": 50,
+        "claim": "power"
+      },
+      {
+        "priority": 10,
+        "when": {
+          "target": "any"
+        },
+        "open": {
+          "tab": "affection",
+          "mode": "interact"
+        }
+      },
+      {
+        "priority": 0,
+        "when": {
+          "target": "none"
+        },
+        "open": {
+          "tab": "affection",
+          "mode": "notarget"
+        }
+      }
+    ],
+    "settingsVia": "mcm"
+  },
+  "views": [
+    {
+      "name": "menu",
+      "page": "views/baka/menu/index.html",
+      "layer": "panel",
+      "listeners": [
+        "snbaka_chose"
+      ],
+      "captureEscape": true
+    },
+    {
+      "name": "hud",
+      "page": "views/baka/hud/index.html",
+      "layer": "hud",
+      "clickThrough": true,
+      "startVisible": true
+    },
+    {
+      "name": "execconfirm",
+      "page": "views/baka/execconfirm/index.html",
+      "layer": "popup",
+      "listeners": [
+        "snbaka_chose"
+      ],
+      "captureEscape": true
+    }
+  ]
+}

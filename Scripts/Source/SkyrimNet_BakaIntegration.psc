@@ -301,12 +301,12 @@ Int   Property iFHUAmbientHeavyBand  = 60 Auto
 ; ============================================================================
 Bool  Property bReactArbitration   = True Auto
 Bool  Property bMephalaLaneNarr    = True Auto
-Bool  Property bMephalaLaneThought = False Auto   ; [REV-174a D2e] default OFF (user fallback ruling; toggle still on the MCM surface)
-Bool  Property bMephalaLanePSpeech = True Auto
+Bool  Property bMephalaLaneThought = False Auto   ; [REV-174a D2e OFF; REV-184 D4 RETIRED -- never read again (save-member only)]
+Bool  Property bMephalaLanePSpeech = False Auto   ; [REV-184 D4] pspeech default OFF (the ruling flips the DEFAULT; existing saves keep saved values)
 Bool  Property bMephalaLanePThought = True Auto
 Bool  Property bMolagBalLaneNarr    = True Auto
-Bool  Property bMolagBalLaneThought = False Auto   ; [REV-174a D2e] default OFF (user fallback ruling; toggle still on the MCM surface)
-Bool  Property bMolagBalLanePSpeech = True Auto
+Bool  Property bMolagBalLaneThought = False Auto   ; [REV-174a D2e OFF; REV-184 D4 RETIRED -- never read again (save-member only)]
+Bool  Property bMolagBalLanePSpeech = False Auto   ; [REV-184 D4] pspeech default OFF
 Bool  Property bMolagBalLanePThought = True Auto
 ; Per-source vs unified cum-cue shaping (amendment 2b): 0 = unified (framework-neutral,
 ; default -- the proposal awaiting §7 ruling), 1 = per-source wording.
@@ -512,6 +512,7 @@ Event OnPlayerLoadGame()
 EndEvent
 
 Function Setup()
+    StorageUtil.ClearIntValuePrefix("SNBaka.DDScenePacify")   ; S343: DeDService drops scene pacify on load too
     ; REV-123: the D5 stale-cosave-stamp clamp moved HERE from the quest's
     ; OnPlayerLoadGame (dead site -- a Quest script never receives that event;
     ; see the REV-123 receipts: no clamp sentinel at the 10-17 01:59:31 load
@@ -636,7 +637,9 @@ Function Setup()
     ; EscalatePower is no longer added to the player — Interact_ShowMenu handles escalation
     ; automatically when the target is on the ground (SNBaka.OnGround=1). The spell record
     ; is kept in the ESP so existing saves aren't broken, but it is no longer granted.
-    If InteractPower && !PlayerRef.HasSpell(InteractPower)
+    ; Magelight Phase 2 leg 6: with the combined panel available the one DeD power replaces this one
+    ; (DeDService grants it and removes this power on every load); granted only without the panel.
+    If InteractPower && !PlayerRef.HasSpell(InteractPower) && !DeDService.PanelAvailable()
         PlayerRef.AddSpell(InteractPower)
     EndIf
 
@@ -3024,10 +3027,10 @@ Int Function _LaneEnabledSet(String asMode)
         If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_narr", 1) == 1
             m = m + 1
         EndIf
-        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_thought", 0) == 1
-            m = m + 2
-        EndIf
-        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 1) == 1
+        ; [REV-184 Leg 4 -- D4] the THOUGHT bit is RETIRED ("gone, not off",
+        ; user ruling of record): bit 2 can never be set here, so the retired
+        ; lane can never fire, rotate, or be picked -- no dangling consumers.
+        If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pspeech", 0) == 1
             m = m + 4
         EndIf
         If StorageUtil.GetIntValue(None, "SNBaka.Action.Lane_pthought", 1) == 1
@@ -3039,9 +3042,9 @@ Int Function _LaneEnabledSet(String asMode)
         If bMephalaLaneNarr
             m = m + 1
         EndIf
-        If bMephalaLaneThought
-            m = m + 2
-        EndIf
+        ; [REV-184 Leg 4 -- D4] thought bit RETIRED (never read again); PSpeech
+        ; DEFAULT flips OFF (property re-see below) -- PThought keeps its ON
+        ; default (the ruling retires npc-thought only).
         If bMephalaLanePSpeech
             m = m + 4
         EndIf
@@ -3053,9 +3056,6 @@ Int Function _LaneEnabledSet(String asMode)
         Int m = 0
         If bMolagBalLaneNarr
             m = m + 1
-        EndIf
-        If bMolagBalLaneThought
-            m = m + 2
         EndIf
         If bMolagBalLanePSpeech
             m = m + 4
@@ -3073,10 +3073,10 @@ Int Function _LaneEnabledSet(String asMode)
         If StorageUtil.GetIntValue(None, sPfx + "narr", 1) == 1
             m = m + 1
         EndIf
-        If StorageUtil.GetIntValue(None, sPfx + "thought", 1) == 1
-            m = m + 2
-        EndIf
-        If StorageUtil.GetIntValue(None, sPfx + "pspeech", 1) == 1
+        ; [REV-184 Leg 4 -- D4] Sanguine/Sheogorath thought bit RETIRED; pspeech
+        ; + pthought DEFAULTS flip OFF (fresh installs; existing saves keep their
+        ; saved values -- the migration note of record).
+        If StorageUtil.GetIntValue(None, sPfx + "pspeech", 0) == 1
             m = m + 4
         EndIf
         If StorageUtil.GetIntValue(None, sPfx + "pthought", 1) == 1
@@ -3155,7 +3155,11 @@ Int Function _ReactParseLanes(String asReact)
             ElseIf t == "narr"
                 mask = mask + 1
             ElseIf t == "thought"
-                mask = mask + 2
+                ; [REV-184 D4] the npc-thought lane is RETIRED ("gone, not
+                ; off"): the keyword parses but contributes NO lane (bit 2
+                ; can never be set again). A pick naming it intersects the
+                ; enabled set empty -> rotation among the survivors.
+                mask = mask + 0
             ElseIf t == "pspeech"
                 mask = mask + 4
             ElseIf t == "pthought"
@@ -3169,8 +3173,10 @@ Int Function _ReactParseLanes(String asReact)
     If !bAnyTok
         Return -1
     EndIf
+    ; [REV-184 D4] the ALL mask drops the retired thought bit: 15 -> 13
+    ; (narr 1 + pspeech 4 + pthought 8; bit 2 gone with the lane).
     If bAll
-        mask = 15
+        mask = 13
     EndIf
     If bNone && mask == 0
         Return 0
@@ -3448,6 +3454,12 @@ Function _DaemonLaneFire(String asMode, Actor akInitiator, Actor akTarget, Strin
             ; PLAYER as the event's target actor (DevKit pairs player-voiced
             ; response types with player-bound events; the prior None binding
             ; left the event NPC-attached and the renderer never surfaced it).
+            ; [S331] the action lanes no longer interrupt by default (user ruling, REV-196 test);
+            ; "Reaction Lanes Interrupt" on = the interrupting copy of the trigger (<lane>_int).
+            If asMode == "Action" && v != 2 && StorageUtil.GetIntValue(None, "SNBaka.Action.LaneInterrupt", 0) == 1
+                sLane = sLane + "_int"
+                _Log("[SNBaka] lane interrupt ON: " + sPfx + sLane + " -- S331")
+            EndIf
             If v == 4 || v == 8
                 SkyrimNetApi.RegisterEvent(sPfx + sLane, asDesc, akInitiator, Game.GetPlayer())
             Else
@@ -4396,12 +4408,8 @@ Bool Function _GSPresent()
 EndFunction
 
 Bool Function _AcheronBridgePresent()
-    If !_bAcheronPresentResolved
-        _bAcheronPresentCached   = Game.GetFormFromFile(0x800, "SkyrimNet_AcheronIntegration.esp") != None
-        _bAcheronPresentResolved = True
-        _Log("[SNBaka] presence probe (cached, REV-159 F-3): SkyrimNet_AcheronIntegration.esp present=" + _bAcheronPresentCached)
-    EndIf
-    Return _bAcheronPresentCached
+    ; S354 (DeD Downed A5b): the Acheron Bridge is retired (S353); never present. Kept for callers.
+    Return False
 EndFunction
 
 
@@ -4997,40 +5005,14 @@ Bool Function _DelegateDownToAcheron(Actor akVictim)
     If !akVictim || !PlayerRef
         Return False
     EndIf
-    ; REV-61 1a — bridge liveness handshake: SNAcheron.Present/Enabled are StorageUtil keys
-    ; that persist in the cosave, so they can be STALE from an install where the bridge was
-    ; loaded/enabled but is now disabled/absent (the 09-30 Frabbi incident: delegation sent
-    ; SNBaka_RequestAcheronDown into a void — no listener, victim never downed, nobody owned
-    ; recovery). Probe the bridge's own quest form (SNAcheron_Quest 0x800) directly: None
-    ; means the bridge esp is NOT in the load order right now, so we route to the local
-    ; fallback window exactly like an absent bridge — no matter what the flags say.
-    If !_AcheronBridgePresent()
-        _Log("[SNBaka] _DelegateDownToAcheron: bridge liveness probe FAILED (SNAcheron_Quest 0x800 not loaded) — stale SNAcheron.Present=" + StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) + "; routing to local fallback window, victim=" + akVictim.GetDisplayName())
-        ; Kill the stale flag so no other Present-reading path is fooled this session —
-        ; the bridge re-stamps it on its own init if it ever loads again.
-        StorageUtil.SetIntValue(PlayerRef, "SNAcheron.Present", 0)
-        Return False
+    If _DDActive()   ; S343 (D-A49): DeD Downed owns the down (pose, timers, Recovering), not the Acheron bridge
+        Actor ddAgg = StorageUtil.GetFormValue(akVictim, "SNBaka.GroundWindowAggressor") as Actor
+        Bool ddOk = DeDService.DownActor(akVictim, ddAgg, "baka")
+        Debug.Trace("[SNBaka][DOWNED] down handed to DeD Downed: " + akVictim.GetDisplayName() + " ok=" + ddOk + " -- S343")
+        Return ddOk
     EndIf
-    ; The integration stamps this flag on init + every self-heal; absent == integration not installed.
-    If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) != 1
-        Return False
-    EndIf
-    ; Present means INSTALLED, not enabled -- the bridge's OnDownRequest gates on its own MCM master
-    ; switch and silently DROPS queued victims while disabled. Delegating into that void cleared our
-    ; local flags with nobody ever actually downing the victim (they'd just stand there). Check the
-    ; same shared StorageUtil key its own MCM writes, so a disabled bridge routes us to the local
-    ; fallback window instead, exactly like an absent one.
-    If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Enabled", 1) != 1
-        Return False
-    EndIf
-    ; Already held (e.g. Acheron's own combat-defeat consequence already picked this same takedown up)?
-    ; Don't re-queue/re-cue — that fired a second, redundant "is down" narration for one event.
-    If StorageUtil.GetIntValue(akVictim, "SNAcheron.Held", 0) == 1
-        Return True
-    EndIf
-    StorageUtil.FormListAdd(PlayerRef, "SNBaka.AcheronDownQueue", akVictim)
-    SendModEvent("SNBaka_RequestAcheronDown")
-    Return True
+    ; S354 (DeD Downed A5b): the Acheron Bridge is retired; without DeD Downed the caller runs Baka's own window.
+    Return False
 EndFunction
 
 ; Single source of truth for "is this actor currently downed", covering all three ways a victim can
@@ -5048,7 +5030,43 @@ Bool Function _IsDownedAny(Actor ak) Global
     EndIf
     Return StorageUtil.GetIntValue(ak, "SNBaka.OnGround", 0) == 1 \
         || ak.IsBleedingOut() \
-        || StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1
+        || StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1 \
+        || DeDService.IsDowned(ak)   ; S343 (D-A49): DeD Downed's state (Ronja's in-combat refusal, S337)
+EndFunction
+
+; ===== S343 (DeD Downed A4 leg 2, spec D-A49): the downed-state layer =====
+; With the DeD Downed module active (DeDService.IsDownedModuleActive), DeDService owns downs, scene pacify and recovery;
+; otherwise the Acheron path of 0.5.x is unchanged. Baka's scene pacify is an on / off flag per actor
+; (SNBaka.DDScenePacify, cleared every load), so repeated protects can never stack DeDService's ref count and leave
+; someone pacified for good (the Ronja class of bug).
+Bool Function _DDActive() Global
+    Return DeDService.IsDownedModuleActive()
+EndFunction
+
+Function _ScenePacifyOn(Actor ak)
+    If !ak
+        Return
+    EndIf
+    If _DDActive()
+        If StorageUtil.GetIntValue(ak, "SNBaka.DDScenePacify", 0) != 1
+            StorageUtil.SetIntValue(ak, "SNBaka.DDScenePacify", 1)
+            DeDService.ScenePacifyBegin(ak)
+            Debug.Trace("[SNBaka][DOWNED] scene pacify ON: " + ak.GetDisplayName() + " -- S343")
+        EndIf
+    EndIf   ; S354 (A5b): no Acheron fallback
+EndFunction
+
+Function _ScenePacifyOff(Actor ak)
+    If !ak
+        Return
+    EndIf
+    If _DDActive()
+        If StorageUtil.GetIntValue(ak, "SNBaka.DDScenePacify", 0) == 1
+            StorageUtil.UnsetIntValue(ak, "SNBaka.DDScenePacify")
+            DeDService.ScenePacifyEnd(ak)
+            Debug.Trace("[SNBaka][DOWNED] scene pacify OFF: " + ak.GetDisplayName() + " -- S343")
+        EndIf
+    EndIf   ; S354 (A5b): no Acheron fallback
 EndFunction
 
 ; Clears an external Acheron hold (bleedout AND/OR our own SNAcheron.Held flag) so a resolving action
@@ -5062,49 +5080,24 @@ Function _ClearAcheronHold(Actor ak, Bool abFullRescue = True, Bool abKeepPacifi
     If !ak
         Return
     EndIf
+    If _DDActive() && DeDService.GetDownedPhase(ak) == 1   ; S343: DeD Downed -> Recovering (spec: up, pacified)
+        DeDService.RecoverActor(ak, False)
+        Debug.Trace("[SNBaka][DOWNED] recover via DeD Downed: " + ak.GetDisplayName() + " -> Recovering -- S343")
+        Return
+    EndIf
     If ak.IsBleedingOut() || StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1
         ; Held cleared FIRST -- the Acheron bridge's OnActorRescued now redowns anyone rescued while
         ; still flagged Held (its "nobody recovers on their own" rule); clearing before RescueActor is
         ; what marks this rescue as sanctioned. RescueActor is documented as queued/async, so the event
         ; fires well after this line, but don't rely on that ordering by accident -- make it explicit.
         StorageUtil.SetIntValue(ak, "SNAcheron.Held", 0)
-        ; Only touch Acheron's own rescue/release if Acheron still THINKS this actor is defeated --
-        ; calling RescueActor/ReleaseActor on an actor it doesn't track as defeated is a call its native
-        ; code was never meant to receive. Shared native API, no hard reference needed.
-        If Acheron.IsDefeated(ak)
-            If abKeepPacified
-                ; INTERACTION TAKEOVER (a struggle/scene is about to own this actor): end the defeat
-                ; but keep Acheron's native pacify ON through the handoff. Rescuing with abRelease=true
-                ; + ReleaseActor (below) fully strips the protection, and every attempt to rebuild it by
-                ; hand afterward lost a race with the QUEUED rescue task — confirmed live, repeatedly:
-                ; "EVERY time somebody gets escalated, during the period we free from acheron, enemies
-                ; aggro." abRelease=false is Acheron's own primitive for exactly this.
-                Acheron.RescueActor(ak, false)
-            Else
-                If abFullRescue
-                    Acheron.RescueActor(ak, true)
-                EndIf
-                ; OSimpleDefeat (a sibling mod doing the same Acheron+OStim defeat/release flow) always pairs
-                ; RescueActor with an explicit ReleaseActor call. RescueActor is documented as QUEUED/async;
-                ; ReleaseActor removes the pacify state immediately — belt-and-suspenders so pacify doesn't
-                ; linger until Acheron's queued task gets around to it.
-                Acheron.ReleaseActor(ak)
-            EndIf
-        Else
-            _Log("[SNBaka] _ClearAcheronHold: Acheron no longer considers " + ak.GetDisplayName() + " defeated -- skipping RescueActor/ReleaseActor")
-            ; We were called because the actor still reads held/bleeding, yet Acheron's tracking has
-            ; already disowned them -- the redown-vs-queued-rescue race (AcheronNG's async rescue task
-            ; un-tracks a defeat the bridge just re-applied) leaves the actor VISUALLY stuck in the
-            ; defeat pose with no native state left for anyone to rescue them out of. Confirmed live:
-            ; follower stuck in the defeated animation after HelpUp, unrescuable (every downed-check
-            ; reads False). RescueActor is what normally ends the pose natively; with it skipped,
-            ; force the graph out ourselves. Both events are harmless no-ops on a clean actor.
-            If ak != PlayerRef
-                ak.RestoreActorValue("Health", 1000.0)   ; a bleedout-threshold HP level would re-drop them instantly
-            EndIf
-            Debug.SendAnimationEvent(ak, "BleedoutStop")
-            Debug.SendAnimationEvent(ak, "IdleForceDefaultState")
+        ; S354 (DeD Downed A5b): no Acheron rescue any more (the bridge is retired); a vanilla-bleeding or
+        ; legacy-held actor is stood up here (the old "Acheron no longer tracks them" branch).
+        If ak != PlayerRef
+            ak.RestoreActorValue("Health", 1000.0)   ; a bleedout-threshold HP level would re-drop them instantly
         EndIf
+        Debug.SendAnimationEvent(ak, "BleedoutStop")
+        Debug.SendAnimationEvent(ak, "IdleForceDefaultState")
         _Log("[SNBaka] _ClearAcheronHold: cleared Acheron hold on " + ak.GetDisplayName() + " (abFullRescue=" + abFullRescue + " keepPacified=" + abKeepPacified + ")")
     EndIf
 EndFunction
@@ -5121,10 +5114,9 @@ Function _OnVictimWon(Actor akWinner, Actor akLoser)
     StorageUtil.SetIntValue(akWinner,    "SNBaka.OnGround", 0)
     StorageUtil.SetStringValue(akWinner, "SNBaka.DownPose", "")
     StorageUtil.SetIntValue(akWinner,    "SNBaka.Captive",  0)
-    ; Hand the release to the integration (it owns the Acheron hold), same as we hand it the down.
-    If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 && Acheron.IsDefeated(akWinner)
-        StorageUtil.FormListAdd(PlayerRef, "SNBaka.AcheronReleaseQueue", akWinner)
-        SendModEvent("SNBaka_RequestAcheronRelease")
+    If _DDActive() && DeDService.GetDownedPhase(akWinner) != 0   ; S343: the winner is free at once
+        DeDService.ReleaseActor(akWinner)
+        Debug.Trace("[SNBaka][DOWNED] struggle won: " + akWinner.GetDisplayName() + " released by DeD Downed -- S343")
     EndIf
 EndFunction
 
@@ -5222,8 +5214,8 @@ Function _ProtectVictimTargeting(Actor akVictim)
         Else
             _Log("[SNBaka] _ProtectVictimTargeting: WARNING — SNBakaCalm spell property is EMPTY, player-victim has no drop-target protection")
         EndIf
-    ElseIf StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
-        Acheron.PacifyActor(akVictim)
+    Else
+        _ScenePacifyOn(akVictim)   ; S343: DeD Downed scene pacify, or Acheron's PacifyActor (0.5.x)
     EndIf
     _ClearStaleCombatLocks(akVictim)
 EndFunction
@@ -6670,8 +6662,9 @@ EndFunction
 ; Release Acheron's two-way pacify, but never strip it from an actor Acheron currently holds
 ; DEFEATED (a defeated actor is always pacified — that protection belongs to the down state).
 Function _ReleaseAcheronPacify(Actor ak)
-    If ak && StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 && !Acheron.IsDefeated(ak)
-        Acheron.ReleaseActor(ak)
+    If ak && _DDActive()   ; S343: only Baka's scene pacify; a DeD Downed / Recovering state is left alone
+        _ScenePacifyOff(ak)
+        Return
     EndIf
 EndFunction
 
@@ -6904,9 +6897,8 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
     ; (Flags were already cleared at the top, before OnGround=1 — do NOT clear them again here,
     ; or a downed-menu pick made during this settle would be lost.)
     _Log("[SNBaka] _DefeatGroundWindow: escalate window open (" + fEscalationWindow + "s)")
-    ; REV-72 SlaveTats module: user-chosen degradation set rides the defeat/downed event
-    ; (module checks its own Enabled/ApplyOnDefeat/set-config gates; extend-not-duplicate).
-    SNBaka_SlaveTatsModule.OnDefeat(akA2)
+    ; Tattoo T1 (D-T1): the automatic defeat tattoo is retired - tattoos come only from chosen lanes.
+    Debug.Trace("[SNBaka.ST] hook retired (D-T1): no automatic tattoo on defeat")
     If _bDruggedEscalation
         SkyrimNetApi.RegisterEvent("baka_defeat", \
             akA2.GetDisplayName() + " is unconscious — drugged by " + akA1.GetDisplayName() + ". " + \
@@ -7168,6 +7160,14 @@ EndFunction
 Int Function _StartSexScene(Actor[] akActors, Actor akVictim, Actor akAggressor, String position, String intensity, Int aiBackend = -1)
     Int backend = _ResolveSexBackend(aiBackend)
     Int tid = -1
+    ; S349 (DeD Downed D-A53): an aggressive scene on a downed / too-hurt-to-fight enemy (never the player or a
+    ; companion, spec 19.1) restarts their down when it ends; DeDDowned.dll watches the scene.
+    If intensity == "aggressive" && akVictim && akVictim != PlayerRef && !akVictim.IsPlayerTeammate() && _DDActive()
+        If DeDService.GetDownedPhase(akVictim) > 0
+            akVictim.SendModEvent("DeD_DownedAssault", "baka", 0.0)
+            Debug.Trace("[SNBaka][DOWNED] assault marked on " + akVictim.GetDisplayName() + " (D-A53) -- S349")
+        EndIf
+    EndIf
     ; FINAL combat gate, at the single choke point every scene start funnels through: if the PLAYER is
     ; among the actors and any combat is still live on or near them, REFUSE to start -- OStim CTDs
     ; (confirmed repeatedly) when its thread spins up while the player is in combat, and every earlier
@@ -7201,6 +7201,25 @@ Int Function _StartSexScene(Actor[] akActors, Actor akVictim, Actor akAggressor,
             EndIf
             ci += 1
         EndWhile
+    EndIf
+    ; [S333] SCENE HAND-OFF (user ruling: default on, MCM / panel "Hand Off Scene Setup"): SkyrimNet-SexLab
+    ; Integration or OStimNet pick the animation (and may let the player pick it) and run the scene; DeD keeps
+    ; its own start as the fallback (setting off, plugin absent, creature scene, plugin refused).
+    Int ho = _HandOffScene(akActors, akVictim, akAggressor, position, intensity, backend, aiBackend)
+    If ho == HANDOFF_SL_PENDING
+        If akVictim
+            _ApplySexTears(akVictim)
+            StorageUtil.SetIntValue(akVictim, "SNBaka.SceneTid", -1)      ; no stale id from an earlier scene
+            StorageUtil.SetIntValue(akVictim, "SNBaka.SceneBackend", 1)   ; the thread id arrives with SexLab's AnimationStart
+        EndIf
+        Return HANDOFF_SL_PENDING
+    ElseIf ho >= 0
+        If akVictim
+            _ApplySexTears(akVictim)
+            StorageUtil.SetIntValue(akVictim, "SNBaka.SceneTid", ho)
+            StorageUtil.SetIntValue(akVictim, "SNBaka.SceneBackend", 2)
+        EndIf
+        Return ho
     EndIf
     If backend == 1
         tid = SkyrimNet_BakaSL.StartScene(akActors, akVictim, akAggressor, position, intensity)
@@ -7274,6 +7293,232 @@ EndFunction
 ; it to end -- OStim in particular crashes (confirmed via CrashLoggerSSE, null actor alignment inside
 ; OStim's AlignMenu) if combat resettles while its own thread is still running. Reads the tid/backend
 ; _StartSexScene stashed on the victim; no-op if none is running.
+; ==================== [S333] SCENE HAND-OFF ====================
+; Returned by _StartSexScene when SkyrimNet-SexLab Integration took the scene: it starts later (its own
+; Yes/No and scene picker may come first), so there is no thread id yet. Callers only test < 0.
+Int Property HANDOFF_SL_PENDING = 100000 AutoReadOnly
+
+; The shared "who runs the player's scenes" switch both plugins read (SkyrimNet_SexLab.esp GLOB 0x808:
+; 0 = SexLab, 1 = OStim; OStimNet refuses player scenes while it is 0). -1 = not installed.
+Int Function _PlayerSceneOwner()
+    If !Game.IsPluginInstalled("SkyrimNet_SexLab.esp")
+        Return -1
+    EndIf
+    GlobalVariable g = Game.GetFormFromFile(0x808, "SkyrimNet_SexLab.esp") as GlobalVariable
+    If !g
+        Return -1
+    EndIf
+    Return g.GetValueInt()
+EndFunction
+
+; -1 = not handed off (DeD starts the scene itself); HANDOFF_SL_PENDING = SkyrimNet-SexLab took it;
+; >= 0 = OStimNet started this thread.
+Int Function _HandOffScene(Actor[] akActors, Actor akVictim, Actor akAggressor, String position, String intensity, Int aiBackend, Int aiPref)
+    If StorageUtil.GetIntValue(None, "SNBaka.SceneHandoff", 1) != 1
+        Return -1
+    EndIf
+    Bool hasPlayer = False
+    Int i = 0
+    While i < akActors.Length
+        If akActors[i] && _CreatureAnimKey(akActors[i]) != ""
+            _Log("[SNBaka] scene hand-off: creature scene - DeD starts it itself -- S333")
+            Return -1
+        EndIf
+        If akActors[i] == PlayerRef
+            hasPlayer = True
+        EndIf
+        i += 1
+    EndWhile
+    Bool hasSLInt = Game.IsPluginInstalled("SkyrimNet_SexLab.esp") && SkyrimNet_BakaSL.Installed()
+    Bool hasOSNet = Game.IsPluginInstalled("TT_OStimNet.esp") && Game.IsPluginInstalled("OStim.esp")
+    Int b = aiBackend
+    ; Scene Framework on Auto: a player scene follows the plugins' shared switch.
+    If hasPlayer && aiPref < 0 && iSexBackend == 0
+        Int owner = _PlayerSceneOwner()
+        If owner == 0 && hasSLInt
+            b = 1
+        ElseIf owner == 1 && hasOSNet
+            b = 2
+        EndIf
+    EndIf
+    Actor agg = akAggressor
+    If !agg
+        agg = akActors[0]
+    EndIf
+    Actor other = None
+    i = 0
+    While i < akActors.Length && !other
+        If akActors[i] && akActors[i] != agg
+            other = akActors[i]
+        EndIf
+        i += 1
+    EndWhile
+    If b == 1 && hasSLInt
+        Return _HandOffSexLab(akActors, akVictim, agg, other, position, intensity)
+    ElseIf b == 2 && hasOSNet
+        Return _HandOffOStimNet(akActors, akVictim, agg, position, intensity)
+    EndIf
+    _Log("[SNBaka] scene hand-off: no plugin for backend " + b + " (SkyrimNet-SexLab=" + hasSLInt + ", OStimNet=" + hasOSNet + ") - DeD starts it itself -- S333")
+    Return -1
+EndFunction
+
+; SkyrimNet-SexLab Integration: its own ModEvent (SkyrimNet_SexLab_Actions.StartScene_Event's payload).
+Int Function _HandOffSexLab(Actor[] akActors, Actor akVictim, Actor akAgg, Actor akOther, String position, String intensity)
+    String tags = ""
+    If position != ""
+        tags = SkyrimNet_SexLab_AnimDb.AnimDb_ResolveTags(position, akActors.Length)
+        If tags == ""
+            _Log("[SNBaka] scene hand-off: SkyrimNet-SexLab has no animation for '" + position + "' with " + akActors.Length + " actors - DeD starts it itself -- S333")
+            Return -1
+        EndIf
+    EndIf
+    String style = "normally"
+    If intensity == "aggressive"
+        style = "forcefully"
+    ElseIf intensity == "loving"
+        style = "gently"
+    EndIf
+    String intent = "sexual activities"
+    If akVictim
+        intent = "sexual assault"
+    EndIf
+    Actor third = None
+    If akActors.Length > 2
+        Int i = 0
+        While i < akActors.Length && !third
+            If akActors[i] && akActors[i] != akAgg && akActors[i] != akOther
+                third = akActors[i]
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
+    ; speaker = the one acting; position 1 = the speaker gives (its "fucking" direction); a victim speaker takes 0.
+    Int speakerPos = 1
+    If akVictim && akVictim == akAgg
+        speakerPos = 0
+    EndIf
+    Int h = ModEvent.Create("SkyrimNet_SexLab_Action_Start")
+    If !h
+        Return -1
+    EndIf
+    ModEvent.PushString(h, intent)
+    ModEvent.PushForm(h, akAgg)
+    ModEvent.PushForm(h, akOther)
+    ModEvent.PushForm(h, akVictim)
+    ModEvent.PushString(h, style)
+    ModEvent.PushString(h, tags)
+    ModEvent.PushInt(h, speakerPos)
+    ModEvent.PushString(h, "")
+    ModEvent.PushString(h, "")
+    ModEvent.PushForm(h, third)
+    ModEvent.Send(h)
+    Float now = Utility.GetCurrentRealTime()
+    Int k = 0
+    While k < akActors.Length
+        If akActors[k]
+            StorageUtil.SetFloatValue(akActors[k], "SNBaka.HandoffAt", now)
+        EndIf
+        k += 1
+    EndWhile
+    _Log("[SNBaka] scene hand-off: SkyrimNet-SexLab Integration intent='" + intent + "' style='" + style + "' tags='" + tags + "' speaker=" + akAgg.GetDisplayName() + " victim=" + _NameOr(akVictim) + " -- S333")
+    Return HANDOFF_SL_PENDING
+EndFunction
+
+; OStimNet: its global start (scene search by intent / action, thread claimed so OStimNet runs it).
+Int Function _HandOffOStimNet(Actor[] akActors, Actor akVictim, Actor akAgg, String position, String intensity)
+    String intent = "lustful"
+    If akVictim
+        intent = "dom"
+        If intensity == "aggressive"
+            intent = "aggressive"
+        EndIf
+    ElseIf intensity == "loving"
+        intent = "romantic"
+    ElseIf intensity == "aggressive"
+        intent = "dom"
+    EndIf
+    String act = ""
+    If position == "vaginal"
+        act = "vaginalsex"
+    ElseIf position == "anal"
+        act = "analsex"
+    ElseIf position == "oral"
+        act = "blowjob"
+        If akAgg.GetActorBase().GetSex() == 1
+            act = "cunnilingus"
+        EndIf
+    EndIf
+    ; S347: with a victim, every other actor is dominant (the encounter's group scenes); without, the aggressor alone
+    Actor[] dom
+    Actor[] subs
+    If akVictim
+        dom = PapyrusUtil.ActorArray(akActors.Length - 1)
+        subs = PapyrusUtil.ActorArray(1)
+        subs[0] = akVictim
+        Int dn = 0
+        Int di = 0
+        While di < akActors.Length && dn < dom.Length
+            If akActors[di] && akActors[di] != akVictim
+                dom[dn] = akActors[di]
+                dn += 1
+            EndIf
+            di += 1
+        EndWhile
+    Else
+        dom = PapyrusUtil.ActorArray(1)
+        dom[0] = akAgg
+        subs = PapyrusUtil.ActorArray(akActors.Length - 1)
+        Int n = 0
+        Int i = 0
+        While i < akActors.Length && n < subs.Length
+            If akActors[i] && akActors[i] != akAgg
+                subs[n] = akActors[i]
+                n += 1
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
+    Int tid = TTON_OStimIntegration.StartOstimSex(dom, subs, act, "", intent)
+    _Log("[SNBaka] scene hand-off: OStimNet intent='" + intent + "' action='" + act + "' -> tid=" + tid + " -- S333")
+    If tid < 0
+        _Log("[SNBaka] scene hand-off: OStimNet could not start it - DeD starts it itself -- S333")
+        Return -1
+    EndIf
+    Return tid
+EndFunction
+
+String Function _NameOr(Actor akActor)
+    If akActor
+        Return akActor.GetDisplayName()
+    EndIf
+    Return "none"
+EndFunction
+
+; SexLab AnimationStart: a scene SkyrimNet-SexLab started for a DeD hand-off gives its thread id to DeD's
+; force-stop record (the victim's SNBaka.SceneTid), as DeD's own start does.
+Function _HandOffClaimThread(Int aiThreadID)
+    Actor[] pos = SkyrimNet_BakaSL.SLThreadPositions(aiThreadID)
+    If !pos
+        Return
+    EndIf
+    Float now = Utility.GetCurrentRealTime()
+    Int i = 0
+    While i < pos.Length
+        Actor a = pos[i]
+        If a
+            Float at = StorageUtil.GetFloatValue(a, "SNBaka.HandoffAt", -1.0)
+            If at >= 0.0
+                StorageUtil.UnsetFloatValue(a, "SNBaka.HandoffAt")
+                If now - at < 600.0 && StorageUtil.GetIntValue(a, "SNBaka.SceneBackend", 0) == 1
+                    StorageUtil.SetIntValue(a, "SNBaka.SceneTid", aiThreadID)
+                    _Log("[SNBaka] scene hand-off: SkyrimNet-SexLab started thread " + aiThreadID + " for " + a.GetDisplayName() + " -- S333")
+                EndIf
+            EndIf
+        EndIf
+        i += 1
+    EndWhile
+EndFunction
+
 Function _StopSexScene(Actor akVictim)
     If !akVictim
         Return
@@ -7378,9 +7623,8 @@ Function _DoEscalation(Actor akA1, Actor akA2)
         Return
     EndIf
     _Log("[SNBaka] _DoEscalation: A1=" + akA1.GetDisplayName() + " A2=" + akA2.GetDisplayName())
-    ; REV-72 SlaveTats module: user-chosen degradation set rides the escalation handoff
-    ; (module checks its own Enabled/ApplyOnEscalation/set-config gates; default OFF).
-    SNBaka_SlaveTatsModule.OnEscalation(akA2)
+    ; Tattoo T1 (D-T1): the automatic escalation tattoo is retired - tattoos come only from chosen lanes.
+    Debug.Trace("[SNBaka.ST] hook retired (D-T1): no automatic tattoo on escalation")
     ; Lock BOTH — not just the attacker. The victim must be Locked too, or (when the victim is the
     ; player) Downed_SkyrimNet keeps running its hold/recovery/creature-retry THROUGH the sex scene and
     ; fires the down pose into it, breaking the animation.
@@ -7475,7 +7719,7 @@ Function _DoEscalation(Actor akA1, Actor akA2)
     ; is started in _StartSexLabScene when the player finishes; cleanup happens
     ; there too.  No SkyrimNet_SexLab dependency. ─────────────────────────────
     If (a1IsPlayer || a2IsPlayer) && SNBakaUI.IsAvailable()
-        _Log("[SNBaka] _DoEscalation: opening PrismaUI encounter wizard")
+        _Log("[SNBaka] _DoEscalation: opening Magelight encounter wizard")
         ; The Interact menu pauses correctly because it opens from normal gameplay.
         ; Here the player is still under DisablePlayerControls from the choke, which
         ; stops PrismaUI's menu-pause from engaging.  Return control to a clean state
@@ -7532,6 +7776,17 @@ Function _EscalationCleanup(Actor akA1, Actor akA2)
     ; a target instead of whiffing at her for the whole scene. Scene-scoped: released after the loop.
     _ProtectVictimTargeting(akA2)
     Utility.Wait(2.0)   ; grace period: SexLab/OStim need a moment to add the actors to the scene faction
+    ; [S333] a scene handed to SkyrimNet-SexLab starts after its Yes/No and scene picker: wait for it (up to
+    ; 90 s) before the end-watch below, else the pair would be released while the player is still choosing.
+    Int hw = 0
+    While hw < 90 && !IsInSexAnimation(akA2) && StorageUtil.GetFloatValue(akA2, "SNBaka.HandoffAt", -1.0) >= 0.0
+        Utility.Wait(1.0)
+        hw += 1
+    EndWhile
+    If hw > 0
+        _Log("[SNBaka] _EscalationCleanup: waited " + hw + "s for the handed-off scene to start (in scene=" + IsInSexAnimation(akA2) + ") -- S333")
+    EndIf
+    StorageUtil.UnsetFloatValue(akA2, "SNBaka.HandoffAt")
     Int waited = 0
     Bool sceneCut = False
     ; Force-stop the scene only when a REAL fight reaches the aggressor -- OStim crashes (confirmed
@@ -7557,9 +7812,7 @@ Function _EscalationCleanup(Actor akA1, Actor akA2)
         ; Scene over: hold the ghost a few MERCY seconds more before dropping it (no spawn-kills the
         ; frame the protection ends), THEN release the scene-scoped pacify.
         _PostEscapeGrace(akA2)
-        If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
-            Acheron.ReleaseActor(akA2)   ; end the scene-scoped pacify; the captive re-down re-pacifies via DefeatActor
-        EndIf
+        _ScenePacifyOff(akA2)   ; S343: end the scene-scoped pacify (DeD Downed, or Acheron's ReleaseActor in 0.5.x)
     EndIf
     If waited >= 900
         _Log("[SNBaka] _EscalationCleanup: WARNING — hit the 15min hard cap still IsInSexAnimation=true; proceeding anyway (stuck scene faction?)")
@@ -7755,11 +8008,34 @@ Function _StartSexLabScene(String role, String intensity, String flavor, String 
 
     ; Present-continuous: the scene is UNFOLDING NOW with these parameters (not a
     ; past/finished statement), so the LLM roleplays it as it happens.
+    ; [S333] user ruling: the scene-start line stays (also when a plugin runs the scene) and carries every
+    ; choice made in the encounter wizard: who takes whom, how, the circumstance and the act, plus how the
+    ; moment came about. SkyrimNet blends it with the plugin's own lines. LLM-facing; DRAFT at the user's pen.
+    ; Runtime strings ASCII (the old drugged line carried an em dash).
+    String setup = ""
+    If consensual
+        If intensity == "loving"
+            setup = aggName + " and " + vicName + " give in to each other, slow and tender."
+        ElseIf intensity == "rough" || intensity == "brutal"
+            setup = aggName + " and " + vicName + " give in to each other, hungry and rough."
+        Else
+            setup = aggName + " and " + vicName + " give in to each other."
+        EndIf
+    ElseIf flavor == "drugged" || wasDrugged
+        setup = vicName + " lies drugged and senseless, at " + aggName + "'s mercy."
+    ElseIf vic == PlayerRef
+        setup = aggName + " has overpowered " + vicName + " and pinned them down."
+    Else
+        setup = aggName + " has " + vicName + " pinned down and overpowered."
+    EndIf
+
     String verb = " is now having sex with "
     If consensual
         If intensity == "loving"
             verb = " is now tenderly making love to "
-        ElseIf intensity == "rough" || intensity == "brutal"
+        ElseIf intensity == "brutal"
+            verb = " is now having wild, brutal sex with "
+        ElseIf intensity == "rough"
             verb = " is now having rough, eager sex with "
         EndIf
     Else
@@ -7768,7 +8044,7 @@ Function _StartSexLabScene(String role, String intensity, String flavor, String 
         ElseIf intensity == "rough"
             verb = " is now roughly forcing themselves on "
         ElseIf intensity == "loving"
-            verb = " is now taking "
+            verb = " is now taking, with a cruel tenderness, "
         Else
             verb = " is now forcing themselves on "
         EndIf
@@ -7776,22 +8052,34 @@ Function _StartSexLabScene(String role, String intensity, String flavor, String 
 
     String typePhrase = ""
     If actType == "anal"
-        typePhrase = ", anal"
+        typePhrase = ", taking them anally"
     ElseIf actType == "painal"
-        typePhrase = ", rough painful anal"
+        typePhrase = ", taking them anally, roughly and painfully"
     ElseIf actType == "oral"
-        typePhrase = ", oral"
+        If consensual
+            typePhrase = ", " + vicName + " pleasuring them with their mouth"
+        Else
+            typePhrase = ", forcing " + vicName + " to use their mouth"
+        EndIf
     ElseIf actType == "vaginal"
-        typePhrase = ", vaginal"
+        typePhrase = ", taking them vaginally"
     EndIf
 
     String flavorPhrase = ""
     If flavor == "drugged" || wasDrugged
-        flavorPhrase = ". " + vicName + " is drugged and unaware — roleplay them as limp and unresponsive"
+        flavorPhrase = ". " + vicName + " is drugged and unaware - roleplay them as limp and unresponsive"
     ElseIf flavor == "blackmail"
-        flavorPhrase = ", coercing them through blackmail"
+        If consensual
+            flavorPhrase = ", a bargain struck under blackmail hanging over them"
+        Else
+            flavorPhrase = ", coercing them through blackmail"
+        EndIf
     ElseIf flavor == "power"
-        flavorPhrase = ", abusing a position of power over them"
+        If consensual
+            flavorPhrase = ", the difference in their power over each other part of the thrill"
+        Else
+            flavorPhrase = ", abusing a position of power over them"
+        EndIf
     ElseIf flavor == "degrading"
         flavorPhrase = ", degrading and humiliating them"
     ElseIf flavor == "gagged"
@@ -7800,7 +8088,8 @@ Function _StartSexLabScene(String role, String intensity, String flavor, String 
         flavorPhrase = ", threatening them throughout"
     EndIf
 
-    String narrative = aggName + verb + vicName + typePhrase + flavorPhrase + "."
+    String narrative = setup + " " + aggName + verb + vicName + typePhrase + flavorPhrase + "."
+    _Log("[SNBaka] scene narration (role=" + role + " intensity=" + intensity + " flavor=" + flavor + " act=" + actType + "): " + narrative + " -- S333")
     SkyrimNetApi.RegisterEvent("baka_sexlab_trigger", narrative, agg, akVictim)
     _Notify(narrative)
 
@@ -9366,6 +9655,48 @@ Function Interact_NoTargetPanel(Actor akCaster)
     _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
 EndFunction
 
+; Magelight Phase 2 leg 3: the power press, routed by Baka, for the combined DeD panel's claim path
+; (the Baka DLL calls this when the baka.json "claim" rule hands it the DeD power press). It mirrors
+; SkyrimNet_BakaInteractEffect.OnEffectStart (that power retires in leg 6): same checks, same order: caster in a scene -> spank menu; target in a scene or locked by someone else -> refuse;
+; supported creature -> creature escalation; no target -> no-target panel; else Interact_ShowMenu
+; (which routes downed / grapple / interact itself).
+Function PowerPressed(Actor akCaster, Actor akTarget)
+    If !akCaster
+        Debug.Trace("[SNBaka][PANEL] PowerPressed: no caster - ignored")
+        Return
+    EndIf
+    String tName = "none"
+    If akTarget
+        tName = akTarget.GetDisplayName()
+    EndIf
+    Debug.Trace("[SNBaka][PANEL] PowerPressed: caster=" + akCaster.GetDisplayName() + " target=" + tName)
+    If IsInSexAnimation(akCaster)
+        Debug.Trace("[SNBaka][PANEL] PowerPressed -> spank menu (caster in a scene)")
+        SexSpank_ShowMenu(akCaster)
+        Return
+    EndIf
+    ; HARD GUARD: never touch an actor already mid-interaction (any mod's scene, or our lock held by
+    ; someone else); the ground-window owner keeps access to their own downed victim.
+    If akTarget && IsInSexAnimation(akTarget)
+        Debug.Trace("[SNBaka][PANEL] PowerPressed -> refused, target is mid-scene")
+        Return
+    EndIf
+    If akTarget && IsActorLocked(akTarget) && !_IsGroundWindowOwner(akCaster, akTarget)
+        Debug.Trace("[SNBaka][PANEL] PowerPressed -> refused, target is locked by someone else")
+        Return
+    EndIf
+    If akTarget && TryCreatureEscalateFromPower(akTarget)
+        Debug.Trace("[SNBaka][PANEL] PowerPressed -> creature escalation")
+        Return
+    EndIf
+    If !akTarget
+        Debug.Trace("[SNBaka][PANEL] PowerPressed -> no-target panel")
+        Interact_NoTargetPanel(akCaster)
+        Return
+    EndIf
+    Interact_ShowMenu(akTarget, akCaster)
+EndFunction
+
 Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
     If !akTarget || !akCaster
         _Log("[SNBaka] interact menu: blocked — null target/caster")
@@ -9437,14 +9768,14 @@ Function Interact_ShowMenu(Actor akTarget, Actor akCaster)
         ; Actors are passed into the DLL and handed straight back on dispatch,
         ; so _pending* is only a fallback — the menu being open (unpaused) can no
         ; longer leave us with the wrong actors.
-        _Log("[SNBaka] interact menu: opening PrismaUI interact menu (" + akCaster.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ")")
+        _Log("[SNBaka] interact menu: opening Magelight interact menu (" + akCaster.GetDisplayName() + " -> " + akTarget.GetDisplayName() + ")")
         SNBakaUI.ShowInteractMenu(akCaster, akTarget)
         _PushModeStates()   ; REV-147 Feature B: initial button state at panel open
         Return  ; result arrives via _DispatchInteractActionWithActors
     EndIf
 
     ; ── Vanilla fallback (synchronous) ───────────────────────────────────────
-    _Log("[SNBaka] interact menu: PrismaUI unavailable — falling back to vanilla Message menus")
+    _Log("[SNBaka] interact menu: Magelight UI unavailable — falling back to vanilla Message menus")
     ; Resolve menus fresh each call — VMAD properties may be zombie refs after ESL compaction.
     Message _mmMain    = Game.GetFormFromFile(0x00080A, "SkyrimNet_BakaIntegration.esp") as Message
     Message _mmAff     = Game.GetFormFromFile(0x00080B, "SkyrimNet_BakaIntegration.esp") as Message
@@ -9772,6 +10103,9 @@ Function _ForceRecover(Actor akActor, Bool abFullRescue = True)
     StorageUtil.SetIntValue(akActor,    "SNBaka.Locked",        0)
     StorageUtil.SetIntValue(akActor,    "SNBaka.StopRequested", 0)
     ; Being helped up IS the untie — a tied prisoner's one recovery path besides the tie lapsing.
+    If StorageUtil.GetIntValue(akActor, "SNBaka.Tied", 0) == 1 && _DDActive()   ; S349: the DeDService restraint too
+        DeDService.SetRestrained(akActor, False, "baka_tie")
+    EndIf
     StorageUtil.SetIntValue(akActor,    "SNBaka.Tied",          0)
     StorageUtil.SetFloatValue(akActor,  "SNBaka.TiedUntilGT",   0.0)
     ; This used to be left set — only _OnVictimWon (a genuine struggle-escape) ever cleared it, so
@@ -9840,12 +10174,7 @@ Function _ForceRecover(Actor akActor, Bool abFullRescue = True)
         ; else in either mod ever cleared it. Confirmed symptom pair: can't attack + sluggish camera
         ; after recovery. Idempotent when already clean.
         Game.SetPlayerAIDriven(False)
-        ; Lingering Acheron PACIFY on the player (applied by earlier builds, save-persistent, native
-        ; handling blocks attack/sprint) — strip it at every recovery. No-op on a clean player; the
-        ; !IsDefeated guard keeps an active defeat's own pacify untouched.
-        If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 && !Acheron.IsDefeated(PlayerRef)
-            Acheron.ReleaseActor(PlayerRef)
-        EndIf
+        ; S354 (A5b): the old Acheron pacify strip is gone with the bridge (DeD_MCM releases Acheron's holds).
     EndIf
     akActor.EvaluatePackage()
     _Log("[SNBaka] _ForceRecover: stood up " + akActor.GetDisplayName() + " (player=" + isPlayer + ")")
@@ -9861,6 +10190,16 @@ EndFunction
 ; currently holds DEFEATED: that state is legitimate and owned by the down pipeline -- HelpUp or
 ; the get-up key is the correct way out of it, not this. Returns how many actors had a stuck state.
 Int Function PanicReset()
+    If _DDActive()   ; S343: DeD Downed's downs, Recovering and scene pacifies end too
+        Actor[] ddAll = DeDService.GetPacifiedActors()
+        Int ddI = 0
+        While ddI < ddAll.Length
+            DeDService.ReleaseActor(ddAll[ddI])
+            ddI += 1
+        EndWhile
+        StorageUtil.ClearIntValuePrefix("SNBaka.DDScenePacify")
+        Debug.Trace("[SNBaka][DOWNED] emergency reset: " + ddAll.Length + " DeD Downed state(s) released -- S343")
+    EndIf
     _Log("[SNBaka] PanicReset: EMERGENCY sweep requested from MCM")
     ; Pop any stuck ground-window loop on its next tick, and drop any half-open transient mode.
     _bReleaseRequested       = True
@@ -9895,16 +10234,13 @@ Int Function PanicReset()
             EndIf
         EndIf
     EndIf
-    Bool acheronPresent = StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
     Actor[] loaded = PO3_SKSEFunctions.GetActorsByProcessingLevel(0)
     Int cleaned = 0
     Int i = 0
     While i < loaded.Length
         Actor a = loaded[i]
         If a && a != PlayerRef && !a.IsDead()
-            Bool stalePacify = acheronPresent && !Acheron.IsDefeated(a) && Acheron.IsPacified(a)
-            Bool wasStuck = stalePacify \
-                || StorageUtil.GetIntValue(a, "SNBaka.Locked",   0) == 1 \
+            Bool wasStuck = StorageUtil.GetIntValue(a, "SNBaka.Locked",   0) == 1 \
                 || StorageUtil.GetIntValue(a, "SNBaka.Pacified", 0) == 1
             _PacifyActor(a, False)             ; restores original aggression (no-op if never pacified)
             If SNBakaCalm
@@ -9921,15 +10257,11 @@ Int Function PanicReset()
             StorageUtil.SetIntValue(a, "SNBaka.StopRequested", 0)
             ; (SNBaka.OnGround/DownPose/Tied are deliberately left alone -- a genuinely downed actor
             ; is recovered by the released ground window / HelpUp, not blind-flag-wiped from here.)
-            If stalePacify
-                Acheron.ReleaseActor(a)        ; strips the native pacify AND its keyword
-                _Log("[SNBaka] PanicReset: released stale Acheron pacify on " + a.GetDisplayName())
-            EndIf
             ; Pose rescue: an actor can be stuck in the defeat/bleedout ANIMATION with every flag
             ; already clean (the redown-vs-queued-rescue race, see _ClearAcheronHold) -- flag sweeps
             ; alone can't see or fix that, and HelpUp refuses ("target not downed"). Force the graph
             ; back to default for anyone NOT genuinely downed; no-op on actors standing normally.
-            If !_IsDownedAny(a) && !(acheronPresent && Acheron.IsDefeated(a))
+            If !_IsDownedAny(a)
                 Debug.SendAnimationEvent(a, "BleedoutStop")
                 Debug.SendAnimationEvent(a, "IdleForceDefaultState")
             EndIf
@@ -9953,12 +10285,9 @@ Int Function PanicReset()
     StorageUtil.SetIntValue(PlayerRef, "SNBaka.StopRequested", 0)
     Game.EnablePlayerControls()
     Game.SetPlayerAIDriven(False)
-    If acheronPresent && !Acheron.IsDefeated(PlayerRef) && Acheron.IsPacified(PlayerRef)
-        Acheron.ReleaseActor(PlayerRef)
-    EndIf
     ; Same pose rescue the NPC sweep gets -- the redown-vs-rescue race can leave the PLAYER visually
     ; collapsed with clean flags too. No-op when standing normally.
-    If !_IsDownedAny(PlayerRef) && !(acheronPresent && Acheron.IsDefeated(PlayerRef))
+    If !_IsDownedAny(PlayerRef)
         Debug.SendAnimationEvent(PlayerRef, "BleedoutStop")
         Debug.SendAnimationEvent(PlayerRef, "IdleForceDefaultState")
     EndIf
@@ -10006,16 +10335,21 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
             ; path could unlock. The initiator requirement above is unchanged (a standing NPC
             ; or the player — the designed lanes), and this circumvention is HELUP ONLY: every
             ; other action's gates stand exactly as they were.
-            If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 && Acheron.IsDefeated(akTarget)
-                helpUpPierce = True
-                _Log("[SNBaka] HelpUp_Execute: target not downed locally but Acheron-defeated — piercing the downed gate (fix 1 circumvention)")
-            Else
-                _Log("[SNBaka] HelpUp_Execute: target not downed (waited " + settle + "s) — nothing to do")
-                Return
-            EndIf
+            _Log("[SNBaka] HelpUp_Execute: target not downed (waited " + settle + "s) — nothing to do")   ; S354: no Acheron pierce
+            Return
         Else
             _Log("[SNBaka] HelpUp_Execute: down state landed after " + settle + "s — proceeding")
         EndIf
+    EndIf
+    If akInitiator == PlayerRef && PlayerRef.IsInCombat() && _DDActive()   ; S344 (D-A46 / D-A50): healing in a fight
+        Int healUsed = DeDService.UseHelpUpHealing(PlayerRef)
+        If healUsed == 0
+            Debug.Notification("You need a health potion to help someone up in a fight, or heal them with a spell.")
+            Debug.Trace("[SNBaka][DOWNED] Help Up refused in combat: no healing -- S344")
+            Return
+        EndIf
+        Debug.Notification("You use " + DeDService.GetHelpUpHealingName() + " to get " + akTarget.GetDisplayName() + " back on their feet.")
+        Debug.Trace("[SNBaka][DOWNED] Help Up in combat: " + DeDService.GetHelpUpHealingName() + " (" + healUsed + ") on " + akTarget.GetDisplayName() + " -- S344")
     EndIf
     _Log("[SNBaka] HelpUp_Execute: " + akInitiator.GetDisplayName() + " helps up " + akTarget.GetDisplayName())
     SkyrimNetApi.RegisterEvent("baka_release", \
@@ -10055,10 +10389,6 @@ Function HelpUp_Execute(Actor akInitiator, Actor akTarget)
     ; deliberate HelpUp. First deliberate Baka->bridge global call: both scripts ship in the
     ; same package, the function is Global + StorageUtil-only (no quest-instance dependency),
     ; and the presence gate keeps it a no-op when the Acheron integration is absent.
-    If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
-        SkyrimNet_AcheronIntegration._AcheronHoldFuneral(akTarget)
-        _Log("[SNBaka] HelpUp_Execute: hold funeral complete — gate pierced (helpUpPierce=" + helpUpPierce + "), hold fully cleared (fix 1)")
-    EndIf
     If spareEnemy
         _SparePacifyEnemy(akTarget)
     EndIf
@@ -10110,15 +10440,8 @@ Function Execute_Execute(Actor akInitiator, Actor akTarget)
         ; gated like _DelegateDownToAcheron (bridge quest 0x800 probe): inert
         ; without Acheron, per the planner's without-Acheron requirement.
         ; _IsDownedAny itself is UNTOUCHED - this is a widening, not a removal.
-        If IsAcheronBridgeInstalled() \
-            && Acheron.IsDefeated(akInitiator) \
-            && StorageUtil.GetIntValue(akInitiator, "SNBaka.OnGround", 0) != 1 \
-            && !akInitiator.IsBleedingOut()
-            _Log("[SNBakaEXEC] Execute_Execute: initiator Acheron-defeated but standing/pacified - ACCEPTED (REV-94 lenient-initiator widening)")
-        Else
-            _Log("[SNBaka] Execute_Execute: blocked — initiator is downed")
-            Return
-        EndIf
+        _Log("[SNBaka] Execute_Execute: blocked — initiator is downed")   ; S354: no Acheron widening
+        Return
     EndIf
     If akTarget == PlayerRef
         ; Never the player — the player's defeat IS the death alternative (choice-5 rule).
@@ -10825,6 +11148,10 @@ Function TieUp_Execute(Actor akBinder, Actor akTarget)
     String tiedPose = "Babo_Captured_A1"
     StorageUtil.SetIntValue(akTarget, "SNBaka.Tied", 1)
     StorageUtil.SetFloatValue(akTarget, "SNBaka.TiedUntilGT", Utility.GetCurrentGameTime() + (fTiedHours / 24.0))
+    If _DDActive()   ; S349 (spec 8): a DeDService restraint; the downed timer is held while tied, the tie ends by its time
+        DeDService.RestrainFor(akTarget, fTiedHours, "baka_tie")
+        Debug.Trace("[SNBaka][DOWNED] tie -> DeDService restraint baka_tie, " + fTiedHours + " game h -- S349")
+    EndIf
     StorageUtil.SetStringValue(akTarget, "SNBaka.DownPose", tiedPose)
     Debug.SendAnimationEvent(akTarget, tiedPose)
     SkyrimNetApi.RegisterEvent("baka_tied", \
@@ -10865,6 +11192,11 @@ Function Untie_Execute(Actor akCutter, Actor akTarget)
     StorageUtil.SetIntValue(akTarget, "SNBaka.Tied", 0)
     StorageUtil.SetFloatValue(akTarget, "SNBaka.TiedUntilGT", 0.0)
     StorageUtil.SetStringValue(akTarget, "SNBaka.DownPose", "")
+    If _DDActive()   ; S349: the restraint ends; a fresh full downed timer (as below)
+        DeDService.SetRestrained(akTarget, False, "baka_tie")
+        DeDService.ResetDowned(akTarget, "untied")
+        Debug.Trace("[SNBaka][DOWNED] untie -> DeDService restraint off, fresh down -- S349")
+    EndIf
     ; Untied is NOT freed — they drop back to a NORMAL down: fresh full timer, normal recovery rules.
     Debug.SendAnimationEvent(akTarget, "BleedoutStart")
     StorageUtil.SetFloatValue(akTarget, "SNBaka.AutoGetUpDeadlineRT", Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(PlayerRef, "SNAcheron.AutoGetUpSeconds", 600.0))
@@ -11186,6 +11518,23 @@ Function CommandTattoo_Execute(Actor akInitiator, Actor akTarget, String asSecti
         _Log("[SNBaka] CommandTattoo REFUSE [child-boundary] -- REV-156")
         Return
     EndIf
+    ; S316 (user ruling): a standing NPC can only be tattooed by the player after agreeing through this
+    ; action. Shape A - an NPC speaker with the PLAYER as the target: the NPC has agreed to take the
+    ; player's tattoo -> the willing menu opens on that NPC (the player picks the designs). Their own
+    ; action firing is the consent, so the dominance gate below does not apply to this shape.
+    If akTarget == PlayerRef && akInitiator != PlayerRef
+        If _IsDownedAny(akInitiator)
+            Debug.Trace("[SNBaka] CommandTattoo REFUSE [downed]: " + akInitiator.GetDisplayName() + " is downed - the forced lane owns downed targets (S316)")
+            Return
+        EndIf
+        If SNBaka_SlaveTatsModule.PickerAvailable()
+            Debug.Trace("[SNBaka] CommandTattoo AGREED (S316): " + akInitiator.GetDisplayName() + " agrees to the player's tattoo - opening the willing menu")
+            SNBaka_SlaveTatsModule.OpenWillingFor(akInitiator, PlayerRef)
+        Else
+            Debug.Trace("[SNBaka] CommandTattoo AGREED but no menu available (S316) - nothing applied")
+        EndIf
+        Return
+    EndIf
     If _IsDownedAny(akTarget)
         _Log("[SNBaka] CommandTattoo REFUSE [downed]: " + akTarget.GetDisplayName() + " is downed - the forced lane owns downed targets -- REV-156")
         Return
@@ -11205,7 +11554,7 @@ Function CommandTattoo_Execute(Actor akInitiator, Actor akTarget, String asSecti
     ; LLM-parameter auto-apply below.
     If akInitiator == PlayerRef && SNBaka_SlaveTatsModule.PickerAvailable()
         _Log("[SNBaka] CommandTattoo PANEL (lane=dialogue, player-initiated): dominance gate passed by " + akTarget.GetDisplayName() + " - opening actor-bound picker (player picks the design) -- REV-178e rider 3")
-        SNBaka_SlaveTatsModule.OpenPickerFor(akTarget, akInitiator)
+        SNBaka_SlaveTatsModule.OpenWillingFor(akTarget, akInitiator)   ; S316: the willing menu (agreement recorded)
         Return
     EndIf
     ; [REV-178e rider 4 / S250] SELECTION ASK on the AUTO-APPLY leg (NPC
@@ -11289,7 +11638,7 @@ Function MarkPlayer_Execute(Actor akInitiator, String asSection, String asName, 
     EndIf
     ; [REV-178e rider 2] curated validation replaces raw ValidatePick: event
     ; sections excluded + body-compat pre-screened (curate-before-pick).
-    String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(PlayerRef, asSection, asName)
+    String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(PlayerRef, asSection, asName, SNBaka_SlaveTatsModule.MethodForLane("ownership"))
     If pick.Length < 2 || pick[0] == "" || pick[1] == ""
         _Log("[SNBaka] MarkPlayer REFUSE [nopacks/noeligible]: no usable non-event body-compatible pack entry -- REV-178e")
         Return
@@ -11323,7 +11672,7 @@ Function _TattooAskDegrade(Actor akTarget, String asLane, String asHintSection, 
     If asLane == "llm_action"
         pick = SNBaka_SlaveTatsModule.CuratedLLMPick(akTarget)
     Else
-        pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, asHintSection, asHintName)
+        pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, asHintSection, asHintName, SNBaka_SlaveTatsModule.MethodForLane(asLane))
     EndIf
     If pick.Length < 2 || pick[0] == "" || pick[1] == ""
         _Log("[SNbaka] tattoo-select degrade REFUSE [nopacks/noeligible] (lane=" + asLane + ") -- REV-178e rider 4")
@@ -11365,7 +11714,7 @@ Bool Function _TattooSelectAsk(Actor akInitiator, Actor akTarget, String asLane,
     If sWear == ""
         sWear = "nothing (this module)"
     EndIf
-    String sPack = SNBaka_SlaveTatsModule.CuratedPackText(akTarget)
+    String sPack = SNBaka_SlaveTatsModule.CuratedPackText(akTarget, 2400, SNBaka_SlaveTatsModule.MethodForLane(asLane))
     If sPack == ""
         _Log("[SNbaka] tattoo-select ask REFUSED [nopacks]: CuratedPackText empty - nothing to show the director -- REV-178e rider 4")
         Return False
@@ -11447,7 +11796,7 @@ Function OnTattooSelectResponse(String response, Int success)
             String sSec = _TrimSP(StringUtil.Substring(response, 0, sep))
             String sName = _TrimSP(StringUtil.Substring(response, sep + 1, StringUtil.GetLength(response) - sep - 1))
             If sSec != "" && sName != ""
-                String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, sSec, sName)
+                String[] pick = SNBaka_SlaveTatsModule.ValidatePickCurated(akTarget, sSec, sName, SNBaka_SlaveTatsModule.MethodForLane(sLane))
                 If pick.Length >= 2 && pick[0] != "" && pick[1] != ""
                     _Log("[SNbaka] tattoo-select APPLY (lane=" + sLane + ", who picked: director '" + sName + "' (" + sSec + ") -> resolved '" + pick[1] + "' (" + pick[0] + "), color=black 0x000000) on " + akTarget.GetDisplayName() + " -- REV-178e rider 4")
                     SNBaka_SlaveTatsModule.ApplyTattoo(akTarget, pick[0], pick[1], 0x000000, True, sLane)
@@ -11709,6 +12058,13 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
     ElseIf choice == 901
         _MolagBalToggle()
         Return
+    ElseIf choice == 12   ; S344 (DeD Downed A4 leg 3, D-A47): Talk with the downed actor
+        If akCaster == PlayerRef && _DDActive()
+            DeDService.AllowDownedTalk(akVictim)
+            akVictim.Activate(PlayerRef)
+            Debug.Trace("[SNBaka][DOWNED] Talk: dialogue with the downed " + akVictim.GetDisplayName() + " -- S344")
+        EndIf
+        Return
     EndIf
     ; MERGED MENU: the downed-victim panel now also shows every regular paired-animation tab
     ; alongside the Down-only actions (see PrismaUI's snbaka_open_downed) -- "from any downed actor
@@ -11769,8 +12125,21 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
         ; Visual cue: the executor swings their equipped weapon at the body before it dies —
         ; attackStart drives a real attack animation for player and NPC alike; if the graph
         ; rejects it in some stance, the kill still lands, just without the flourish.
-        Debug.SendAnimationEvent(akCaster, "attackStart")
-        Utility.Wait(0.6)
+        ; S344 (DeD Downed A4 leg 3, spec 10): the vanilla kill move on a target on the ground that fits the weapon
+        Bool kmPlayed = False
+        If akCaster == PlayerRef && _DDActive()
+            Idle km = DeDService.DownedKillMove(akCaster)
+            If km
+                kmPlayed = akCaster.PlayIdleWithTarget(km, akVictim)
+                Debug.Trace("[SNBaka][DOWNED] Execute: kill move " + km + " played=" + kmPlayed + " on " + akVictim.GetDisplayName() + " -- S344")
+            EndIf
+        EndIf
+        If kmPlayed
+            Utility.Wait(3.0)
+        Else
+            Debug.SendAnimationEvent(akCaster, "attackStart")
+            Utility.Wait(0.6)
+        EndIf
         ; REV-100 fix (b): KILL-TIME RECHECK — the 0.6s flourish wait above is a real race
         ; window (the REV-99 incident chain: fire -> flourish -> state changed underneath).
         ; Rev-20 recheck precedent, extended: re-validate BOTH actor refs and every state
@@ -11785,7 +12154,7 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
             _Log("[SNBakaEXEC] Execute refused: kill-time recheck — target is the player")
             Return
         EndIf
-        If akVictim.IsDead()
+        If akVictim.IsDead() && !kmPlayed   ; S344: a kill move kills by itself
             _Log("[SNBakaEXEC] Execute refused: kill-time recheck — target already dead")
             Return
         EndIf
@@ -11794,7 +12163,7 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
             _ExecuteSceneRefuse(akCaster, akVictim)
             Return
         EndIf
-        If !_IsDownedAny(akVictim)
+        If !_IsDownedAny(akVictim) && !kmPlayed   ; S344: the kill move's death ends the down
             _Log("[SNBakaEXEC] Execute refused: kill-time recheck — target no longer downed")
             _ExecuteGateRefuse(akCaster, akVictim, "the moment passed - the victim is no longer helpless")
             Return
@@ -11843,6 +12212,11 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
     ElseIf choice == 9
         ; REV-74 rider 1 — "Remove Tattoos" on the downed menu, same service-delegation contract.
         SNBaka_SlaveTatsModule.RemoveAllFromActor(akVictim, "downedmenu")
+        Return
+    ElseIf choice == 13
+        ; S316 makeup lanes: "Force Makeup" (Down tab; the tile shows only with SlaveTats installed).
+        Debug.Trace("[SNBaka] _DispatchDownedAction: Force Makeup on " + akVictim.GetDisplayName())
+        SNBaka_SlaveTatsModule.ForcedMakeup(akCaster, akVictim)
         Return
     ElseIf choice == 10
         ; [REV-144 Strip] Down-tab "Strip" tile (baka-module.md REV-134e + REV-136 rulings
@@ -11948,6 +12322,13 @@ Function _StripRestore_Execute(Actor akCaster, Actor akVictim)
         _Notify(akVictim.GetDisplayName() + " is under a SeverActions outfit lock - their system owns re-dressing.")
         Return
     EndIf
+    ; [REV-187 / Spec ddng-force-strip-guard v1.2, Component 2.5 call site (a)] DDNG's armor-update
+    ; hook re-strips redressed actors ~1s after each equip when its per-actor "stripped" bookkeeping
+    ; went stale (ISSUE-6: survives save/load into the cosave). Clear it BEFORE the re-equip equips
+    ; fire, so DD's hook is not primed to strip the restored items right back off. No-op + zero log
+    ; when DDNG is absent, when the actor is clean, or when any device is worn (constraint of record).
+    SkyrimNet_BakaSL.ClearStaleDDStrip(akVictim)
+    SkyrimNet_BakaSL.NoteDDRedress(akVictim)
     Form[] akRestore = StorageUtil.FormListToArray(akVictim, "SNBaka.StripQueue")
     Int i = 0
     Int nRestored = 0
@@ -12710,14 +13091,12 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         ; nobody targets them. Released right after the wait loop. Known trade-off, per explicit
         ; direction: intercession-by-hit won't break a creature scene anymore (a pacified creature
         ; never re-targets its attacker, so the abort rule can't see the fight).
-        If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
-            Acheron.PacifyActor(akCreature)
-            If comp1
-                Acheron.PacifyActor(comp1)
-            EndIf
-            If comp2
-                Acheron.PacifyActor(comp2)
-            EndIf
+        _ScenePacifyOn(akCreature)   ; S343: through the downed-state layer
+        If comp1
+            _ScenePacifyOn(comp1)
+        EndIf
+        If comp2
+            _ScenePacifyOn(comp2)
         EndIf
         _Log("[SNBaka] CreatureEscalate(" + akVictim.GetDisplayName() + "): STARTING creature sex scene (backend=" + iCreatureBackend + ", group size=" + sexActors.Length + ", victimStillDowned=" + _IsDownedAny(akVictim) + ")")
         ; Narrative parity for NPC victims (confirmed feedback: "for other npcs, llm do not get as many
@@ -12793,14 +13172,12 @@ Function _DoCreatureEscalation(Actor akCreature, Actor akVictim)
         ; End the scene-scoped two-way pacify on the scene actors (mirrors the PacifyActor calls at
         ; scene start). The aggressor's ONE-WAY pacify (_PacifyActor: aggression 0) stays until the
         ; victim's recovery un-pacifies the tracked threat, same as always.
-        If StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1
-            Acheron.ReleaseActor(akCreature)
-            If comp1
-                Acheron.ReleaseActor(comp1)
-            EndIf
-            If comp2
-                Acheron.ReleaseActor(comp2)
-            EndIf
+        _ScenePacifyOff(akCreature)   ; S343: through the downed-state layer
+        If comp1
+            _ScenePacifyOff(comp1)
+        EndIf
+        If comp2
+            _ScenePacifyOff(comp2)
         EndIf
         ; Scene over: hold the ghost a few MERCY seconds more before dropping it (no spawn-kills the
         ; frame the protection ends), THEN release the scene-scoped pacify. The downed state that
@@ -13632,12 +14009,21 @@ Function _RegisterModEvents()
     RegisterForModEvent("ocum_applied_cum",           "OnOCumApplied")
     RegisterForModEvent("ocum_applied_cum_npc_scene", "OnOCumAppliedNPCScene")
     RegisterForModEvent("HookStageEnd",               "OnSLStageEnd")
+    ; [REV-187 / Component 4] the DeDService.dll guard sink's strip-cycle callback
+    RegisterForModEvent("dd_guard_strip",             "OnDDGuardStrip")
     ; REV-133c: HookAnimationEnd arm RETIRED (aftermath rider 2.5b).
     ; REV-149: HookAnimationStart + HookAnimationEnd RE-ARMED for the FHU v2
     ; entry-capture bracket (capture at AnimationStart, stash clear at
     ; AnimationEnd -- user-ruled mid-REV-149; distinct purpose from the retired
     ; aftermath arm, whose handler name is NOT reused).
     RegisterForModEvent("HookAnimationStart",         "OnSLAnimationStart")
+    ; S347 (DeD Downed A4 leg 4b, spec 19.2): the encounter coordinator's turns
+    RegisterForModEvent("DeD_DownedVictorJoin",       "OnDeDVictorJoin")
+    RegisterForModEvent("DeD_DownedVictorTurn",       "OnDeDVictorTurn")
+    ; S349 (DeD Downed A4 leg 4d, spec 8): a tie that ends in DeDService (its time, Free from restraints) unties here
+    RegisterForModEvent("DeD_RestraintChanged",       "OnDeDRestraintChanged")
+    ; S351 (DeD Downed spec 20): Baka's outcomes chosen by a victor (strip, tattoo, makeup, execute)
+    RegisterForModEvent("DeD_DownedVictorAct",        "OnDeDVictorAct")
     RegisterForModEvent("HookAnimationEnd",           "OnSLAnimationEnd")
     RegisterForModEvent("sr.inflater.start",          "OnFHUStartSignal")
     ; REV-117 cum-v2: the P+ push-time location signal (SexLabApplyCumFX,
@@ -13696,17 +14082,7 @@ Function _ArmModules()
     ; (objectFormat-2 decode error; enumeration receipts in PROJECT_STATE §104); the old
     ; 0x800 cast here was a wrong-form cast — effectively a no-op. Retargeted to 0x801,
     ; EnsureAlive() is functional (the bridge's documented idempotent no-op when ticking).
-    If !IsAcheronBridgeInstalled()
-        _Log("[SNBaka] module-arm: Acheron bridge NOT installed (esp absent from load order — Option-B clause: keeps own Form/esp until the scheduled esp-unification phase)")
-    Else
-        SkyrimNet_AcheronIntegration bridge = Game.GetFormFromFile(0x801, "SkyrimNet_AcheronIntegration.esp") as SkyrimNet_AcheronIntegration
-        If bridge
-            _Log("[SNBaka] module-arm: Acheron bridge installed + manager instance live (host 0x801) — nudging EnsureAlive()")
-            bridge.EnsureAlive()
-        Else
-            _Log("[SNBaka] module-arm: Acheron bridge INSTALLED but manager instance ABSENT at host 0x801 (unexpected — esp attaches the manager there since the REV-62 fold; report if seen) — EnsureAlive() nudge skipped (no-op sentinel)")
-        EndIf
-    EndIf
+    _Log("[SNBaka] module-arm: Acheron bridge retired (S353); DeD Downed owns downs when installed -- S354")
     _Log("[SNBaka] module-arm: GS Poses presence=" + _GSPresent())
     SNBaka_SlaveTatsModule.Arm()
     ; REV-74 rider 1 — motherboard service registry (first service: tattoo.picker). Hosts
@@ -14206,12 +14582,20 @@ Function ApplySpankMark(Actor akTarget)
         StorageUtil.SetIntValue(akTarget, "SkyrimNetSDB.AssTatStage", newStage)
     EndIf
     StorageUtil.FormListAdd(Self, "SkyrimNetSDB.SpankedActors", akTarget, True)
-    ; REV-72 SlaveTats module: user-chosen degradation set rides alongside the heat marks
-    ; (extend-not-duplicate; module checks its own Enabled/ApplyOnSpank/set-config gates).
-    SNBaka_SlaveTatsModule.OnSpankHeat(akTarget)
+    ; Tattoo T1 (D-T2): spank marks are Baka's own (the heat marks above); the tattoo module's
+    ; spank slot set is retired.
+    Debug.Trace("[SNBaka.ST] hook retired (D-T2): spank marks are Baka's own, no tattoo-module spank set")
 EndFunction
 
 Function ApplyBreastMark(Actor akTarget)
+    ; [REV-184 D5 -- BREAST PAIRING AUDIT/ENFORCEMENT VERDICT] The location
+    ; pairing is ALREADY enforced by construction: breast spanks draw
+    ; "SkyrimNet Spank"/"spank_breasts" (OUR shipped set) right here, NEVER
+    ; the user's SNBaka.ST.SpankSet* pick -- so a user set lacking a breast
+    ; variant cannot break the pairing (the pick only rides alongside via
+    ; OnSpankHeat). Our set carries the breast variant (skyrimnet_spank.json:
+    ; spank_breasts entry, verified census S262/receipt this rev). No code
+    ; change needed; this stamp is the enforcement receipt.
     If !akTarget || _SexOf(akTarget) != 1
         Return
     EndIf
@@ -14389,6 +14773,26 @@ Function _GetSexSceneNPCs(Actor akCaster, Actor[] result)
                 _Log("[SNBaka] _GetSexSceneNPCs: found " + slot + " NPC(s) via OStim thread " + threadID)
                 Return
             EndIf
+        EndIf
+    EndIf
+
+    ; [S331] SexLab thread roster first (same idea as the OStim path above): the cell scan below
+    ; missed a partner not listed in the caster's cell (REV-196 dogfood, Ronja). Scan stays as fallback.
+    Actor[] slActors = SkyrimNet_BakaSL.SceneActorsOf(akCaster)
+    If slActors
+        Int sSlot = 0
+        Int s = 0
+        While s < slActors.Length && sSlot < 3
+            Actor sCand = slActors[s]
+            If sCand && sCand != PlayerRef && sCand != akCaster && !sCand.IsDead()
+                result[sSlot] = sCand
+                sSlot += 1
+            EndIf
+            s += 1
+        EndWhile
+        If sSlot > 0
+            _Log("[SNBaka] _GetSexSceneNPCs: found " + sSlot + " NPC(s) via SexLab thread roster -- S331")
+            Return
         EndIf
     EndIf
 
@@ -14842,7 +15246,118 @@ EndEvent
 Event OnSLStageEnd(Int aiThreadID, Bool abHasPlayer)
     ; REV-96 Task 2: body MOVED VERBATIM to SNBaka_CumDetectionModule.HandleSLStageEnd.
     SNBaka_CumDetectionModule.HandleSLStageEnd(Self, aiThreadID, abHasPlayer)
+    ; [REV-187 / Spec ddng-force-strip-guard v1.2, Component 2.5 call site (b)] Scene teardown:
+    ; sweep EVERY scene actor, victim and aggressor alike — DeD's strip session is "self-victim"
+    ; (VictimRef == akActor in SkyrimNet_BakaSL.StripActor), so the strip can stick on either and
+    ; the victim/aggressor distinction is unreliable. Idempotent; silent on clean/absent cases.
+    Actor[] sceneActors = SkyrimNet_BakaSL.SLThreadPositions(aiThreadID)
+    If sceneActors
+        Int i = 0
+        While i < sceneActors.Length
+            SkyrimNet_BakaSL.ClearStaleDDStrip(sceneActors[i])
+            SkyrimNet_BakaSL.NoteDDRedress(sceneActors[i])
+            i += 1
+        EndWhile
+    EndIf
 EndEvent
+
+; [REV-187 / Spec ddng-force-strip-guard v1.2, Component 4 — Papyrus hit handler]
+; The DeDService.dll guard sink attributes a DD-initiated armor UNEQUIP (stack walk) and emits
+; "dd_guard_strip" (sender = the actor, strArg = the armor form's hex FormID). This handler is
+; the spec's bounded, single-retry strip-cycle guard:
+;   1. Within fDDGuardWindow (default 10s, real seconds vs the NoteDDRedress game-time stamp)
+;      of the last redress AND zero DD devices on the actor (GetDevices().Length == 0) ->
+;      re-equip the stripped item ONCE, log it.
+;   2. One retry per redress per form (single-slot budget, cleared at each NoteDDRedress re-arm);
+;      a second DD strip of the same form aborts the guard and defers to DD (no equip/unequip
+;      war against DD's hook).
+;   3. Preconditions fail (window expired / budget spent / devices present): log-only, human
+;      reviews. Never suppress a DD action on a device-wearing actor (the constraint of
+;      record, 2026-11-17).
+Event OnDDGuardStrip(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor akActor = akSender as Actor
+    If !akActor
+        Return
+    EndIf
+    Armor[] devices = zadNativeFunctions.GetDevices(akActor)
+    If devices && devices.Length > 0
+        _Log("[SNBaka] DDGuard: devices present (" + devices.Length + ") on " + akActor.GetDisplayName() + " - deferred to DD, no retry (constraint of record)")
+        Return
+    EndIf
+    Float fRedressAt = StorageUtil.GetFloatValue(akActor, "SNBaka.DDGuardRedressAt", -1.0)
+    Float fWindow = StorageUtil.GetFloatValue(None, "SNBaka.DDGuardWindow", 10.0) / 86400.0 ; real seconds -> game-time days
+    If fRedressAt < 0.0 || (Utility.GetCurrentGameTime() - fRedressAt) > fWindow
+        _Log("[SNBaka] DDGuard: window expired (or never armed) on " + akActor.GetDisplayName() + " - log-only, no retry")
+        Return
+    EndIf
+    Int iForm = _HexToInt(asStrArg)
+    Form akStripped = Game.GetForm(iForm)
+    If !akStripped || akActor.GetItemCount(akStripped) <= 0
+        _Log("[SNBaka] DDGuard: stripped form " + asStrArg + " not resolvable/in inventory on " + akActor.GetDisplayName() + " - log-only")
+        Return
+    EndIf
+    If StorageUtil.GetIntValue(akActor, "SNBaka.DDGuardRetriedForm", 0) == iForm
+        _Log("[SNBaka] DDGuard: second DD strip of " + asStrArg + " on " + akActor.GetDisplayName() + " - budget spent, deferring to DD (no equip war)")
+        Return
+    EndIf
+    akActor.EquipItem(akStripped, True)
+    StorageUtil.SetIntValue(akActor, "SNBaka.DDGuardRetriedForm", iForm)
+    _Log("[SNBaka] DDGuard: DD force-stripped " + akStripped.GetName() + " (" + asStrArg + ") off " + akActor.GetDisplayName() + " within the redress window - re-equipped ONCE (single retry)")
+EndEvent
+
+; [REV-187] hex FormID string -> int (the DLL strArg is "{:08X}"); handles an optional 0x
+; prefix and mixed case. Pure Papyrus, no plugin dependency.
+Int Function _HexToInt(String asHex) Global
+    String s = asHex
+    If StringUtil.GetNthChar(s, 0) == "0" && (StringUtil.GetNthChar(s, 1) == "x" || StringUtil.GetNthChar(s, 1) == "X")
+        s = StringUtil.Substring(s, 2, 0)
+    EndIf
+    Int v = 0
+    Int i = 0
+    Int n = StringUtil.GetLength(s)
+    While i < n
+        v = v * 16 + _HexDigit(StringUtil.GetNthChar(s, i))
+        i += 1
+    EndWhile
+    Return v
+EndFunction
+
+Int Function _HexDigit(String c) Global
+    If c == "0"
+        Return 0
+    ElseIf c == "1"
+        Return 1
+    ElseIf c == "2"
+        Return 2
+    ElseIf c == "3"
+        Return 3
+    ElseIf c == "4"
+        Return 4
+    ElseIf c == "5"
+        Return 5
+    ElseIf c == "6"
+        Return 6
+    ElseIf c == "7"
+        Return 7
+    ElseIf c == "8"
+        Return 8
+    ElseIf c == "9"
+        Return 9
+    ElseIf c == "a" || c == "A"
+        Return 10
+    ElseIf c == "b" || c == "B"
+        Return 11
+    ElseIf c == "c" || c == "C"
+        Return 12
+    ElseIf c == "d" || c == "D"
+        Return 13
+    ElseIf c == "e" || c == "E"
+        Return 14
+    ElseIf c == "f" || c == "F"
+        Return 15
+    EndIf
+    Return 0
+EndFunction
 
 ; ---- REV-149: FHU v2 ENTRY-AROUSAL CAPTURE bracket (user rulings a/b + the
 ; mid-REV-149 hook-choice ruling) ----
@@ -14851,7 +15366,105 @@ EndEvent
 ; as the proven HookStageEnd binding (sslThreadModel SetupThreadEvent:
 ; PushInt(thread_id), PushBool(HasPlayer)). CAPTURE-ONLY: these handlers never
 ; drive FHU inflation (the OStim parity ruling -- capture-only, no fill-driving).
+; S347 (DeD Downed A4 leg 4b, spec 19.2): DeDDowned.dll runs the encounter after the player goes down; each turn arrives
+; as DeD_DownedVictorJoin per victor (sender = the victor) and then DeD_DownedVictorTurn (sender = the downed target,
+; strArg "sex|<count>"). The scene goes through _StartSexScene, so the scene hand-off (SkyrimNet-SexLab Integration /
+; OStimNet) and its settings apply; DeDDowned.dll watches the target's scene to end the turn.
+; S349 (DeD Downed A4 leg 4d, spec 8): Baka Tie Up is a DeDService restraint (source baka_tie) while DeD Downed is
+; active; when it ends there (its game time ran out, or the DeD Downed page's Free from restraints) the tie ends here.
+Event OnDeDRestraintChanged(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor a = akSender as Actor
+    If !a || StringUtil.Find(asStrArg, "off:") != 0 || StringUtil.Find(asStrArg, "baka_tie") < 0
+        Return
+    EndIf
+    If StorageUtil.GetIntValue(a, "SNBaka.Tied", 0) == 1
+        StorageUtil.SetIntValue(a, "SNBaka.Tied", 0)
+        StorageUtil.SetFloatValue(a, "SNBaka.TiedUntilGT", 0.0)
+        StorageUtil.SetStringValue(a, "SNBaka.DownPose", "")
+        If DeDService.IsDowned(a)
+            Debug.SendAnimationEvent(a, "BleedoutStart")
+        EndIf
+        Debug.Trace("[SNBaka][DOWNED] tie on " + a.GetDisplayName() + " ended by DeDService (" + asStrArg + ") -- S349")
+    EndIf
+EndEvent
+
+; S351 (DeD Downed spec 20, D-A65): a victor's outcome owned by Baka. DeDDowned.dll sends DeD_DownedVictorJoin
+; (sender = the victor) and then DeD_DownedVictorAct (sender = the downed target, strArg = the outcome key).
+Event OnDeDVictorAct(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor target = akSender as Actor
+    Actor v = None
+    If StorageUtil.FormListCount(PlayerRef, "SNBaka.DDTurnVictors") > 0
+        v = StorageUtil.FormListGet(PlayerRef, "SNBaka.DDTurnVictors", 0) as Actor
+    EndIf
+    StorageUtil.FormListClear(PlayerRef, "SNBaka.DDTurnVictors")
+    If !target || !v
+        Debug.Trace("[SNBaka][DOWNED] victor outcome " + asStrArg + " ignored: no target or victor -- S351")
+        Return
+    EndIf
+    Debug.Trace("[SNBaka][DOWNED] victor outcome: " + v.GetDisplayName() + " -> " + asStrArg + " on " + target.GetDisplayName() + " -- S351")
+    If asStrArg == "strip"
+        _Strip_Execute(v, target)
+    ElseIf asStrArg == "tattoo"
+        _ForcedTattoo_Execute(v, target)
+    ElseIf asStrArg == "makeup"
+        Bool ok = SNBaka_SlaveTatsModule.ForcedMakeup(v, target)
+        Debug.Trace("[SNBaka][DOWNED] forced makeup applied=" + ok + " -- S351")
+    ElseIf asStrArg == "execute"
+        ; the user allowed it (level above Never, default Never): the player too (spec 20.1); not Execute_Execute,
+        ; which never targets the player and asks its own confirmation
+        Idle km = DeDService.DownedKillMove(v)
+        If km
+            v.PlayIdleWithTarget(km, target)
+            Utility.Wait(3.0)
+        EndIf
+        If !target.IsDead()
+            target.Kill(v)
+        EndIf
+        Debug.Trace("[SNBaka][DOWNED] victor execute: kill move=" + (km != None) + " dead=" + target.IsDead() + " -- S351")
+    Else
+        Debug.Trace("[SNBaka][DOWNED] victor outcome " + asStrArg + " unknown -- S351")
+    EndIf
+EndEvent
+
+Event OnDeDVictorJoin(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor v = akSender as Actor
+    If v
+        StorageUtil.FormListAdd(PlayerRef, "SNBaka.DDTurnVictors", v, False)
+    EndIf
+EndEvent
+
+Event OnDeDVictorTurn(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor target = akSender as Actor
+    Int n = StorageUtil.FormListCount(PlayerRef, "SNBaka.DDTurnVictors")
+    If !target || n <= 0
+        StorageUtil.FormListClear(PlayerRef, "SNBaka.DDTurnVictors")
+        Debug.Trace("[SNBaka][DOWNED] encounter turn ignored: no target or no victors -- S347")
+        Return
+    EndIf
+    Actor[] actors = PapyrusUtil.ActorArray(n + 1)
+    actors[0] = target
+    String names = ""
+    Int i = 0
+    While i < n
+        actors[i + 1] = StorageUtil.FormListGet(PlayerRef, "SNBaka.DDTurnVictors", i) as Actor
+        If actors[i + 1]
+            If names != ""
+                names += " and "
+            EndIf
+            names += actors[i + 1].GetDisplayName()
+        EndIf
+        i += 1
+    EndWhile
+    StorageUtil.FormListClear(PlayerRef, "SNBaka.DDTurnVictors")
+    Int tid = _StartSexScene(actors, target, actors[1], "", "aggressive")
+    Debug.Trace("[SNBaka][DOWNED] encounter turn: " + names + " with " + target.GetDisplayName() + " -> scene " + tid + " -- S347")
+    If tid >= 0
+        SkyrimNetApi.RegisterEvent("baka_sexlab_trigger", names + " take the beaten " + target.GetDisplayName() + " where they lie.", actors[1], target)
+    EndIf
+EndEvent
+
 Event OnSLAnimationStart(Int aiThreadID, Bool abHasPlayer)
+    _HandOffClaimThread(aiThreadID)   ; S333
     SNBaka_FHUInflationModule.HandleSceneStartSL(Self, aiThreadID)
 EndEvent
 
@@ -15057,4 +15670,59 @@ Event OnOStimActorOrgasm(String eventName, String SceneID, Float OrgasmThreadID,
     SNBaka_FHUInflationModule.HandleOStimOrgasm(Self, eventName, SceneID, OrgasmThreadID, OrgasmedActor)
 EndEvent
 
+; --- S316 makeup lanes: ApplyMakeup (external YAML actions/ApplyMakeup.yaml; placeholder text, register entry 60) ---
+; The speaker makes up a willing target (an NPC, or the player). Never on a downed target (the
+; Force Makeup tile owns those). Thin executor; the module owns the pick (Voluntary makeup packs).
+Function ApplyMakeup_Execute(Actor akInitiator, Actor akTarget)
+    _ActionLaneFire(akInitiator, akTarget, "ApplyMakeup")
+    If !akInitiator || !akTarget || !SNBaka_SlaveTatsModule.Installed()
+        Debug.Trace("[SNBaka] ApplyMakeup REFUSE [null/absent] (S316)")
+        Return
+    EndIf
+    If _ChildBoundaryRefused(akInitiator, akTarget, "ApplyMakeup")
+        Return
+    EndIf
+    If _IsDownedAny(akTarget)
+        Debug.Trace("[SNBaka] ApplyMakeup REFUSE [downed]: " + akTarget.GetDisplayName() + " (S316)")
+        Return
+    EndIf
+    Bool ok = SNBaka_SlaveTatsModule.WillingMakeup(akTarget)
+    Debug.Trace("[SNBaka] ApplyMakeup: " + akInitiator.GetDisplayName() + " -> " + akTarget.GetDisplayName() + " applied=" + ok + " (S316)")
+EndFunction
 
+; --- S319: the MCM "Spank (in a scene)" key ---
+; Only during a sex scene the player is in: one scene partner is spanked at once (the same
+; _SexSpank_Execute the spank menu's pick runs, cooldown included); with more than one partner
+; the spank menu opens ("Spank who?"). Outside a scene: nothing (trace only).
+Function SpankKeyPressed()
+    If !IsInSexAnimation(PlayerRef)
+        Debug.Trace("[SNBaka] Spank key: not in a sex scene - ignored")
+        Return
+    EndIf
+    Float nowTime = Utility.GetCurrentGameTime()
+    If nowTime - StorageUtil.GetFloatValue(None, "SkyrimNetSDB.LastSpankTime", 0.0) < (fSpankCooldownSex / 86400.0)
+        Debug.Trace("[SNBaka] Spank key: on cooldown")
+        Return
+    EndIf
+    Actor[] sceneNPCs = new Actor[3]
+    _GetSexSceneNPCs(PlayerRef, sceneNPCs)
+    Int n = 0
+    Actor only = None
+    Int i = 0
+    While i < 3
+        If sceneNPCs[i]
+            n += 1
+            only = sceneNPCs[i]
+        EndIf
+        i += 1
+    EndWhile
+    If n == 1
+        Debug.Trace("[SNBaka] Spank key: spanking " + only.GetDisplayName())
+        _SexSpank_Execute(PlayerRef, only)
+    ElseIf n > 1
+        Debug.Trace("[SNBaka] Spank key: " + n + " partners - opening the spank menu")
+        SexSpank_ShowMenu(PlayerRef)
+    Else
+        Debug.Trace("[SNBaka] Spank key: no scene partner found")
+    EndIf
+EndFunction

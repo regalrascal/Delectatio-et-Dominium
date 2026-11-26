@@ -1,0 +1,19 @@
+name: "ded_companion_rescue"
+description: "DeD Downed (S352, spec 15): a companion has just healed the downed player back into the fight, or helped them up after the fight was won."
+
+eventCriteria:
+  eventType: "ded_companion_rescue"
+
+response:
+  type: "direct_narration"
+  content: |
+    {{ originator }} gets {{ target }} back on their feet. Narrate the moment: how {{ originator }}
+    does it, what they say, and how {{ target }} comes back to themselves.
+    {{ event_data }}
+
+audience: "nearby_npcs"
+
+enabled: true
+probability: 1
+cooldownSeconds: 10
+priority: 8

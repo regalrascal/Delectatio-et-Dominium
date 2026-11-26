@@ -44,12 +44,26 @@ Scriptname SNBaka_FHUInflationModule
 ;   (SNBaka.FHULast.V/.A/.O.<formid>) -- the discriminator is sound, the "v1 poll
 ;   walks them already" premise was false.
 ;
-;   OStim parity (mid-REV-149 user ruling): the OStim capture listener is NOT
-;   BUILT -- the SL FHU Baka Ostim 0.18 bridge is DISABLED in the active Ultra
-;   profile (modlist.txt) and the enabled FHU 2.11 Beta has zero OStim
-;   registrations (SexLab hooks only, sr_inflateQuest L383-385); OStim-driven
-;   fills do not occur in-profile. STOP-and-report honored; capture is
-;   SL-scenes-only; absent stash = context-agnostic fallback, sentinel'd.
+;   OStim parity (mid-REV-149 user ruling): [REV-184 D1 CORRECTION] the
+;   OStim capture driver IS NOW BUILT -- HandleOStimOrgasm (armed on the
+;   motherboard via RegisterForModEvent("ostim_actor_orgasm"), presence-gated
+;   on OStim.esp) drives fills OStim-side with the 0.18 bridge's own metadata
+;   chain, and the REV-155 double-fire guard stands down when the bridge owns
+;   the lane (srq.ocummale present). SL-present behavior is UNTOUCHED by
+;   design (additive): the SexLab hooks stay byte-current; the driver only
+;   arms the OStim listener. DUAL-SOURCE CENSUS (REV-184 Leg 1.1): both
+;   community sources carry the SAME plugin name (sr_FillHerUp.esp) ->
+;   mutually exclusive in MO2; PRIMARY = "SL FHU Baka Ostim 0.18" bridge
+;   (masters match the installed-profile surface: Skyrim/DG/DB/SLAroused/
+;   OStim/OCum; hotfix overlay, 7 pex, least new surface, matches this
+;   module's 0x000D63 detection + the REV-155 guard contract). FALLBACK =
+;   "Fill Her Up - OStim Edition v0.4.1" (Lirael Atelier/BaboFactory standalone
+;   edition, masters Skyrim/DG/DB ONLY, own sr_FHUOStim.pex shim, full ~130-
+;   pex dist incl. meshes/sounds) -- redundant as a DeD source (same form
+;   0x000D63 satisfies Installed()), viable only if the bridge misbehaves.
+;   The MO2 install of either source is the USER's choice (the runbook step
+;   documents 0.18 as the OStim-only enabler; it replaces base FHU 2.11's
+;   esp by name).
 ;
 ;   REV-154 (FHU v2 final lane) ADDS: the AMBIENT BYSTANDER REACTION CUE (the
 ;   planner's 30%/60% expose bands, the cum-ambient REV-122/127/133c/134a/134f
@@ -105,14 +119,13 @@ Scriptname SNBaka_FHUInflationModule
 ; binary; identical in BOTH installed variants -- the base hotfix esp and the
 ; "SL FHU Baka Ostim 0.18" patch esp). ----
 Bool Function Installed() Global
-    If StorageUtil.GetIntValue(None, "SNBaka.FHUAbsent", 0) == 1
+    ; S316 fix: the absence used to be cached in StorageUtil on the None key, which rides the
+    ; SAVE - a game first run without the mod never detected it after the mod was installed.
+    ; The SKSE load-order lookup below is error-free when the plugin is absent, so no cache.
+    If Game.GetModByName("sr_FillHerUp.esp") == 255 && Game.GetLightModByName("sr_FillHerUp.esp") == 65535
         Return False
     EndIf
-    If Game.GetFormFromFile(0x000D63, "sr_FillHerUp.esp") != None
-        Return True
-    EndIf
-    StorageUtil.SetIntValue(None, "SNBaka.FHUAbsent", 1)
-    Return False
+    Return Game.GetFormFromFile(0x000D63, "sr_FillHerUp.esp") != None
 EndFunction
 
 ; ---- FHU INFLATION AWARENESS (Task 3b: fallback poll design) ----
@@ -990,4 +1003,167 @@ String Function GetDedInflationAny(Actor akObserver) Global
         nearest = "the swollen person"
     EndIf
     Return "{\"any\": true, \"nearest\": \"" + nearest + "\"}"
+EndFunction
+
+; ------------------------------------------------------------------
+; S316 THE FILL HER UP SECTION OF THE COMBINED DeD PANEL
+; ------------------------------------------------------------------
+; The Baka DLL (framework) bridges the panel's "fhu" module to PanelMsg here (same shape as the
+; SlaveTats section). Main: inflation status of the subject (the panel's target, else the player, or
+; whoever was tapped in the "Inflated nearby" list). Settings: the MCM "Fill Her Up" page's rows.
+; Display text is placeholder (register entry 60). ASCII.
+; ------------------------------------------------------------------
+
+SkyrimNet_BakaIntegration Function _PanelHost() Global
+    Return Game.GetFormFromFile(0x000D62, "SkyrimNet_BakaIntegration.esp") as SkyrimNet_BakaIntegration
+EndFunction
+
+String Function _PQ(String s) Global
+    String o = ""
+    If StringUtil.Find(s, "\"") < 0 && StringUtil.Find(s, "\\") < 0
+        o = s
+    Else
+        Int n = StringUtil.GetLength(s)
+        Int i = 0
+        While i < n
+            String c = StringUtil.GetNthChar(s, i)
+            If c == "\"" || c == "\\"
+                o += "\\"
+            EndIf
+            o += c
+            i += 1
+        EndWhile
+    EndIf
+    Return "\"" + o + "\""
+EndFunction
+
+String Function _PB(Bool b) Global
+    If b
+        Return "true"
+    EndIf
+    Return "false"
+EndFunction
+
+Function PanelMsg(String asKind, String asSection, String asTab, String asPick, String asKey, String asValue, Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    Debug.Trace("[SNBaka][FHU][PANEL] " + asKind + " section=" + asSection + " pick=" + asPick + " key=" + asKey)
+    If asKind == "closed"
+        StorageUtil.UnsetFormValue(p, "SNBaka.FHU.P.Subject")
+        Return
+    EndIf
+    If asKind == "set"
+        _PanelSetting(asKey, asValue)
+        Return
+    EndIf
+    If asKind == "req" && asSection == "settings"
+        DeDService.PanelPush("fhu", _PanelSettingsJson())
+        Return
+    EndIf
+    If asKind == "act" && StringUtil.Find(asPick, "who:") == 0
+        Form fhq = Game.GetFormFromFile(0x000D63, "sr_FillHerUp.esp")
+        If fhq
+            StorageUtil.SetFormValue(p, "SNBaka.FHU.P.Subject", StorageUtil.FormListGet(fhq, "sr.inflater.Actors", StringUtil.Substring(asPick, 4) as Int))
+        EndIf
+    EndIf
+    DeDService.PanelPush("fhu", _PanelMainJson(akTarget))
+EndFunction
+
+String Function _Pct(Float afAmount) Global
+    Return ((afAmount / _FHUMaxInflation() * 100.0) as Int) + "%"
+EndFunction
+
+String Function _PanelMainJson(Actor akTarget) Global
+    Actor p = Game.GetPlayer()
+    If !Installed()
+        Return "{\"module\":\"fhu\",\"section\":\"main\",\"items\":[],\"notice\":{\"title\":\"Fill Her Up is not installed\",\"text\":\"Nothing to show.\"}}"
+    EndIf
+    Actor subj = StorageUtil.GetFormValue(p, "SNBaka.FHU.P.Subject", None) as Actor
+    If !subj
+        subj = akTarget
+    EndIf
+    If !subj
+        subj = p
+    EndIf
+    String name = subj.GetDisplayName()
+    If subj == p
+        name = "Yourself"
+    EndIf
+    Float amt = StorageUtil.GetFloatValue(subj, "sr.inflater.amount", 0.0)
+    String chips = "{\"label\":" + _PQ("Belly " + _Pct(amt)) + ",\"tone\":\"red\"}"
+    chips += ",{\"label\":" + _PQ("Vaginal " + _Pct(StorageUtil.GetFloatValue(subj, "sr.inflater.cum.vaginal", 0.0))) + "}"
+    chips += ",{\"label\":" + _PQ("Anal " + _Pct(StorageUtil.GetFloatValue(subj, "sr.inflater.cum.anal", 0.0))) + "}"
+    chips += ",{\"label\":" + _PQ("Oral " + _Pct(StorageUtil.GetFloatValue(subj, "sr.inflater.cum.oral", 0.0))) + "}"
+    String items = ""
+    Form fhq = Game.GetFormFromFile(0x000D63, "sr_FillHerUp.esp")
+    If fhq
+        Int n = StorageUtil.FormListCount(fhq, "sr.inflater.Actors")
+        Int i = 0
+        While i < n
+            Actor a = StorageUtil.FormListGet(fhq, "sr.inflater.Actors", i) as Actor
+            If a && !a.IsDead() && StorageUtil.GetFloatValue(a, "sr.inflater.amount", 0.0) > 0.0
+                If items != ""
+                    items += ","
+                EndIf
+                items += "{\"id\":\"who:" + i + "\",\"label\":" + _PQ(a.GetDisplayName() + " - " + _Pct(StorageUtil.GetFloatValue(a, "sr.inflater.amount", 0.0))) + ",\"stay\":true"
+                If a == subj
+                    items += ",\"state\":\"on\""
+                EndIf
+                items += "}"
+            EndIf
+            i += 1
+        EndWhile
+    EndIf
+    String out = "{\"module\":\"fhu\",\"section\":\"main\",\"tab\":\"status\",\"layout\":\"list\",\"tabs\":[{\"id\":\"status\",\"label\":\"Inflated nearby\"}]"
+    out += ",\"header\":{\"eyebrow\":\"Fill Her Up\",\"name\":" + _PQ(name) + ",\"chips\":[" + chips + "]}"
+    out += ",\"items\":[" + items + "]"
+    If items == ""
+        out += ",\"notice\":{\"title\":\"No one is inflated\",\"text\":\"Nobody nearby carries a load right now.\"}"
+    EndIf
+    Return out + "}"
+EndFunction
+
+String Function _PanelSettingsJson() Global
+    SkyrimNet_BakaIntegration h = _PanelHost()
+    If !h
+        Return "{\"module\":\"fhu\",\"section\":\"settings\",\"settings\":[]}"
+    EndIf
+    String out = "{\"module\":\"fhu\",\"section\":\"settings\",\"settings\":[{\"group\":\"Fill Her Up Awareness\",\"settings\":["
+    out += "{\"key\":\"aware\",\"type\":\"toggle\",\"label\":\"Module Toggle - Fill Her Up Awareness\",\"desc\":\"Enable/disable cues and reactions for Fill Her Up Baka\",\"value\":" + _PB(h.bFHUInflationEnabled) + "}"
+    out += ",{\"key\":\"narr\",\"type\":\"toggle\",\"label\":\"Follow-up Prompt\",\"value\":" + _PB(h.bFHUInflateNarration) + "}"
+    out += ",{\"key\":\"ambnarr\",\"type\":\"toggle\",\"label\":\"Ambient Narration\",\"value\":" + _PB(h.bFHUAmbientNarration) + "}"
+    out += ",{\"key\":\"notice\",\"type\":\"slider\",\"label\":\"Noticeable Band\",\"value\":" + h.iFHUAmbientNoticeBand + ",\"min\":5,\"max\":95,\"step\":5,\"unit\":\"%\"}"
+    out += ",{\"key\":\"heavy\",\"type\":\"slider\",\"label\":\"Heavy Band\",\"value\":" + h.iFHUAmbientHeavyBand + ",\"min\":10,\"max\":100,\"step\":5,\"unit\":\"%\"}"
+    out += ",{\"key\":\"cadence\",\"type\":\"slider\",\"label\":\"Ambient Cue Interval\",\"value\":" + (StorageUtil.GetFloatValue(None, "SNBaka.FHUAmbientCadence", 60.0) as Int) + ",\"min\":15,\"max\":240,\"step\":5,\"unit\":\"s\"}"
+    out += "]}]}"
+    Return out
+EndFunction
+
+; asValue is the raw JSON value from the page: true / false / 35. Same writes as the MCM page.
+Function _PanelSetting(String asKey, String asValue) Global
+    SkyrimNet_BakaIntegration h = _PanelHost()
+    Bool ok = h != None
+    If ok
+        If asKey == "aware"
+            h.bFHUInflationEnabled = asValue == "true"
+            h.Setup()   ; re-arms or disarms the level poll right now (the MCM's call)
+        ElseIf asKey == "narr"
+            h.bFHUInflateNarration = asValue == "true"
+        ElseIf asKey == "ambnarr"
+            h.bFHUAmbientNarration = asValue == "true"
+        ElseIf asKey == "notice"
+            h.iFHUAmbientNoticeBand = asValue as Int
+        ElseIf asKey == "heavy"
+            h.iFHUAmbientHeavyBand = asValue as Int
+        ElseIf asKey == "cadence"
+            StorageUtil.SetFloatValue(None, "SNBaka.FHUAmbientCadence", asValue as Float)
+        Else
+            ok = False
+        EndIf
+    EndIf
+    String val = asValue
+    If val == ""
+        val = "null"
+    EndIf
+    Debug.Trace("[SNBaka][FHU][PANEL] setting " + asKey + " = " + asValue + " ok=" + ok)
+    DeDService.PanelSettingResult("fhu", "{\"key\":" + _PQ(asKey) + ",\"value\":" + val + ",\"ok\":" + _PB(ok) + "}")
 EndFunction

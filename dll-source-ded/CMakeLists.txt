@@ -14,6 +14,13 @@ add_commonlibsse_plugin(${PROJECT_NAME}
         src/Scheduler.cpp
         src/EventPump.cpp
         src/ActorContextStore.cpp
+        src/DDGuard.cpp
+        src/ModuleRegistry.cpp
+        src/UIHost.cpp
+        src/PanelFlags.cpp
+        src/PanelHost.cpp
+        src/Preview.cpp
+        src/Downed.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
@@ -24,4 +31,8 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE src/PCH.h)
 set_property(TARGET ${PROJECT_NAME} PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-target_include_directories(${PROJECT_NAME} PRIVATE include src)
+target_include_directories(${PROJECT_NAME} PRIVATE include src external/magelight external/phantasm)
+
+# Magelight workstream Phase 1: module descriptors are JSON.
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)

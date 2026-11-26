@@ -1,0 +1,8 @@
+{
+  "schema": 2,
+  "id": "framework",
+  "name": "DeD",
+  "requires": "DeD_Framework.esp",
+  "settingsVia": "mcm",
+  "views": []
+}

@@ -2,11 +2,12 @@
 
 #include "HitEventSink.h"
 #include "PapyrusFunctions.h"
-#include "PrismaUIBridge.h"
+#include "DeDPanelClient.h"
 #include "SkyrimNetBridge.h"
 
 
-// Closes the active PrismaUI menu on ESC or Tab so the player isn't stuck.
+// Closes the active DeD menu on ESC or Tab so the player isn't stuck (Magelight also reports
+// Escape as a close; CancelMenu is idempotent, so a double signal cancels once).
 class MenuInputHandler : public RE::BSTEventSink<RE::InputEvent*> {
 public:
     static MenuInputHandler* GetSingleton() {
@@ -16,7 +17,7 @@ public:
 
     RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* a_event,
                                           RE::BSTEventSource<RE::InputEvent*>*) override {
-        if (!a_event || !PrismaUIBridge::IsMenuOpen())
+        if (!a_event || !DeDPanelClient::IsMenuOpen())
             return RE::BSEventNotifyControl::kContinue;
 
         for (auto* ev = *a_event; ev; ev = ev->next) {            
@@ -28,7 +29,7 @@ public:
             constexpr std::uint32_t kEscape = 1;
             constexpr std::uint32_t kTab    = 15;
             if (btn->GetIDCode() == kEscape || btn->GetIDCode() == kTab) {
-                PrismaUIBridge::CancelMenu();
+                DeDPanelClient::CancelMenu();
                 return RE::BSEventNotifyControl::kStop;
             }
         }
@@ -66,20 +67,20 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     }      
     SKSE::log::info("{} {} loaded", SKSE::GetPluginName(), SKSE::GetPluginVersion());
     SKSE::log::info(" CommonLibSSE-NG v{}", COMMONLIBSSE_VERSION);
-    SKSE::log::info(" Running on Skyrim v{}", REL::Module::get().version().string());
+    SKSE::log::info(" Running on Skyrim {} v{}", (REL::Module::IsVR() ? "VR" : (REL::Module::IsAE() ? "AE" : "SE")), REL::Module::get().version().string());
 
     SKSE::GetMessagingInterface()->RegisterListener([](SKSE::MessagingInterface::Message* msg) {
         switch (msg->type) {
         case SKSE::MessagingInterface::kPostLoad:
-            PrismaUIBridge::RequestAPI();
+            DeDPanelClient::RequestAPI();
             break;
         case SKSE::MessagingInterface::kDataLoaded:
             // View created exactly once here  -  never re-created on save load,
             // matching the known-good behaviour.  ShowInteractMenu self-heals
-            // lazily if PrismaUI ever reports the view invalid.
-            PrismaUIBridge::CreateMenuView();
-            PrismaUIBridge::CreateHudView();
-            PrismaUIBridge::CreateSlaveTatsView();   // REV-72 SlaveTats set-picker
+            // lazily: DeDService hosts the views (Magelight) and may finish kDataLoaded after us.
+            DeDPanelClient::CreateMenuView();
+            DeDPanelClient::CreateHudView();
+            DeDPanelClient::CreateSlaveTatsView();   // REV-72 SlaveTats set-picker
             RE::BSInputDeviceManager::GetSingleton()->AddEventSink(MenuInputHandler::GetSingleton());
             SKSE::log::info("Input handler registered.");
             RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESHitEvent>(HitEventSink::GetSingleton());
@@ -91,7 +92,9 @@ SKSEPluginLoad(const SKSE::LoadInterface* skse) {
         case SKSE::MessagingInterface::kNewGame:
             // Clear any no-collision flags left dangling from a prior session.
             // No-op on a fresh process (tracking list is empty).
-            PrismaUIBridge::RestoreTrackedCollision();
+            DeDPanelClient::RestoreTrackedCollision();
+            // Magelight Phase 2 leg 5: the SlaveTats panel handler + the automatic pack rescan.
+            DeDPanelClient::OnGameLoaded();
             break;
         }
     });

@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "id": "gs-poses",
+  "name": "GS Poses",
+  "requires": "SkyrimNet_AnimationsGS.esp",
+  "panel": {
+    "tagline": "have them strike a pose",
+    "order": 20,
+    "rules": [
+      {
+        "priority": 5,
+        "when": {
+          "target": "any"
+        },
+        "open": {
+          "tab": "",
+          "mode": "interact"
+        }
+      },
+      {
+        "priority": 0,
+        "when": {
+          "target": "none"
+        },
+        "open": {
+          "tab": "",
+          "mode": "notarget"
+        }
+      }
+    ],
+    "settingsVia": "mcm"
+  },
+  "views": [
+    {
+      "name": "grid",
+      "page": "views/gs-poses/grid/index.html",
+      "layer": "panel",
+      "listeners": [
+        "gsanim_chose"
+      ],
+      "captureEscape": true
+    }
+  ]
+}

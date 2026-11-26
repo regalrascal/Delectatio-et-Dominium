@@ -1,0 +1,21 @@
+name: "ded_downed_after"
+description: "DeD Downed (S348, spec 19.4): the player was beaten and left lying; the screen faded, time passed and they have just come to a short way off. Narrate the waking."
+
+eventCriteria:
+  eventType: "ded_downed_after"
+
+response:
+  type: "direct_narration"
+  content: |
+    The fight is long over and the player was the one who lost it. Narrate the
+    moment they come to: where they are, how the body feels (bruises, the ache
+    of every breath, stiffness, the cold of the ground), and the first thought
+    that surfaces. Keep it to this waking beat; whoever beat them is gone.
+    {{ event_data }}
+
+audience: "player"
+
+enabled: true
+probability: 1
+cooldownSeconds: 30
+priority: 8
