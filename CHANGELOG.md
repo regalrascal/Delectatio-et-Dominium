@@ -29,9 +29,8 @@ DeD Downed replaces Acheron. Includes everything from 0.5.0, which was never rel
   actions and reactions; installed packs found automatically.
 - **Scenes.** Hand Off Scene Setup sends scenes through SkyrimNet-SexLab Integration or OStimNet; richer scene-start
   narration; the Spank (in a scene) key spanks your scene partner.
-- **Fixes (0.4.1 – 0.5.0).** Mods installed after the first load are now detected; AI tattoo and display actions match
-  SkyrimNet's current action format; Baka's MCM split into two pages, unused thought lanes retired, player-speech lanes
-  off by default; Devious Devices NG no longer leaves you "stuck stripped" after redressing; OStim-only fixes.
+- **Fixes (since 0.4.2).** Mods installed after the first load are now detected; AI tattoo and display actions match
+  SkyrimNet's current action format; Devious Devices NG no longer leaves you "stuck stripped" after redressing.
 
 ## v0.4.0 — the community-hardened release
 
