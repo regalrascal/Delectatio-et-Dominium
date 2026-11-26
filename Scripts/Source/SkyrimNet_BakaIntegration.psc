@@ -5030,7 +5030,6 @@ Bool Function _IsDownedAny(Actor ak) Global
     EndIf
     Return StorageUtil.GetIntValue(ak, "SNBaka.OnGround", 0) == 1 \
         || ak.IsBleedingOut() \
-        || StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1 \
         || DeDService.IsDowned(ak)   ; S343 (D-A49): DeD Downed's state (Ronja's in-combat refusal, S337)
 EndFunction
 
@@ -5080,17 +5079,15 @@ Function _ClearAcheronHold(Actor ak, Bool abFullRescue = True, Bool abKeepPacifi
     If !ak
         Return
     EndIf
-    If _DDActive() && DeDService.GetDownedPhase(ak) == 1   ; S343: DeD Downed -> Recovering (spec: up, pacified)
-        DeDService.RecoverActor(ak, False)
-        Debug.Trace("[SNBaka][DOWNED] recover via DeD Downed: " + ak.GetDisplayName() + " -> Recovering -- S343")
+    If _DDActive() && DeDService.GetDownedPhase(ak) == 1   ; S343: DeD Downed takes the recovery
+        ; S359 (spec 19.1): the player and companions are simply up again (no "too hurt to fight", no "after" fade);
+        ; beaten NPCs go to Recovering (up, pacified).
+        Bool party = ak == PlayerRef || ak.IsPlayerTeammate()
+        DeDService.RecoverActor(ak, party)
+        Debug.Trace("[SNBaka][DOWNED] recover via DeD Downed: " + ak.GetDisplayName() + " -> " + party + " (True = back to normal, False = Recovering) -- S359")
         Return
     EndIf
-    If ak.IsBleedingOut() || StorageUtil.GetIntValue(ak, "SNAcheron.Held", 0) == 1
-        ; Held cleared FIRST -- the Acheron bridge's OnActorRescued now redowns anyone rescued while
-        ; still flagged Held (its "nobody recovers on their own" rule); clearing before RescueActor is
-        ; what marks this rescue as sanctioned. RescueActor is documented as queued/async, so the event
-        ; fires well after this line, but don't rely on that ordering by accident -- make it explicit.
-        StorageUtil.SetIntValue(ak, "SNAcheron.Held", 0)
+    If ak.IsBleedingOut()   ; S359: the bridge's SNAcheron.Held flag is gone
         ; S354 (DeD Downed A5b): no Acheron rescue any more (the bridge is retired); a vanilla-bleeding or
         ; legacy-held actor is stood up here (the old "Acheron no longer tracks them" branch).
         If ak != PlayerRef
@@ -6548,13 +6545,11 @@ Function _CleanupPair(Actor akA1, Actor akA2, \
     ; _DefeatGroundWindow, already reapplies everything itself a few lines later) -- so only re-glue
     ; protections back on for a still-downed actor when nothing else is about to do it.
     If _IsDownedAny(akA1)
-        StorageUtil.SetFloatValue(akA1, "SNBaka.AutoGetUpDeadlineRT", Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(PlayerRef, "SNAcheron.AutoGetUpSeconds", 600.0))
         If !bSkipA2Reset
             _ReassertDownedProtection(akA1)
         EndIf
     EndIf
     If _IsDownedAny(akA2)
-        StorageUtil.SetFloatValue(akA2, "SNBaka.AutoGetUpDeadlineRT", Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(PlayerRef, "SNAcheron.AutoGetUpSeconds", 600.0))
         If !bSkipA2Reset
             _ReassertDownedProtection(akA2)
         EndIf
@@ -6732,10 +6727,6 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
             _Log("[SNBaka] silence watch: " + akVictim.GetDisplayName() + " locked by a follow-up action — standing down (that action owns resolution)")
             Return
         EndIf
-        If StorageUtil.FormListFind(PlayerRef, "SNBaka.AcheronDownQueue", akVictim) >= 0
-            _Log("[SNBaka] silence watch: " + akVictim.GetDisplayName() + " still queued for the Acheron bridge — standing down")
-            Return
-        EndIf
         If akVictim.IsInCombat() \
                 || (akAggressor && !akAggressor.IsDead() && akAggressor.GetDistance(akVictim) <= fCombatOverRadius)
             silence = 0.0
@@ -6767,7 +6758,6 @@ Function _AbandonedHoldWatch(Actor akAggressor, Actor akVictim)
     _Log("[SNBaka] silence watch FIRED for " + akVictim.GetDisplayName() + " — reason: " + sReason + " | aggressor-disengaged=true combat-near=" + akVictim.IsInCombat() \
         + " locked=" + StorageUtil.GetIntValue(akVictim, "SNBaka.Locked", 0) \
         + " sexthread=" + IsInSexAnimation(akVictim) \
-        + " queued=" + (StorageUtil.FormListFind(PlayerRef, "SNBaka.AcheronDownQueue", akVictim) >= 0) \
         + " | firing recovery chain")
     ; REV-17 Task 4 rider: stop any stale victim-side struggle loop before recovering.
     ; _CleanupPair skips the victim's IdleForceDefaultState when bSkipA2Reset=True (the
@@ -6818,6 +6808,10 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
         ; would be false). Double-registration guard is structural: this branch and the
         ; fallback window are mutually exclusive arms of this same If — a non-delegated
         ; victim keeps the fallback registration only, a delegated one gets this one only.
+        If akA2 == PlayerRef && _DDActive()
+            ; S359: DeD Downed's encounter owns a downed player (the winners decide there); no second decision cue
+            Debug.Trace("[SNBaka][DOWNED] player down handed to DeD Downed: no baka_defeat cue, the encounter decides -- S359")
+        Else
         SkyrimNetApi.RegisterEvent("baka_defeat", \
             akA2.GetDisplayName() + " is beaten down and helpless at " + akA1.GetDisplayName() + "'s feet. " + \
             akA1.GetDisplayName() + " can talk to them — interrogate, threaten, mock, demand their surrender " + \
@@ -6827,13 +6821,16 @@ Function _DefeatGroundWindow(Actor akA1, Actor akA2)
             "The decision lands through the action itself. " + akA2.GetDisplayName() + " reacts. One beat.", \
             akA1, akA2)
         _Log("[SNBaka] _DefeatGroundWindow: baka_defeat registered for delegated victim " + akA2.GetDisplayName() + " (aggressor " + akA1.GetDisplayName() + ")")
+        EndIf
         _StartCooldown(akA1)
         ; REV-17 Task 2: this branch previously returned straight into Acheron's hold with
         ; no bounded exit of its own — the 09-15 session's abandoned hold. Run the silence
         ; watch here: it resolves the delegated hold through the sanctioned recovery chain
         ; when the aggressor has disengaged and no action claimed the victim.
-        _AbandonedHoldWatch(akA1, akA2)
-        _Log("[SNBaka] _DefeatGroundWindow: delegated downed state to Acheron for " + akA2.GetDisplayName())
+        If !_DDActive()   ; S359: DeD Downed's own timers end its downs (the silence watch was for Acheron's abandoned holds)
+            _AbandonedHoldWatch(akA1, akA2)
+        EndIf
+        _Log("[SNBaka] _DefeatGroundWindow: down delegated for " + akA2.GetDisplayName() + " -- S359")
         Return
     EndIf
 
@@ -11199,7 +11196,6 @@ Function Untie_Execute(Actor akCutter, Actor akTarget)
     EndIf
     ; Untied is NOT freed — they drop back to a NORMAL down: fresh full timer, normal recovery rules.
     Debug.SendAnimationEvent(akTarget, "BleedoutStart")
-    StorageUtil.SetFloatValue(akTarget, "SNBaka.AutoGetUpDeadlineRT", Utility.GetCurrentRealTime() + StorageUtil.GetFloatValue(PlayerRef, "SNAcheron.AutoGetUpSeconds", 600.0))
     SkyrimNetApi.RegisterEvent("baka_untied", \
         akCutter.GetDisplayName() + " cuts " + akTarget.GetDisplayName() + " loose — still beaten and down, but no longer bound.", \
         akCutter, akTarget)
@@ -12180,7 +12176,6 @@ Function _DispatchDownedAction(Int choice, Actor akCaster, Actor akVictim)
                 akCaster.GetDisplayName() + " finishes the helpless " + akVictim.GetDisplayName() + " with a deliberate killing blow.", \
                 akCaster, akVictim)
         EndIf
-        StorageUtil.SetIntValue(akVictim, "SNAcheron.Held", 0)
         StorageUtil.SetIntValue(akVictim, "SNBaka.OnGround", 0)
         ; [REV-161 fix 2.1] Post-execution lock release: a downed victim stays
         ; SNBaka.Locked=1 for the entire ground window (SNBakaInteractEffect
@@ -13401,7 +13396,7 @@ Function _TryCreatureEscalateOnDowned(Actor akVictim)
     ; perpetually "downing". SNAcheron.FreshDownRT is the shared stamp Acheron's own _CueDowned/
     ; Downed_SkyrimNet.RunConsequence set at the exact moment of a genuinely fresh down (0.0 default if
     ; Acheron isn't installed or this is a pure Baka-native down, which trivially passes this check).
-    Float sinceFreshDown = Utility.GetCurrentRealTime() - StorageUtil.GetFloatValue(akVictim, "SNAcheron.FreshDownRT", 0.0)
+    Float sinceFreshDown = Utility.GetCurrentRealTime() - StorageUtil.GetFloatValue(akVictim, "SNBaka.FreshDownRT", 0.0)   ; S359: stamped on DeD_Downed
     If sinceFreshDown < fFreshDownGraceDuration
         _Log("[SNBaka] creature: blocked — " + akVictim.GetDisplayName() + " only " + sinceFreshDown + "s since fresh down, need " + fFreshDownGraceDuration + "s to settle first")
         Return
@@ -13979,8 +13974,8 @@ Function _RegisterModEvents()
     RegisterForModEvent("SNBaka_MenuChoice",          "OnSNBakaMenuChoice")
     RegisterForModEvent("SNBaka_TryCreatureOnDowned", "OnTryCreatureOnDowned")
     RegisterForModEvent("SNBaka_CreatureHitFollower", "OnCreatureHitFollower")
-    RegisterForModEvent("SNAcheron_RequestForceRecover", "OnAcheronForceRecoverRequest")
     RegisterForModEvent("SNBaka_DefeatedExecuted",       "OnDefeatedExecuted")
+    RegisterForModEvent("DeD_Downed",                    "OnDeDDownedStamp")   ; S359: the creature fresh-down grace
     ; Mirrors SNAcheron.Present (set by the Acheron bridge) — lets Acheron's standalone install detect
     ; whether we're actually here to answer SNBaka_TryCreatureOnDowned before it bothers waiting on us.
     If PlayerRef
@@ -13988,19 +13983,6 @@ Function _RegisterModEvents()
         _Log("[SNBaka] _RegisterModEvents: SNBaka.Present set to 1 on " + PlayerRef + " (readback=" + StorageUtil.GetIntValue(PlayerRef, "SNBaka.Present", -99) + ")")
     Else
         _Log("[SNBaka] _RegisterModEvents: PlayerRef is None -- SNBaka.Present NOT set this call")
-    EndIf
-    ; REV-61 1a — Acheron bridge liveness re-stamp (per load + heartbeat): SNAcheron.Present
-    ; is written by the BRIDGE and persists in the cosave, so it can outlive the bridge mod
-    ; being disabled (09-30 Frabbi incident root cause). _RegisterModEvents is re-run from
-    ; Setup() on every OnInit/OnPlayerLoadGame/MCM reload + the OnUpdateGameTime heartbeat,
-    ; so this is the per-load re-stamp surface: if the bridge esp is not in the load order
-    ; NOW, clear the stale flag. We only ever CLEAR — setting it is the bridge's job when it
-    ; is actually loaded. _DelegateDownToAcheron carries an independent runtime probe as
-    ; belt-and-braces, so a stale value can never route a delegation into the void.
-    If PlayerRef && StorageUtil.GetIntValue(PlayerRef, "SNAcheron.Present", 0) == 1 \
-            && !_AcheronBridgePresent()
-        StorageUtil.SetIntValue(PlayerRef, "SNAcheron.Present", 0)
-        _Log("[SNBaka] Acheron bridge: esp probe failed at re-registration — stale SNAcheron.Present cleared to 0 (local downed fallback owns this session)")
     EndIf
     ; REV-63 detection + inflation triggers (see the DETECTION TRIGGERS section
     ; near the tail of this file). Registered unconditionally; every handler is
@@ -14138,10 +14120,6 @@ Function _DisarmModules()
     _Log("[SNBaka] module-disarm: advisory only at REV-68 (no module requires hard teardown)")
 EndFunction
 
-; Acheron's player self-recovery QTE (hold-key) asks us to force-recover an actor it can't fully clean
-; up itself (e.g. it was Baka's own local ground window holding them, not an Acheron hold) — same
-; queue-drain pattern as every other cross-mod request here. _ForceRecover is a no-op if the actor
-; wasn't downed by us in the first place, so this is safe to call regardless of who actually held them.
 ; Native hit sink (HitEventSink.cpp): a PHYSICAL hit landed on an Acheron-DEFEATED non-player actor.
 ; Vanilla-mortality spec for the helpless — a deliberate strike on a defeated body kills it. The kill
 ; is applied HERE (not natively) so the remaining protections still count: essential/protected actors
@@ -14159,24 +14137,11 @@ Event OnDefeatedExecuted(String eventName, String strArg, Float numArg, Form sen
     SkyrimNetApi.RegisterEvent("baka_execution", \
         victim.GetDisplayName() + " is struck while lying defeated on the ground — the blow is final.", \
         None, victim)
-    StorageUtil.SetIntValue(victim, "SNAcheron.Held", 0)   ; release our claim so nothing fights the corpse
     victim.Kill(None)
     Utility.Wait(0.5)
     _Log("[SNBaka] OnDefeatedExecuted: post-kill IsDead=" + victim.IsDead() + " (False here = something blocks Kill, e.g. an essential flag)")
 EndEvent
 
-Event OnAcheronForceRecoverRequest(String eventName, String strArg, Float numArg, Form sender)
-    Int cnt = StorageUtil.FormListCount(PlayerRef, "SNAcheron.ForceRecoverQueue")
-    Int i = 0
-    While i < cnt
-        Actor a = StorageUtil.FormListGet(PlayerRef, "SNAcheron.ForceRecoverQueue", i) as Actor
-        If a
-            _ForceRecover(a)
-        EndIf
-        i += 1
-    EndWhile
-    StorageUtil.FormListClear(PlayerRef, "SNAcheron.ForceRecoverQueue")
-EndEvent
 
 ; REMOVED: the OnHunterPrideChoice listener for Acheron Integration's custom "Hunter's Pride" options
 ; (Escalate/Investigate/Inspect/Stand Back/Help Up added to Acheron's own native E/activate menu) —
@@ -15372,6 +15337,15 @@ EndFunction
 ; OStimNet) and its settings apply; DeDDowned.dll watches the target's scene to end the turn.
 ; S349 (DeD Downed A4 leg 4d, spec 8): Baka Tie Up is a DeDService restraint (source baka_tie) while DeD Downed is
 ; active; when it ends there (its game time ran out, or the DeD Downed page's Free from restraints) the tie ends here.
+; S359: a fresh DeD Downed down (any reason) - creature escalation waits fFreshDownGraceDuration so the collapse can settle
+; (the grace once read the Acheron bridge's SNAcheron.FreshDownRT stamp).
+Event OnDeDDownedStamp(String asEventName, String asStrArg, Float afNumArg, Form akSender)
+    Actor a = akSender as Actor
+    If a
+        StorageUtil.SetFloatValue(a, "SNBaka.FreshDownRT", Utility.GetCurrentRealTime())
+    EndIf
+EndEvent
+
 Event OnDeDRestraintChanged(String asEventName, String asStrArg, Float afNumArg, Form akSender)
     Actor a = akSender as Actor
     If !a || StringUtil.Find(asStrArg, "off:") != 0 || StringUtil.Find(asStrArg, "baka_tie") < 0

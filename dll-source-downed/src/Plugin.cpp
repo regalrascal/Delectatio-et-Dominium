@@ -386,7 +386,7 @@ namespace
 	std::deque<TrailPoint> g_trail;   // the player's position once a second while up (last 90 s)
 	struct After
 	{
-		int   stage = 0;              // 0 idle, 1 faded out, 2 done (fade in sent)
+		int   stage = 0;              // 0 idle, 1 faded out, 2 done (fade in sent), 3 waiting for the player's scene (S359)
 		float started = 0.0f;
 		bool  interacted = false;
 		std::vector<std::uint32_t> victors;
@@ -498,7 +498,12 @@ namespace
 
 	void StartAfter(bool a_interacted, const std::vector<std::uint32_t>& a_victors)
 	{
-		if (g_after.stage == 1) return;
+		if (g_after.stage == 1 || g_after.stage == 3) return;
+		if (auto* pc = RE::PlayerCharacter::GetSingleton(); pc && InScene(pc)) {   // S359: never fade / move mid-scene
+			g_after = { 3, Now(), a_interacted, a_victors };
+			SKSE::log::info("{} AFTER waits: the player is in a scene.", kTag);
+			return;
+		}
 		g_after = { 1, Now(), a_interacted, a_victors };
 		PapyrusFade(true);
 		SKSE::log::info("{} AFTER: fade out ({}).", kTag, a_interacted ? "after the encounter" : "nobody stayed");
@@ -544,6 +549,14 @@ namespace
 
 	void UpdateAfter(RE::PlayerCharacter* a_pc)
 	{
+		if (g_after.stage == 3) {   // S359: waiting for the player's scene to end (15 min at most)
+			if (!InScene(a_pc) || Now() - g_after.started > 900.0f) {
+				const auto waited = g_after;
+				g_after.stage = 0;
+				StartAfter(waited.interacted, waited.victors);
+			}
+			return;
+		}
 		if (g_after.stage == 1) {
 			if (Now() - g_after.started >= 2.0f) FinishAfter();
 			return;
@@ -1567,7 +1580,7 @@ namespace
 				if (const auto it = g_downAt.find(player->GetFormID()); it != g_downAt.end()) since = Now() - it->second;
 				else since = 99.0f;
 			}
-			if (!g_enc.tried && since >= 3.0f) {
+			if (!g_enc.tried && since >= 3.0f && !InScene(player)) {   // S359: not while a scene (e.g. Baka's) holds the player
 				// S352 (spec 15): the encounter waits until the fight is lost; companions still up may heal the player
 				const auto f = Fight(player);
 				const bool resist = Setting("companions.resist") >= 0.5f;
@@ -1603,6 +1616,7 @@ namespace
 		TakeAgainAnswers();
 		// Running: no turn in progress -> the next queued one, else wait for keep-going answers, else the end
 		if (!g_enc.running) {
+			if (InScene(player)) return;   // S359: a scene the encounter did not start: no new turn and no end until it is over
 			if (g_enc.turn < g_enc.turns.size()) StartTurn();
 			if (!g_enc.running && !AnyPending()) EndEncounter("every turn done");
 			return;
@@ -1766,7 +1780,7 @@ namespace
 				// S346 (D-A62 / D-A63, spec 19.1): no Recovering for the player or companions (companions stay pacified
 				// only inside an encounter window). Until the "after" transition exists (4c) the player simply stands.
 				const bool player = actor->IsPlayerRef();
-				if (player && g_after.stage == 1) return RE::BSEventNotifyControl::kContinue;   // S348: the "after" stands them up
+				if (player && (g_after.stage == 1 || g_after.stage == 3)) return RE::BSEventNotifyControl::kContinue;   // S348: the "after" stands them up
 				if (player && !g_encounter.load()) {   // S348 (spec 19.4): the timer ran out with nobody staying -> the "after"
 					StartAfter(false, {});
 					return RE::BSEventNotifyControl::kContinue;
