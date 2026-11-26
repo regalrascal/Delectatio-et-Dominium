@@ -43,7 +43,7 @@ What's new in 0.6.0
 - **One menu for everything:** a single DeD Interact power (or hotkey) opens a combined menu for every module.
 - **Tattoos and makeup, done properly:** pick, queue and apply marks, preview them on the body, and give every
   tattoo a description the AI can read.
-- **Scenes hand off** to SkyrimNet-SexLab Integration or OStimNet for their scene picking.
+- **Scenes hand off** to [SkyrimNet-SexLab Integration](https://github.com/GoodProvider/SkyrimNet_SexLab) or [OStimNet](https://github.com/tetherball88/OStimNet) for their scene picking.
 - **Spank during a scene** with its own hotkey.
 
 Full details: [Releases](https://github.com/regalrascal/Delectatio-et-Dominium/releases) and the [CHANGELOG](CHANGELOG.md).
@@ -96,7 +96,7 @@ Features
 
 ### Scenes — SexLab and OStim
 - **Either framework, or both:** DeD starts scenes on whichever you run (the MCM picks Auto).
-- **Hand Off Scene Setup** (on by default): scenes go through **SkyrimNet-SexLab Integration** or **OStimNet** when
+- **Hand Off Scene Setup** (on by default): scenes go through **[SkyrimNet-SexLab Integration](https://github.com/GoodProvider/SkyrimNet_SexLab)** or **[OStimNet](https://github.com/tetherball88/OStimNet)** when
   installed, so their own scene choice and settings apply.
 - **Richer scene starts:** the narration says who, how and why, from the choices made.
 
@@ -139,7 +139,7 @@ Features
 ### SlaveTats — marks that linger
 - **Tattoos and makeup from the menu:** on yourself, on a downed captive, or on someone who agreed to it; queue
   several and apply them together.
-- **Live preview:** see the marks on the body before applying (with Phantasm installed).
+- **Live preview:** see the marks on the body before applying (with [Phantasm](https://www.nexusmods.com/skyrimspecialedition/mods/197470) installed).
 - **Descriptions the AI can read:** write your own, or let DeD describe a tattoo from its texture, so NPCs know what
   a mark says and where it is.
 - **AI actions:** NPCs tattoo, brand or paint others in character, and react to marks they notice.
@@ -161,7 +161,7 @@ Installer options
 
 | Option | Ticked by default | What it adds | Needs |
 |---|---|---|---|
-| **Framework** | always installed | DeD Service, the DeD menu, the MCM, the DeD Interact power | Magelight UI |
+| **Framework** | always installed | DeD Service, the DeD menu, the MCM, the DeD Interact power | [Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303) |
 | **Baka Interactions** | yes | Interactions, escalation, capture, creatures, Mephala / Molag Bal, cum narration, spank packs | Baka Motion Data Pack |
 | **GS Poses** | yes | The pose grid, pose actions, Sanguine / Sheogorath | GSPoses |
 | **FHU Inflation** | when FHU is found | Inflation narration | Fill Her Up — Baka Edition |
@@ -180,8 +180,8 @@ Requirements
 | **Required** | Skyrim SE 1.5.97 or AE 1.6.x · [SKSE64](https://skse.silverlock.org/) · [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) 0.25 or later · [Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303) 1.9.0+ · [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) · [PapyrusUtil](https://www.nexusmods.com/skyrimspecialedition/mods/13048) · [Baka Motion Data Pack](https://www.loverslab.com/files/file/26992-baka-motion-data-pack/) (run Pandora / Nemesis / FNIS) |
 | **Scenes (at least one)** | [SexLab Framework](https://www.loverslab.com/files/file/20058-sexlab-se-sex-animation-framework-v166d-08292026/) · OStim Standalone. Without either, escalation simply won't start a scene. |
 | **Per module** | [GSPoses by Gunslicer](https://www.patreon.com/Gunslicer/posts/pose-mod-02-06-159933025) (GS Poses) · [Fill Her Up — Baka Edition](https://www.loverslab.com/files/file/14920-fill-her-up-baka-edition/) (FHU) · [SlaveTats](https://www.loverslab.com/files/file/619-slavetats/) + JContainers (SlaveTats; [SlaveTats NG](https://www.loverslab.com/files/file/35989-slavetatsng/) recommended) |
-| **Recommended** | SkyrimNet-SexLab Integration or OStimNet (scene hand-off) · an arousal framework (OSL Aroused or SL Aroused NG) · [Flash Games – Struggling QTE](https://www.nexusmods.com/skyrimspecialedition/mods/121909) · [Injured Animations Dynamic Replacer SE](https://www.nexusmods.com/skyrimspecialedition/mods/34663) (the injured look for beaten enemies) · [SeverActions](https://github.com/Severause/SeverActions) |
-| **Optional** | [OCum](https://www.nexusmods.com/skyrimspecialedition/mods/77506) or SLACS 2 + SCO (cum decals) · Phantasm (tattoo live preview) · Devious Devices (restraints) · [OCreatures Revived](https://www.loverslab.com/files/file/49059-ocreatures-revived/) + creature animations · [SS++](https://www.loverslab.com/files/file/13531-simple-slavery-plus-plus/) (Sell to Slavery) · [FSM](https://www.loverslab.com/files/file/23032-follower-slavery-mod-fsm-14122025/) (Enslave Follower) · [EmoTears](https://www.nexusmods.com/skyrimspecialedition/mods/122296) · [Dynamic Feminine Female Modesty Animations OAR](https://www.nexusmods.com/skyrimspecialedition/mods/104374) |
+| **Recommended** | [SkyrimNet-SexLab Integration](https://github.com/GoodProvider/SkyrimNet_SexLab) or [OStimNet](https://github.com/tetherball88/OStimNet) (scene hand-off) · an arousal framework (OSL Aroused or SL Aroused NG) · [Flash Games – Struggling QTE](https://www.nexusmods.com/skyrimspecialedition/mods/121909) · [Injured Animations Dynamic Replacer SE](https://www.nexusmods.com/skyrimspecialedition/mods/34663) (the injured look for beaten enemies) · [SeverActions](https://github.com/Severause/SeverActions) |
+| **Optional** | [OCum](https://www.nexusmods.com/skyrimspecialedition/mods/77506) or SLACS 2 + SCO (cum decals) · [Phantasm](https://www.nexusmods.com/skyrimspecialedition/mods/197470) (tattoo live preview) · Devious Devices (restraints) · [OCreatures Revived](https://www.loverslab.com/files/file/49059-ocreatures-revived/) + creature animations · [SS++](https://www.loverslab.com/files/file/13531-simple-slavery-plus-plus/) (Sell to Slavery) · [FSM](https://www.loverslab.com/files/file/23032-follower-slavery-mod-fsm-14122025/) (Enslave Follower) · [EmoTears](https://www.nexusmods.com/skyrimspecialedition/mods/122296) · [Dynamic Feminine Female Modesty Animations OAR](https://www.nexusmods.com/skyrimspecialedition/mods/104374) |
 | **No longer needed** | PrismaUI (since 0.5.0) · Acheron (since 0.6.0) |
 
 **Game versions:** SE 1.5.97 and AE 1.6.x are tested in-house. The DLLs use Address Library, so 1.7 with matching SKSE
@@ -198,7 +198,7 @@ Compatibility
 | **Acheron** | Replaced by DeD Downed. If it stays installed, switch it off in its own MCM; DeD Downed waits until you do. |
 | **Death alternatives** (e.g. Respawn) | DeD Downed acts before them; when its roll says "not this time", they run as before. |
 | **Press E to Heal Followers** | No double potion: DeD's downs don't use the engine bleedout, so only DeD's Help Up applies to them. |
-| **SkyrimNet-SexLab Integration / OStimNet** | Scenes hand off to them (setting Hand Off Scene Setup). |
+| **[SkyrimNet-SexLab Integration](https://github.com/GoodProvider/SkyrimNet_SexLab) / [OStimNet](https://github.com/tetherball88/OStimNet)** | Scenes hand off to them (setting Hand Off Scene Setup). |
 | **SeverActions** | Works alongside; its downed and captive actions add to the AI's options. |
 | **Devious Devices** | Restraints given through DeD Downed are recognised; locked devices stay on without their key. |
 
@@ -264,7 +264,7 @@ Credits
 - **Oldcustard** — bug hunting, the creature-struggle fixes and Execute contributions.
 - **Gunslicer** (GSPoses) and **Baka** (Baka Motion Data Pack, Fill Her Up — Baka Edition) — the source mods DeD builds on.
 - **Min and the [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) project** — the framework this whole mod lives inside.
-- **The authors of Magelight UI, SkyrimNet-SexLab Integration, OStimNet, Acheron and SeverActions** — whose work DeD
+- **The authors of [Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303), [SkyrimNet-SexLab Integration](https://github.com/GoodProvider/SkyrimNet_SexLab), [OStimNet](https://github.com/tetherball88/OStimNet), [Phantasm](https://www.nexusmods.com/skyrimspecialedition/mods/197470), Acheron and SeverActions** — whose work DeD
   builds on, hands off to, or learned from.
 
 * * *
